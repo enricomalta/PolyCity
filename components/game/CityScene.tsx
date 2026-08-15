@@ -1,12 +1,33 @@
 "use client"
 
-import { Suspense, useMemo } from "react"
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+} from "react"
+
 import { Canvas } from "@react-three/fiber"
-import { OrbitControls, ContactShadows } from "@react-three/drei"
-import { PCFShadowMap, MOUSE } from "three"
-import { CAMERA, TILE_SIZE, tileToWorld } from "@/lib/game/constants"
+
+import {
+  OrbitControls,
+  ContactShadows,
+} from "@react-three/drei"
+
+import {
+  PCFShadowMap,
+  MOUSE,
+} from "three"
+
+import {
+  CAMERA,
+  TILE_SIZE,
+  tileToWorld,
+} from "@/lib/game/constants"
+
 import { canPlace } from "@/lib/game/grid"
+
 import { useGame } from "@/hooks/useGame"
+
 import { Building } from "./Building"
 import { Road } from "./Road"
 import { GroundTiles } from "./GroundTiles"
@@ -25,53 +46,175 @@ export function CityScene() {
   const {
     tiles,
     state,
+
     tool,
     selectedBuilding,
+
     hoveredTile,
     selectedTile,
+
+    buildRotation,
+
     setHoveredTile,
     selectTile,
+
     build,
     demolish,
+
+    rotateBuilding,
   } = useGame()
 
   const buildings = state?.buildings ?? []
 
-  // Validity of the currently hovered tile, used to color the preview.
+  // ---------------------------------------------------------------------------
+  // Keyboard controls
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      // Only rotate while actively placing something.
+      if (
+        tool !== "BUILD" &&
+        tool !== "ROAD"
+      ) {
+        return
+      }
+
+      if (!selectedBuilding) {
+        return
+      }
+
+      // Do not steal R from text fields or other editable elements.
+      const target = event.target as HTMLElement | null
+
+      if (
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.tagName === "SELECT" ||
+        target?.isContentEditable
+      ) {
+        return
+      }
+
+      if (event.key.toLowerCase() !== "r") {
+        return
+      }
+
+      event.preventDefault()
+
+      rotateBuilding()
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [
+    tool,
+    selectedBuilding,
+    rotateBuilding,
+  ])
+
+  // ---------------------------------------------------------------------------
+  // Hover validity
+  // ---------------------------------------------------------------------------
+
   const hoverValid = useMemo(() => {
-    if (!hoveredTile) return false
-    const tile = tiles[hoveredTile.x]?.[hoveredTile.z]
-    if (tool === "DEMOLISH") return Boolean(tile?.occupiedBy)
+    if (!hoveredTile) {
+      return false
+    }
+
+    const tile =
+      tiles[hoveredTile.x]?.[hoveredTile.z]
+
+    if (tool === "DEMOLISH") {
+      return Boolean(tile?.occupiedBy)
+    }
+
     return canPlace(tile)
-  }, [hoveredTile, tiles, tool])
+  }, [
+    hoveredTile,
+    tiles,
+    tool,
+  ])
+
+  // ---------------------------------------------------------------------------
+  // Tile interaction
+  // ---------------------------------------------------------------------------
 
   function handleSelect(x: number, z: number) {
     const tile = tiles[x]?.[z]
+
+    // Demolish mode
     if (tool === "DEMOLISH") {
-      if (tile?.occupiedBy) void demolish(x, z)
+      if (tile?.occupiedBy) {
+        void demolish(x, z)
+      }
+
       return
     }
-    if ((tool === "BUILD" || tool === "ROAD") && selectedBuilding) {
-      if (canPlace(tile)) void build(x, z, selectedBuilding, 0)
+
+    // Build / road mode
+    if (
+      (tool === "BUILD" || tool === "ROAD") &&
+      selectedBuilding
+    ) {
+      if (canPlace(tile)) {
+        void build(
+          x,
+          z,
+          selectedBuilding,
+          buildRotation,
+        )
+      }
+
       return
     }
-    // SELECT mode: mark the tile for the inspector panel.
+
+    // Select mode
     selectTile({ x, z })
   }
 
   return (
     <Canvas
-      shadows={{ type: PCFShadowMap }}
-      camera={{ position: CAMERA.initialPosition, fov: CAMERA.fov }}
+      shadows={{
+        type: PCFShadowMap,
+      }}
+      camera={{
+        position: CAMERA.initialPosition,
+        fov: CAMERA.fov,
+      }}
       dpr={[1, 2]}
-      gl={{ antialias: true, powerPreference: "high-performance" }}
+      gl={{
+        antialias: true,
+        powerPreference: "high-performance",
+      }}
     >
-      <color attach="background" args={["#9fc9e8"]} />
-      <fog attach="fog" args={["#9fc9e8", 55, 120]} />
+      <color
+        attach="background"
+        args={["#9fc9e8"]}
+      />
 
-      {/* Dependency-free lighting: no remote environment map to fetch. */}
+      <fog
+        attach="fog"
+        args={[
+          "#9fc9e8",
+          55,
+          120,
+        ]}
+      />
+
       <ambientLight intensity={0.75} />
-      <hemisphereLight args={["#dcefff", "#4a6b3a", 0.7]} />
+
+      <hemisphereLight
+        args={[
+          "#dcefff",
+          "#4a6b3a",
+          0.7,
+        ]}
+      />
+
       <directionalLight
         position={[18, 28, 12]}
         intensity={1.5}
@@ -87,23 +230,60 @@ export function CityScene() {
       <Suspense fallback={null}>
         <GroundTiles
           tiles={tiles}
-          onHover={(x, z) => setHoveredTile({ x, z })}
-          onLeave={() => setHoveredTile(null)}
+          onHover={(x, z) =>
+            setHoveredTile({ x, z })
+          }
+          onLeave={() =>
+            setHoveredTile(null)
+          }
           onSelect={handleSelect}
         />
 
-        {/* Placed buildings */}
-        {buildings.map((b) => {
-          const position: [number, number, number] = [tileToWorld(b.x), 0, tileToWorld(b.z)]
-          if (b.type === "ROAD") return <Road key={b.id} position={position} />
-          return <Building key={b.id} type={b.type} position={position} rotation={b.rotation} />
+        {/* ----------------------------------------------------------------- */}
+        {/* Placed buildings                                                  */}
+        {/* ----------------------------------------------------------------- */}
+
+        {buildings.map((building) => {
+          const position: [
+            number,
+            number,
+            number,
+          ] = [
+            tileToWorld(building.x),
+            0,
+            tileToWorld(building.z),
+          ]
+
+          if (building.type === "ROAD") {
+            return (
+              <Road
+                key={building.id}
+                position={position}
+                rotation={building.rotation}
+              />
+            )
+          }
+
+          return (
+            <Building
+              key={building.id}
+              type={building.type}
+              position={position}
+              rotation={building.rotation}
+            />
+          )
         })}
+
+        {/* ----------------------------------------------------------------- */}
+        {/* Building preview / selection                                      */}
+        {/* ----------------------------------------------------------------- */}
 
         <SelectionIndicator
           hovered={hoveredTile}
           selected={selectedTile}
           tool={tool}
           selectedBuilding={selectedBuilding}
+          rotation={buildRotation}
           valid={hoverValid}
         />
 
@@ -127,9 +307,13 @@ export function CityScene() {
         minPolarAngle={CAMERA.minPolarAngle}
         maxPolarAngle={CAMERA.maxPolarAngle}
         target={[0, 0, 0]}
-        // Left drag orbits the camera, right drag pans. Building happens on a
+                // Left drag orbits the camera, right drag pans. Building happens on a
         // deliberate tap (handled in GroundTiles), never while dragging.
-        mouseButtons={{ LEFT: MOUSE.ROTATE, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.PAN }}
+        mouseButtons={{
+          LEFT: MOUSE.ROTATE,
+          MIDDLE: MOUSE.DOLLY,
+          RIGHT: MOUSE.PAN,
+        }}
       />
     </Canvas>
   )

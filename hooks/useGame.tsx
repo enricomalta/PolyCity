@@ -24,6 +24,16 @@ interface GameContextValue {
   pending: boolean
   lastMessage: string | null
 
+  /**
+   * Rotation of the building currently being placed.
+   *
+   * 0 = 0°
+   * 1 = 90°
+   * 2 = 180°
+   * 3 = 270°
+   */
+  buildRotation: number
+
   // ---- UI / selection / build-mode state ----
   tool: ToolMode
   selectedBuilding: BuildingType | null
@@ -35,6 +45,8 @@ interface GameContextValue {
   selectBuildingType: (b: BuildingType | null) => void
   setHoveredTile: (c: Coord | null) => void
   selectTile: (c: Coord | null) => void
+  rotateBuilding: () => void
+  resetBuildRotation: () => void
   build: (x: number, z: number, buildingType: BuildingType, rotation?: number) => Promise<void>
   demolish: (x: number, z: number) => Promise<void>
   updatePolicy: (policy: CityPolicy) => Promise<boolean>
@@ -56,6 +68,14 @@ export function GameProvider({ cityId = DEFAULT_CITY_ID, children }: { cityId?: 
   const [selectedBuilding, setSelectedBuilding] = useState<BuildingType | null>(null)
   const [hoveredTile, setHoveredTile] = useState<Coord | null>(null)
   const [selectedTile, setSelectedTile] = useState<Coord | null>(null)
+
+  /**
+   * Rotation used only while placing a new building.
+   *
+   * The value is intentionally stored as a discrete 0-3 value instead
+   * of radians/degrees. The renderer converts it to radians.
+   */
+  const [buildRotation, setBuildRotation] = useState(0)
 
   // Terrain is procedurally generated from the city's server-provided seed, so
   // the world is deterministic, unique per player and persistent. Occupancy is
@@ -140,6 +160,14 @@ export function GameProvider({ cityId = DEFAULT_CITY_ID, children }: { cityId?: 
     if (b) setTool(b === "ROAD" ? "ROAD" : "BUILD")
   }, [])
 
+  const rotateBuilding = useCallback(() => {
+    setBuildRotation((current) => (current + 1) % 4)
+  }, [])
+
+  const resetBuildRotation = useCallback(() => {
+    setBuildRotation(0)
+  }, [])
+
   const value = useMemo<GameContextValue>(
     () => ({
       city,
@@ -153,10 +181,13 @@ export function GameProvider({ cityId = DEFAULT_CITY_ID, children }: { cityId?: 
       selectedBuilding,
       hoveredTile,
       selectedTile,
+      buildRotation,
       setTool,
       selectBuildingType,
       setHoveredTile,
       selectTile: setSelectedTile,
+      rotateBuilding,
+      resetBuildRotation,
       build,
       demolish,
       updatePolicy,
@@ -175,11 +206,14 @@ export function GameProvider({ cityId = DEFAULT_CITY_ID, children }: { cityId?: 
       selectedBuilding,
       hoveredTile,
       selectedTile,
+      buildRotation,
       selectBuildingType,
       build,
       demolish,
       updatePolicy,
       load,
+      rotateBuilding,
+      resetBuildRotation,
     ],
   )
 
