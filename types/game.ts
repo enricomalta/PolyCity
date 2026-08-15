@@ -1,4 +1,4 @@
-import type { CityState } from "./city"
+import type { CityState, CityPolicy } from "./city"
 
 // The set of buildings available in V1. Kept as a string union so it is easy
 // to serialize into API actions and to key the building catalog.
@@ -19,7 +19,7 @@ export type BuildingCategory =
   | "INDUSTRIAL"
   | "SERVICES"
 
-export type TerrainType = "GRASS" | "WATER" | "ROCK"
+export type TerrainType = "GRASS" | "WATER" | "ROCK" | "FOREST" | "SAND"
 
 export interface Tile {
   x: number
@@ -35,6 +35,7 @@ export interface Tile {
 export type GameAction =
   | { type: "BUILD"; buildingType: BuildingType; x: number; z: number; rotation: number }
   | { type: "DEMOLISH"; x: number; z: number }
+  | { type: "SET_POLICY"; policy: CityPolicy }
 
 // Standard envelope returned by every action so the UI can react uniformly.
 export interface GameResponse {

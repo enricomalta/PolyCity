@@ -5,6 +5,19 @@ import type { BuildingType } from "@/types/game"
 import { getBuilding } from "@/lib/game/buildings"
 import { Tree } from "./Tree"
 
+const WINDOW = "#7fd0ff"
+const DOOR = "#5b3a26"
+
+// A thin plot slab so every building visually "sits" on the tile.
+function Foundation({ color = "#8a8f7a" }: { color?: string }) {
+  return (
+    <mesh receiveShadow position={[0, 0.03, 0]}>
+      <boxGeometry args={[0.94, 0.06, 0.94]} />
+      <meshStandardMaterial color={color} flatShading />
+    </mesh>
+  )
+}
+
 // Low-poly building models composed from primitive geometry. Each type has a
 // small, recognizable silhouette. flatShading gives the faceted poly look.
 function Model({ type }: { type: BuildingType }) {
@@ -16,31 +29,49 @@ function Model({ type }: { type: BuildingType }) {
     case "HOUSE":
       return (
         <group>
-          <mesh castShadow receiveShadow position={[0, def.height / 2, 0]}>
+          <Foundation color="#9a8f6a" />
+          {/* body */}
+          <mesh castShadow receiveShadow position={[0, def.height / 2 + 0.06, 0]}>
             <boxGeometry args={[0.7, def.height, 0.7]} />
             <meshStandardMaterial color={c} flatShading />
           </mesh>
-          <mesh castShadow position={[0, def.height + 0.18, 0]} rotation={[0, Math.PI / 4, 0]}>
+          {/* pitched roof */}
+          <mesh castShadow position={[0, def.height + 0.24, 0]} rotation={[0, Math.PI / 4, 0]}>
             <coneGeometry args={[0.62, 0.42, 4]} />
             <meshStandardMaterial color={roof} flatShading />
           </mesh>
+          {/* door */}
+          <mesh position={[0, 0.2, 0.36]}>
+            <boxGeometry args={[0.16, 0.28, 0.02]} />
+            <meshStandardMaterial color={DOOR} flatShading />
+          </mesh>
+          {/* windows */}
+          {[-0.2, 0.2].map((x) => (
+            <mesh key={x} position={[x, 0.42, 0.36]}>
+              <boxGeometry args={[0.14, 0.14, 0.02]} />
+              <meshStandardMaterial color={WINDOW} emissive={WINDOW} emissiveIntensity={0.15} flatShading />
+            </mesh>
+          ))}
         </group>
       )
     case "SMALL_APARTMENT":
       return (
         <group>
-          <mesh castShadow receiveShadow position={[0, def.height / 2, 0]}>
+          <Foundation color="#b7b0a2" />
+          <mesh castShadow receiveShadow position={[0, def.height / 2 + 0.06, 0]}>
             <boxGeometry args={[0.72, def.height, 0.72]} />
             <meshStandardMaterial color={c} flatShading />
           </mesh>
-          {/* window bands */}
-          {[0.5, 0.95, 1.4].map((y) => (
-            <mesh key={y} position={[0, y, 0.37]}>
-              <boxGeometry args={[0.5, 0.14, 0.02]} />
-              <meshStandardMaterial color="#4a5a72" flatShading />
-            </mesh>
-          ))}
-          <mesh castShadow position={[0, def.height + 0.05, 0]}>
+          {/* window grid on the front face */}
+          {[0.45, 0.85, 1.25].map((y) =>
+            [-0.18, 0.18].map((x) => (
+              <mesh key={`${y}-${x}`} position={[x, y, 0.37]}>
+                <boxGeometry args={[0.2, 0.16, 0.02]} />
+                <meshStandardMaterial color={WINDOW} emissive={WINDOW} emissiveIntensity={0.12} flatShading />
+              </mesh>
+            )),
+          )}
+          <mesh castShadow position={[0, def.height + 0.11, 0]}>
             <boxGeometry args={[0.76, 0.1, 0.76]} />
             <meshStandardMaterial color={roof} flatShading />
           </mesh>
@@ -49,17 +80,23 @@ function Model({ type }: { type: BuildingType }) {
     case "SHOP":
       return (
         <group>
-          <mesh castShadow receiveShadow position={[0, def.height / 2, 0]}>
+          <Foundation color="#7a8f95" />
+          <mesh castShadow receiveShadow position={[0, def.height / 2 + 0.06, 0]}>
             <boxGeometry args={[0.8, def.height, 0.8]} />
             <meshStandardMaterial color={c} flatShading />
+          </mesh>
+          {/* storefront glass */}
+          <mesh position={[0, 0.32, 0.41]}>
+            <boxGeometry args={[0.6, 0.34, 0.02]} />
+            <meshStandardMaterial color={WINDOW} emissive={WINDOW} emissiveIntensity={0.2} flatShading />
           </mesh>
           <mesh castShadow position={[0, def.height + 0.06, 0]}>
             <boxGeometry args={[0.86, 0.12, 0.86]} />
             <meshStandardMaterial color={roof} flatShading />
           </mesh>
           {/* awning */}
-          <mesh position={[0, 0.35, 0.42]} rotation={[Math.PI / 2.6, 0, 0]}>
-            <planeGeometry args={[0.7, 0.22]} />
+          <mesh position={[0, 0.56, 0.44]} rotation={[Math.PI / 2.6, 0, 0]}>
+            <planeGeometry args={[0.72, 0.22]} />
             <meshStandardMaterial color="#e8963a" side={2} flatShading />
           </mesh>
         </group>
@@ -67,43 +104,61 @@ function Model({ type }: { type: BuildingType }) {
     case "FACTORY":
       return (
         <group>
-          <mesh castShadow receiveShadow position={[0, def.height / 2, 0]}>
+          <Foundation color="#6f747a" />
+          <mesh castShadow receiveShadow position={[0, def.height / 2 + 0.06, 0]}>
             <boxGeometry args={[0.82, def.height, 0.82]} />
             <meshStandardMaterial color={c} flatShading />
           </mesh>
-          <mesh castShadow position={[0.22, def.height + 0.2, -0.15]}>
-            <cylinderGeometry args={[0.1, 0.12, 0.5, 6]} />
+          {/* sawtooth-ish roof block */}
+          <mesh castShadow position={[0, def.height + 0.11, 0]}>
+            <boxGeometry args={[0.86, 0.12, 0.86]} />
             <meshStandardMaterial color={roof} flatShading />
           </mesh>
-          <mesh castShadow position={[-0.05, def.height + 0.12, 0.1]}>
-            <cylinderGeometry args={[0.08, 0.1, 0.34, 6]} />
-            <meshStandardMaterial color={roof} flatShading />
-          </mesh>
+          {[0.22, -0.05].map((x, i) => (
+            <mesh key={x} castShadow position={[x, def.height + 0.28, i === 0 ? -0.15 : 0.1]}>
+              <cylinderGeometry args={[0.09, 0.12, 0.5, 6]} />
+              <meshStandardMaterial color="#3f4249" flatShading />
+            </mesh>
+          ))}
         </group>
       )
     case "PARK":
       return (
         <group>
-          <mesh receiveShadow position={[0, def.height / 2, 0]}>
-            <boxGeometry args={[0.9, def.height, 0.9]} />
+          <mesh receiveShadow position={[0, def.height / 2 + 0.03, 0]}>
+            <boxGeometry args={[0.92, def.height, 0.92]} />
             <meshStandardMaterial color={c} flatShading />
           </mesh>
-          <Tree position={[-0.2, def.height, -0.2]} scale={0.8} />
-          <Tree position={[0.22, def.height, 0.18]} scale={1} />
+          {/* winding path */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, def.height + 0.04, 0]}>
+            <planeGeometry args={[0.18, 0.9]} />
+            <meshStandardMaterial color="#cbb487" />
+          </mesh>
+          <Tree position={[-0.22, def.height, -0.2]} scale={0.8} />
+          <Tree position={[0.24, def.height, 0.18]} scale={1} />
+          <Tree position={[0.2, def.height, -0.28]} scale={0.6} />
         </group>
       )
     case "POWER_PLANT":
       return (
         <group>
-          <mesh castShadow receiveShadow position={[0, def.height / 2, 0]}>
+          <Foundation color="#6f5a3a" />
+          <mesh castShadow receiveShadow position={[0, def.height / 2 + 0.06, 0]}>
             <boxGeometry args={[0.85, def.height, 0.85]} />
             <meshStandardMaterial color={c} flatShading />
           </mesh>
           {[-0.2, 0.2].map((x) => (
-            <mesh key={x} castShadow position={[x, def.height + 0.28, -0.1]}>
-              <cylinderGeometry args={[0.13, 0.16, 0.56, 8]} />
-              <meshStandardMaterial color={roof} flatShading />
-            </mesh>
+            <group key={x}>
+              <mesh castShadow position={[x, def.height + 0.34, -0.1]}>
+                <cylinderGeometry args={[0.13, 0.16, 0.68, 8]} />
+                <meshStandardMaterial color={roof} flatShading />
+              </mesh>
+              {/* smoke cap */}
+              <mesh position={[x, def.height + 0.7, -0.1]}>
+                <cylinderGeometry args={[0.16, 0.13, 0.08, 8]} />
+                <meshStandardMaterial color="#2c2f33" flatShading />
+              </mesh>
+            </group>
           ))}
         </group>
       )
@@ -117,7 +172,7 @@ function Model({ type }: { type: BuildingType }) {
             [-0.25, 0.25],
             [0.25, 0.25],
           ].map(([x, z], i) => (
-            <mesh key={i} castShadow position={[x, 0.45, z]}>
+            <mesh key={i} castShadow position={[x, 0.45, z]} rotation={[0, 0, x > 0 ? -0.08 : 0.08]}>
               <cylinderGeometry args={[0.04, 0.04, 0.9, 5]} />
               <meshStandardMaterial color={roof} flatShading />
             </mesh>
@@ -137,6 +192,26 @@ function Model({ type }: { type: BuildingType }) {
   }
 }
 
+// A bright, unmistakable plot marker painted under every structure. It uses
+// the building's own accent color and glows slightly so the player can always
+// tell "something is built here", regardless of how detailed the model is.
+// This is deliberately simple placeholder art — swap the models above later.
+function PlotMarker({ color }: { color: string }) {
+  return (
+    <group>
+      <mesh position={[0, 0.02, 0]}>
+        <boxGeometry args={[0.96, 0.04, 0.96]} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.35} flatShading />
+      </mesh>
+      {/* thin raised border so the tile pops against neighbours */}
+      <mesh position={[0, 0.05, 0]}>
+        <boxGeometry args={[0.9, 0.02, 0.9]} />
+        <meshStandardMaterial color="#0f141d" />
+      </mesh>
+    </group>
+  )
+}
+
 // A placed building. Memoized because most re-renders come from unrelated UI
 // state; the model only needs to re-render when its identity changes.
 export const Building = memo(function Building({
@@ -148,8 +223,10 @@ export const Building = memo(function Building({
   position: [number, number, number]
   rotation?: number
 }) {
+  const def = getBuilding(type)
   return (
     <group position={position} rotation={[0, (rotation * Math.PI) / 2, 0]}>
+      <PlotMarker color={def.color} />
       <Model type={type} />
     </group>
   )

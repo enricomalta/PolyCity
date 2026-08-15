@@ -36,7 +36,7 @@ export function GameHUD() {
     if (!selectedTile) return { tile: null, building: null }
     const tile = tiles[selectedTile.x]?.[selectedTile.z] ?? null
     const building =
-      state?.buildings.find((b) => b.x === selectedTile.x && b.z === selectedTile.z) ?? null
+      state?.buildings?.find((b) => b.x === selectedTile.x && b.z === selectedTile.z) ?? null
     return { tile, building }
   }, [selectedTile, tiles, state?.buildings])
 
@@ -52,17 +52,27 @@ export function GameHUD() {
 
       {/* Middle row: tools left, inspector right */}
       <div className="mt-3 flex flex-1 items-start justify-between gap-3">
-        <ToolBar
-          tool={tool}
-          onSelect={() => {
-            setTool("SELECT")
-            selectBuildingType(null)
-          }}
-          onDemolish={() => {
-            setTool("DEMOLISH")
-            selectBuildingType(null)
-          }}
-        />
+        <div className="flex flex-col items-start gap-3">
+          <ToolBar
+            tool={tool}
+            onSelect={() => {
+              setTool("SELECT")
+              selectBuildingType(null)
+            }}
+            onDemolish={() => {
+              setTool("DEMOLISH")
+              selectBuildingType(null)
+            }}
+          />
+          <div className="pointer-events-none hidden rounded-lg bg-card/80 px-3 py-2 text-xs leading-relaxed text-muted-foreground shadow-sm backdrop-blur sm:block">
+            <p className="font-medium text-foreground">Controles</p>
+            <p>
+              <span className="font-mono text-foreground">WASD</span> mover câmera
+            </p>
+            <p>Arrastar: girar {"\u00b7"} Botão direito: deslocar</p>
+            <p>Clique: construir / selecionar</p>
+          </div>
+        </div>
 
         <div className="flex flex-col items-end gap-3">
           <GameToast message={lastMessage} onDismiss={clearMessage} />

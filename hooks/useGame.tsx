@@ -1,7 +1,7 @@
 "use client"
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
-import type { City, CityState } from "@/types/city"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
+import type { City, CityPolicy, CityState } from "@/types/city"
 import type { BuildingType, Tile, ToolMode } from "@/types/game"
 import { gameService } from "@/services/game"
 import { DEFAULT_CITY_ID } from "@/lib/game/constants"
@@ -37,6 +37,7 @@ interface GameContextValue {
   selectTile: (c: Coord | null) => void
   build: (x: number, z: number, buildingType: BuildingType, rotation?: number) => Promise<void>
   demolish: (x: number, z: number) => Promise<void>
+  updatePolicy: (policy: CityPolicy) => Promise<boolean>
   clearMessage: () => void
   reload: () => Promise<void>
 }
@@ -56,13 +57,13 @@ export function GameProvider({ cityId = DEFAULT_CITY_ID, children }: { cityId?: 
   const [hoveredTile, setHoveredTile] = useState<Coord | null>(null)
   const [selectedTile, setSelectedTile] = useState<Coord | null>(null)
 
-  // Terrain is generated once and reused; occupancy is derived from the
-  // authoritative building list. Keeping the base terrain in a ref avoids
-  // regenerating geometry inputs on every state change.
-  const baseTiles = useRef<Tile[][]>(generateTerrain())
+  // Terrain is procedurally generated from the city's server-provided seed, so
+  // the world is deterministic, unique per player and persistent. Occupancy is
+  // then derived from the authoritative building list.
+  const baseTiles = useMemo<Tile[][]>(() => generateTerrain(city?.seed ?? 1), [city?.seed])
   const tiles = useMemo(
-    () => applyOccupancy(baseTiles.current, state?.buildings ?? []),
-    [state?.buildings],
+    () => applyOccupancy(baseTiles, state?.buildings ?? []),
+    [baseTiles, state?.buildings],
   )
 
   const load = useCallback(async () => {
@@ -116,6 +117,24 @@ export function GameProvider({ cityId = DEFAULT_CITY_ID, children }: { cityId?: 
     [cityId],
   )
 
+  const updatePolicy = useCallback<GameContextValue["updatePolicy"]>(
+    async (policy) => {
+      setPending(true)
+      try {
+        const res = await gameService.updatePolicy(cityId, policy)
+        setState(res.state)
+        setLastMessage(res.message ?? null)
+        return res.success
+      } catch {
+        setLastMessage("Não foi possível salvar a política municipal.")
+        return false
+      } finally {
+        setPending(false)
+      }
+    },
+    [cityId],
+  )
+
   const selectBuildingType = useCallback((b: BuildingType | null) => {
     setSelectedBuilding(b)
     if (b) setTool(b === "ROAD" ? "ROAD" : "BUILD")
@@ -140,6 +159,7 @@ export function GameProvider({ cityId = DEFAULT_CITY_ID, children }: { cityId?: 
       selectTile: setSelectedTile,
       build,
       demolish,
+      updatePolicy,
       clearMessage: () => setLastMessage(null),
       reload: load,
     }),
@@ -158,6 +178,7 @@ export function GameProvider({ cityId = DEFAULT_CITY_ID, children }: { cityId?: 
       selectBuildingType,
       build,
       demolish,
+      updatePolicy,
       load,
     ],
   )

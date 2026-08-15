@@ -22,5 +22,9 @@ export const CAMERA = {
   panSpeed: 0.8,
 }
 
-// A demo city id used when playing against the mock service.
-export const DEFAULT_CITY_ID = "demo-city"
+// Treasury every brand-new city starts with.
+export const STARTING_MONEY = 5000
+
+// The player's own city is always addressed as "me": the backend resolves it
+// from the authenticated Firebase user, so the client never needs a real id.
+export const DEFAULT_CITY_ID = "me"

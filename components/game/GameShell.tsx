@@ -17,7 +17,7 @@ function GameStage() {
 
   return (
     <div className="relative h-svh w-full overflow-hidden bg-background">
-      {status === "loading" && <FullscreenLoader label="Carregando sua cidade..." />}
+      {status === "loading" && <FullScreenLoader label="Carregando sua cidade..." />}
       {status === "error" && (
         <div className="flex h-full items-center justify-center px-6 text-center">
           <p className="text-muted-foreground">
