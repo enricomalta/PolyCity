@@ -33,6 +33,7 @@ import { Road } from "./Road"
 import { GroundTiles } from "./GroundTiles"
 import { SelectionIndicator } from "./SelectionIndicator"
 import { CameraController } from "./CameraController"
+import { PerformanceMonitor } from "./PerformanceMonitor"
 /**
  * The full 3D city. It reads authoritative state from the game store and
  * turns pointer interactions into INTENTIONS (build/demolish/select) that the
@@ -210,6 +211,7 @@ export function CityScene() {
           "high-performance",
       }}
     >
+      <PerformanceMonitor />
       <color
         attach="background"
         args={["#9fc9e8"]}
