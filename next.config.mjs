@@ -3,9 +3,19 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+
   images: {
     unoptimized: true,
   },
+
+  serverExternalPackages: [
+    "firebase-admin",
+    "firebase-admin/auth",
+    "firebase-admin/app",
+    "firebase-admin/firestore",
+    "jwks-rsa",
+    "jose",
+  ],
 }
 
 export default nextConfig
