@@ -19,32 +19,53 @@ export type BuildingCategory =
   | "INDUSTRIAL"
   | "SERVICES"
 
-export type TerrainType = "GRASS" | "WATER" | "ROCK" | "FOREST" | "SAND"
+export type TerrainType =
+  | "GRASS"
+  | "WATER"
+  | "ROCK"
+  | "FOREST"
+  | "SAND"
 
 export interface Tile {
   x: number
   z: number
   terrain: TerrainType
-  // id of the building occupying this tile, or null when empty
   occupiedBy: string | null
 }
 
-// The frontend sends INTENTIONS, never final state. The backend validates
-// everything (ownership, cost, terrain, cooldown, rules) and replies with
-// the authoritative result.
+// The frontend sends INTENTIONS, never final state.
 export type GameAction =
-  | { type: "BUILD"; buildingType: BuildingType; x: number; z: number; rotation: number }
-  | { type: "DEMOLISH"; x: number; z: number }
-  | { type: "SET_POLICY"; policy: CityPolicy }
+  | {
+      type: "BUILD"
+      buildingType: BuildingType
+      x: number
+      z: number
+      rotation: number
+    }
+  | {
+      type: "DEMOLISH"
+      x: number
+      z: number
+    }
+  | {
+      type: "ROTATE"
+      x: number
+      z: number
+      rotation: number
+    }
+  | {
+      type: "SET_POLICY"
+      policy: CityPolicy
+    }
 
-// Standard envelope returned by every action so the UI can react uniformly.
 export interface GameResponse {
   success: boolean
-  // The full, authoritative city state after applying the action.
   state: CityState
-  // Optional human-friendly message (e.g. why an action was rejected).
   message?: string
 }
 
-// Interaction tools available in the HUD.
-export type ToolMode = "SELECT" | "BUILD" | "ROAD" | "DEMOLISH"
+export type ToolMode =
+  | "SELECT"
+  | "BUILD"
+  | "ROAD"
+  | "DEMOLISH"

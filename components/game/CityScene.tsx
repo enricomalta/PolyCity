@@ -33,7 +33,6 @@ import { Road } from "./Road"
 import { GroundTiles } from "./GroundTiles"
 import { SelectionIndicator } from "./SelectionIndicator"
 import { CameraController } from "./CameraController"
-
 /**
  * The full 3D city. It reads authoritative state from the game store and
  * turns pointer interactions into INTENTIONS (build/demolish/select) that the
@@ -64,18 +63,19 @@ export function CityScene() {
     rotateBuilding,
   } = useGame()
 
-  const buildings = state?.buildings ?? []
+  const buildings =
+    state?.buildings ?? []
 
   // ---------------------------------------------------------------------------
-  // Keyboard controls
+  // R = rotate current building preview
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      // Only rotate while actively placing something.
+    function handleKeyDown(
+      event: KeyboardEvent,
+    ) {
       if (
-        tool !== "BUILD" &&
-        tool !== "ROAD"
+        event.key.toLowerCase() !== "r"
       ) {
         return
       }
@@ -84,8 +84,15 @@ export function CityScene() {
         return
       }
 
-      // Do not steal R from text fields or other editable elements.
-      const target = event.target as HTMLElement | null
+      if (
+        tool !== "BUILD" &&
+        tool !== "ROAD"
+      ) {
+        return
+      }
+
+      const target =
+        event.target as HTMLElement | null
 
       if (
         target?.tagName === "INPUT" ||
@@ -96,23 +103,25 @@ export function CityScene() {
         return
       }
 
-      if (event.key.toLowerCase() !== "r") {
-        return
-      }
-
       event.preventDefault()
 
       rotateBuilding()
     }
 
-    window.addEventListener("keydown", handleKeyDown)
+    window.addEventListener(
+      "keydown",
+      handleKeyDown,
+    )
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown)
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown,
+      )
     }
   }, [
-    tool,
     selectedBuilding,
+    tool,
     rotateBuilding,
   ])
 
@@ -120,33 +129,41 @@ export function CityScene() {
   // Hover validity
   // ---------------------------------------------------------------------------
 
-  const hoverValid = useMemo(() => {
-    if (!hoveredTile) {
-      return false
-    }
+  const hoverValid =
+    useMemo(() => {
+      if (!hoveredTile) {
+        return false
+      }
 
-    const tile =
-      tiles[hoveredTile.x]?.[hoveredTile.z]
+      const tile =
+        tiles[hoveredTile.x]?.[
+          hoveredTile.z
+        ]
 
-    if (tool === "DEMOLISH") {
-      return Boolean(tile?.occupiedBy)
-    }
+      if (tool === "DEMOLISH") {
+        return Boolean(
+          tile?.occupiedBy,
+        )
+      }
 
-    return canPlace(tile)
-  }, [
-    hoveredTile,
-    tiles,
-    tool,
-  ])
+      return canPlace(tile)
+    }, [
+      hoveredTile,
+      tiles,
+      tool,
+    ])
 
   // ---------------------------------------------------------------------------
   // Tile interaction
   // ---------------------------------------------------------------------------
 
-  function handleSelect(x: number, z: number) {
-    const tile = tiles[x]?.[z]
+  function handleSelect(
+    x: number,
+    z: number,
+  ) {
+    const tile =
+      tiles[x]?.[z]
 
-    // Demolish mode
     if (tool === "DEMOLISH") {
       if (tile?.occupiedBy) {
         void demolish(x, z)
@@ -155,9 +172,9 @@ export function CityScene() {
       return
     }
 
-    // Build / road mode
     if (
-      (tool === "BUILD" || tool === "ROAD") &&
+      (tool === "BUILD" ||
+        tool === "ROAD") &&
       selectedBuilding
     ) {
       if (canPlace(tile)) {
@@ -172,7 +189,7 @@ export function CityScene() {
       return
     }
 
-    // Select mode
+    // SELECT mode
     selectTile({ x, z })
   }
 
@@ -182,13 +199,15 @@ export function CityScene() {
         type: PCFShadowMap,
       }}
       camera={{
-        position: CAMERA.initialPosition,
+        position:
+          CAMERA.initialPosition,
         fov: CAMERA.fov,
       }}
       dpr={[1, 2]}
       gl={{
         antialias: true,
-        powerPreference: "high-performance",
+        powerPreference:
+          "high-performance",
       }}
     >
       <color
@@ -205,7 +224,9 @@ export function CityScene() {
         ]}
       />
 
-      <ambientLight intensity={0.75} />
+      <ambientLight
+        intensity={0.75}
+      />
 
       <hemisphereLight
         args={[
@@ -216,10 +237,17 @@ export function CityScene() {
       />
 
       <directionalLight
-        position={[18, 28, 12]}
+        position={[
+          18,
+          28,
+          12,
+        ]}
         intensity={1.5}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[
+          2048,
+          2048,
+        ]}
         shadow-camera-left={-24}
         shadow-camera-right={24}
         shadow-camera-top={24}
@@ -231,7 +259,10 @@ export function CityScene() {
         <GroundTiles
           tiles={tiles}
           onHover={(x, z) =>
-            setHoveredTile({ x, z })
+            setHoveredTile({
+              x,
+              z,
+            })
           }
           onLeave={() =>
             setHoveredTile(null)
@@ -239,58 +270,66 @@ export function CityScene() {
           onSelect={handleSelect}
         />
 
-        {/* ----------------------------------------------------------------- */}
-        {/* Placed buildings                                                  */}
-        {/* ----------------------------------------------------------------- */}
+        {/* Placed buildings */}
 
-        {buildings.map((building) => {
+        {buildings.map((b) => {
           const position: [
             number,
             number,
             number,
           ] = [
-            tileToWorld(building.x),
+            tileToWorld(b.x),
             0,
-            tileToWorld(building.z),
+            tileToWorld(b.z),
           ]
 
-          if (building.type === "ROAD") {
+          if (
+            b.type === "ROAD"
+          ) {
             return (
               <Road
-                key={building.id}
+                key={b.id}
                 position={position}
-                rotation={building.rotation}
+                rotation={
+                  b.rotation
+                }
               />
             )
           }
 
           return (
             <Building
-              key={building.id}
-              type={building.type}
+              key={b.id}
+              type={b.type}
               position={position}
-              rotation={building.rotation}
+              rotation={
+                b.rotation
+              }
             />
           )
         })}
-
-        {/* ----------------------------------------------------------------- */}
-        {/* Building preview / selection                                      */}
-        {/* ----------------------------------------------------------------- */}
 
         <SelectionIndicator
           hovered={hoveredTile}
           selected={selectedTile}
           tool={tool}
-          selectedBuilding={selectedBuilding}
-          rotation={buildRotation}
+          selectedBuilding={
+            selectedBuilding
+          }
           valid={hoverValid}
+          rotation={buildRotation}
         />
 
         <ContactShadows
-          position={[0, 0.01, 0]}
+          position={[
+            0,
+            0.01,
+            0,
+          ]}
           opacity={0.35}
-          scale={TILE_SIZE * 40}
+          scale={
+            TILE_SIZE * 40
+          }
           blur={2}
           far={10}
         />
@@ -301,14 +340,22 @@ export function CityScene() {
       <OrbitControls
         makeDefault
         enablePan
-        panSpeed={CAMERA.panSpeed}
-        minDistance={CAMERA.minDistance}
-        maxDistance={CAMERA.maxDistance}
-        minPolarAngle={CAMERA.minPolarAngle}
-        maxPolarAngle={CAMERA.maxPolarAngle}
+        panSpeed={
+          CAMERA.panSpeed
+        }
+        minDistance={
+          CAMERA.minDistance
+        }
+        maxDistance={
+          CAMERA.maxDistance
+        }
+        minPolarAngle={
+          CAMERA.minPolarAngle
+        }
+        maxPolarAngle={
+          CAMERA.maxPolarAngle
+        }
         target={[0, 0, 0]}
-                // Left drag orbits the camera, right drag pans. Building happens on a
-        // deliberate tap (handled in GroundTiles), never while dragging.
         mouseButtons={{
           LEFT: MOUSE.ROTATE,
           MIDDLE: MOUSE.DOLLY,

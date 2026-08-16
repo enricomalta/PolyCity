@@ -28,6 +28,7 @@ export function GameHUD() {
     selectBuildingType,
     selectTile,
     demolish,
+    rotateSelectedBuilding,
     lastMessage,
     clearMessage,
   } = useGame()
@@ -84,6 +85,17 @@ export function GameHUD() {
               onDemolish={(x, z) => {
                 void demolish(x, z)
                 selectTile(null)
+              }}
+              onRotate={(
+                x,
+                z,
+                rotation,
+              ) => {
+                void rotateSelectedBuilding(
+                  x,
+                  z,
+                  rotation,
+                )
               }}
             />
           )}

@@ -189,6 +189,46 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
     return { success: true, state: docToState(doc), message: "Construção demolida." }
   }
 
+  if (action.type === "ROTATE") {
+    const idx =
+      doc.buildings.findIndex(
+        (b) =>
+          b.x === action.x &&
+          b.z === action.z,
+      )
+
+    if (idx === -1) {
+      return reject(
+        "Nenhuma construção encontrada aqui.",
+      )
+    }
+
+    const normalizedRotation =
+      ((action.rotation % 4) + 4) % 4
+
+    doc.buildings[idx] = {
+      ...doc.buildings[idx],
+      rotation: normalizedRotation,
+    }
+
+    doc.updatedAt =
+      new Date(now).toISOString()
+
+    await cityRef.update({
+      buildings: doc.buildings,
+      money: doc.money,
+      lastTickAt: doc.lastTickAt,
+      updatedAt: doc.updatedAt,
+    })
+
+    return {
+      success: true,
+      state: docToState(doc),
+      message:
+        "Construção rotacionada.",
+    }
+  }
+
   if (action.type === "SET_POLICY") {
     doc.policy = sanitizePolicy(action.policy)
     doc.updatedAt = new Date(now).toISOString()

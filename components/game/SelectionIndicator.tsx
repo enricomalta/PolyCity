@@ -19,36 +19,42 @@ interface Coord {
   z: number
 }
 
-interface SelectionIndicatorProps {
-  hovered: Coord | null
-  selected: Coord | null
-  tool: ToolMode
-  selectedBuilding: BuildingType | null
-  rotation: number
-  valid: boolean
-}
-
-// Visual feedback for the cursor: a tile highlight (green=valid, red=invalid),
-// a ghost preview of the armed building, and a marker on the selected tile.
+// Visual feedback for the cursor:
+// - tile highlight
+// - building ghost preview
+// - direction indicator
+// - selected tile marker
 export function SelectionIndicator({
   hovered,
   selected,
   tool,
   selectedBuilding,
-  rotation,
   valid,
-}: SelectionIndicatorProps) {
+  rotation,
+}: {
+  hovered: Coord | null
+  selected: Coord | null
+  tool: ToolMode
+  selectedBuilding:
+    | BuildingType
+    | null
+  valid: boolean
+  rotation: number
+}) {
   const isBuilding =
     tool === "BUILD" ||
     tool === "ROAD"
 
-  const highlight = valid
-    ? "#4ade80"
-    : "#f87171"
+  const highlight =
+    valid
+      ? "#4ade80"
+      : "#f87171"
 
-  const selectedDefinition =
+  const building =
     selectedBuilding
-      ? getBuilding(selectedBuilding)
+      ? getBuilding(
+          selectedBuilding,
+        )
       : null
 
   const rotationRadians =
@@ -56,21 +62,21 @@ export function SelectionIndicator({
 
   return (
     <group>
-      {/* ----------------------------------------------------------------- */}
-      {/* Hovered tile                                                      */}
-      {/* ----------------------------------------------------------------- */}
-
       {hovered && (
         <group
           position={[
-            tileToWorld(hovered.x),
+            tileToWorld(
+              hovered.x,
+            ),
             0,
-            tileToWorld(hovered.z),
+            tileToWorld(
+              hovered.z,
+            ),
           ]}
         >
-          {/* ------------------------------------------------------------- */}
-          {/* Tile footprint                                                 */}
-          {/* ------------------------------------------------------------- */}
+          {/* ============================================================= */}
+          {/* TILE HIGHLIGHT                                                 */}
+          {/* ============================================================= */}
 
           <mesh
             rotation={[
@@ -95,179 +101,202 @@ export function SelectionIndicator({
               color={highlight}
               transparent
               opacity={0.35}
+              depthWrite={false}
             />
           </mesh>
 
-          {/* ------------------------------------------------------------- */}
-          {/* Building preview                                               */}
-          {/* ------------------------------------------------------------- */}
+          {/* ============================================================= */}
+          {/* BUILDING PREVIEW                                               */}
+          {/* ============================================================= */}
 
           {isBuilding &&
             selectedBuilding &&
-            selectedDefinition && (
-              <>
+            building && (
+              <group
+                rotation={[
+                  0,
+                  rotationRadians,
+                  0,
+                ]}
+              >
                 {/* ------------------------------------------------------- */}
-                {/* ROAD PREVIEW                                             */}
+                {/* Ghost building body                                      */}
                 {/* ------------------------------------------------------- */}
 
-                {selectedBuilding === "ROAD" ? (
-                  <group
-                    rotation={[
-                      0,
-                      rotationRadians,
-                      0,
-                    ]}
-                  >
-                    {/* Asphalt */}
-
-                    <mesh
-                      position={[
-                        0,
-                        selectedDefinition.height / 2 +
-                          0.03,
-                        0,
-                      ]}
-                    >
-                      <boxGeometry
-                        args={[
-                          TILE_SIZE * 0.98,
-                          selectedDefinition.height,
-                          TILE_SIZE * 0.98,
-                        ]}
-                      />
-
-                      <meshStandardMaterial
-                        color={
-                          valid
-                            ? selectedDefinition.color
-                            : "#f87171"
-                        }
-                        transparent
-                        opacity={0.55}
-                        flatShading
-                      />
-                    </mesh>
-
-                    {/* Curbs */}
-
-                    {[
-                      -TILE_SIZE * 0.49,
-                      TILE_SIZE * 0.49,
-                    ].map((x) => (
-                      <mesh
-                        key={x}
-                        position={[
-                          x,
-                          selectedDefinition.height +
-                            0.045,
-                          0,
-                        ]}
-                      >
-                        <boxGeometry
-                          args={[
-                            0.07,
-                            0.05,
-                            TILE_SIZE * 0.96,
-                          ]}
-                        />
-
-                        <meshStandardMaterial
-                          color={
-                            valid
-                              ? "#9aa0a6"
-                              : "#b94a4a"
-                          }
-                          transparent
-                          opacity={0.75}
-                          flatShading
-                        />
-                      </mesh>
-                    ))}
-
-                    {/* Center lane */}
-
-                    {[-0.3, 0, 0.3].map(
-                      (z) => (
-                        <mesh
-                          key={z}
-                          position={[
-                            0,
-                            selectedDefinition.height +
-                              0.052,
-                            z,
-                          ]}
-                          rotation={[
-                            -Math.PI / 2,
-                            0,
-                            0,
-                          ]}
-                        >
-                          <planeGeometry
-                            args={[
-                              0.08,
-                              0.18,
-                            ]}
-                          />
-
-                          <meshBasicMaterial
-                            color="#e8c33a"
-                            transparent
-                            opacity={0.9}
-                          />
-                        </mesh>
+                <mesh
+                  position={[
+                    0,
+                    building.height / 2 +
+                      0.04,
+                    0,
+                  ]}
+                >
+                  <boxGeometry
+                    args={[
+                      0.75,
+                      Math.max(
+                        0.1,
+                        building.height,
                       ),
-                    )}
-                  </group>
-                ) : (
-                  /* ------------------------------------------------------- */
-                  /* NORMAL BUILDING PREVIEW                                 */
-                  /* ------------------------------------------------------- */
+                      0.75,
+                    ]}
+                  />
 
-                  <group
+                  <meshStandardMaterial
+                    color={
+                      valid
+                        ? building.color
+                        : "#f87171"
+                    }
+                    transparent
+                    opacity={0.38}
+                    flatShading
+                    depthWrite={false}
+                  />
+                </mesh>
+
+                {/* ------------------------------------------------------- */}
+                {/* Building front/facade                                    */}
+                {/* ------------------------------------------------------- */}
+
+                <mesh
+                  position={[
+                    0,
+                    0.28,
+                    0.39,
+                  ]}
+                >
+                  <boxGeometry
+                    args={[
+                      0.42,
+                      0.22,
+                      0.035,
+                    ]}
+                  />
+
+                  <meshBasicMaterial
+                    color={
+                      valid
+                        ? "#ffffff"
+                        : "#ffd0d0"
+                    }
+                    transparent
+                    opacity={0.9}
+                    depthWrite={false}
+                  />
+                </mesh>
+
+                {/* ------------------------------------------------------- */}
+                {/* Entrance                                                  */}
+                {/* ------------------------------------------------------- */}
+
+                <mesh
+                  position={[
+                    0,
+                    0.15,
+                    0.415,
+                  ]}
+                >
+                  <boxGeometry
+                    args={[
+                      0.14,
+                      0.25,
+                      0.045,
+                    ]}
+                  />
+
+                  <meshBasicMaterial
+                    color={
+                      valid
+                        ? "#6b4226"
+                        : "#8f3030"
+                    }
+                    transparent
+                    opacity={0.95}
+                    depthWrite={false}
+                  />
+                </mesh>
+
+                {/* ------------------------------------------------------- */}
+                {/* Direction arrow                                           */}
+                {/* ------------------------------------------------------- */}
+
+                <group
+                  position={[
+                    0,
+                    0.06,
+                    0.58,
+                  ]}
+                >
+                  <mesh
                     rotation={[
+                      -Math.PI / 2,
                       0,
-                      rotationRadians,
                       0,
                     ]}
                   >
-                    <mesh
-                      position={[
-                        0,
-                        selectedDefinition.height / 2 +
-                          0.03,
-                        0,
+                    <coneGeometry
+                      args={[
+                        0.10,
+                        0.22,
+                        4,
                       ]}
-                    >
-                      <boxGeometry
-                        args={[
-                          0.75,
-                          Math.max(
-                            0.1,
-                            selectedDefinition.height,
-                          ),
-                          0.75,
-                        ]}
-                      />
+                    />
 
-                      <meshStandardMaterial
-                        color={
-                          valid
-                            ? selectedDefinition.color
-                            : "#f87171"
-                        }
-                        transparent
-                        opacity={0.5}
-                        flatShading
-                      />
-                    </mesh>
-                  </group>
-                )}
-              </>
+                    <meshBasicMaterial
+                      color={
+                        valid
+                          ? "#ffffff"
+                          : "#ffd0d0"
+                      }
+                      transparent
+                      opacity={0.95}
+                      depthWrite={false}
+                    />
+                  </mesh>
+                </group>
+
+                {/* ------------------------------------------------------- */}
+                {/* Direction line                                            */}
+                {/* ------------------------------------------------------- */}
+
+                <mesh
+                  position={[
+                    0,
+                    0.055,
+                    0.48,
+                  ]}
+                  rotation={[
+                    0,
+                    0,
+                    0,
+                  ]}
+                >
+                  <boxGeometry
+                    args={[
+                      0.035,
+                      0.025,
+                      0.25,
+                    ]}
+                  />
+
+                  <meshBasicMaterial
+                    color={
+                      valid
+                        ? "#ffffff"
+                        : "#ffd0d0"
+                    }
+                    transparent
+                    opacity={0.9}
+                    depthWrite={false}
+                  />
+                </mesh>
+              </group>
             )}
 
-          {/* ------------------------------------------------------------- */}
-          {/* Demolish marker                                                */}
-          {/* ------------------------------------------------------------- */}
+          {/* ============================================================= */}
+          {/* DEMOLISH MARKER                                                */}
+          {/* ============================================================= */}
 
           {tool === "DEMOLISH" && (
             <mesh
@@ -300,9 +329,9 @@ export function SelectionIndicator({
         </group>
       )}
 
-      {/* ----------------------------------------------------------------- */}
-      {/* Selected tile                                                     */}
-      {/* ----------------------------------------------------------------- */}
+      {/* =============================================================== */}
+      {/* SELECTED TILE                                                    */}
+      {/* =============================================================== */}
 
       {selected &&
         tool === "SELECT" && (
@@ -313,9 +342,13 @@ export function SelectionIndicator({
               0,
             ]}
             position={[
-              tileToWorld(selected.x),
+              tileToWorld(
+                selected.x,
+              ),
               0.03,
-              tileToWorld(selected.z),
+              tileToWorld(
+                selected.z,
+              ),
             ]}
           >
             <ringGeometry
