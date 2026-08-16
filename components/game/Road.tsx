@@ -76,51 +76,48 @@ function createRoadShape(
 
   if (connectionCount === 3) {
     if (!hasN) {
-      // E + S + W
-      shape.moveTo(-half, -halfWidth)
-      shape.lineTo(-halfWidth, -halfWidth)
-      shape.lineTo(-halfWidth, half)
-      shape.lineTo(halfWidth, half)
+      // E + S + W: barra E-W, perna para o Sul (lado presente)
+      shape.moveTo(-halfWidth, -half)
+      shape.lineTo(halfWidth, -half)
       shape.lineTo(halfWidth, -halfWidth)
       shape.lineTo(half, -halfWidth)
       shape.lineTo(half, halfWidth)
       shape.lineTo(-half, halfWidth)
       shape.lineTo(-half, -halfWidth)
+      shape.lineTo(-halfWidth, -halfWidth)
       shape.closePath()
     } else if (!hasE) {
-      // N + S + W
+      // N + S + W: barra N-S, perna para Oeste (lado presente)
       shape.moveTo(-halfWidth, -half)
       shape.lineTo(halfWidth, -half)
-      shape.lineTo(halfWidth, -halfWidth)
+      shape.lineTo(halfWidth, half)
+      shape.lineTo(-halfWidth, half)
+      shape.lineTo(-halfWidth, halfWidth)
+      shape.lineTo(-half, halfWidth)
+      shape.lineTo(-half, -halfWidth)
+      shape.lineTo(-halfWidth, -halfWidth)
+      shape.closePath()
+    } else if (!hasS) {
+      // N + E + W: barra E-W, perna para o Norte (lado presente)
+      shape.moveTo(-halfWidth, half)
+      shape.lineTo(halfWidth, half)
+      shape.lineTo(halfWidth, halfWidth)
+      shape.lineTo(half, halfWidth)
+      shape.lineTo(half, -halfWidth)
       shape.lineTo(-half, -halfWidth)
       shape.lineTo(-half, halfWidth)
       shape.lineTo(-halfWidth, halfWidth)
-      shape.lineTo(-halfWidth, half)
-      shape.lineTo(halfWidth, half)
-      shape.lineTo(halfWidth, halfWidth)
-      shape.lineTo(-halfWidth, halfWidth)
-      shape.closePath()
-    } else if (!hasS) {
-      // N + E + W
-      shape.moveTo(-halfWidth, -half)
-      shape.lineTo(halfWidth, -half)
-      shape.lineTo(halfWidth, -halfWidth)
-      shape.lineTo(half, -halfWidth)
-      shape.lineTo(half, halfWidth)
-      shape.lineTo(halfWidth, halfWidth)
-      shape.lineTo(halfWidth, half)
-      shape.lineTo(-halfWidth, half)
       shape.closePath()
     } else {
-      // N + E + S
-      shape.moveTo(-halfWidth, -half)
-      shape.lineTo(halfWidth, -half)
+      // N + E + S: barra N-S, perna para Leste (lado presente)
+      shape.moveTo(halfWidth, -half)
+      shape.lineTo(-halfWidth, -half)
+      shape.lineTo(-halfWidth, half)
+      shape.lineTo(halfWidth, half)
       shape.lineTo(halfWidth, halfWidth)
       shape.lineTo(half, halfWidth)
       shape.lineTo(half, -halfWidth)
       shape.lineTo(halfWidth, -halfWidth)
-      shape.lineTo(halfWidth, half)
-      shape.lineTo(-halfWidth, half)
       shape.closePath()
     }
 
@@ -173,17 +170,17 @@ function createRoadShape(
     let endAngle = Math.PI / 2
 
     if (hasN && hasE) {
-      startAngle = Math.PI / 2
-      endAngle = Math.PI
-    } else if (hasE && hasS) {
-      startAngle = Math.PI
-      endAngle = Math.PI * 1.5
-    } else if (hasS && hasW) {
-      startAngle = Math.PI * 1.5
-      endAngle = Math.PI * 2
-    } else if (hasW && hasN) {
       startAngle = 0
       endAngle = Math.PI / 2
+    } else if (hasE && hasS) {
+      startAngle = Math.PI * 1.5
+      endAngle = Math.PI * 2
+    } else if (hasS && hasW) {
+      startAngle = Math.PI
+      endAngle = Math.PI * 1.5
+    } else if (hasW && hasN) {
+      startAngle = Math.PI / 2
+      endAngle = Math.PI
     } else {
       shape.moveTo(-halfWidth, -half)
       shape.lineTo(halfWidth, -half)
@@ -242,7 +239,8 @@ function createRoadShape(
    */
 
   if (connectionCount === 1) {
-    if (hasN || hasS) {
+    if (hasS) {
+      // aberta ao Sul (y=-half), tampa arredondada ao Norte (y=+half)
       shape.moveTo(-halfWidth, -half)
       shape.lineTo(halfWidth, -half)
       shape.lineTo(halfWidth, half)
@@ -257,15 +255,48 @@ function createRoadShape(
       return shape
     }
 
-    shape.moveTo(-half, -halfWidth)
-    shape.lineTo(half, -halfWidth)
+    if (hasN) {
+      // aberta ao Norte (y=+half), tampa arredondada ao Sul (y=-half)
+      shape.moveTo(-halfWidth, half)
+      shape.lineTo(halfWidth, half)
+      shape.lineTo(halfWidth, -half)
+      shape.quadraticCurveTo(
+        0,
+        -half - halfWidth * 0.35,
+        -halfWidth,
+        -half,
+      )
+      shape.closePath()
+
+      return shape
+    }
+
+    if (hasW) {
+      // aberta a Oeste (x=-half), tampa arredondada a Leste (x=+half)
+      shape.moveTo(-half, -halfWidth)
+      shape.lineTo(half, -halfWidth)
+      shape.quadraticCurveTo(
+        half + halfWidth * 0.35,
+        0,
+        half,
+        halfWidth,
+      )
+      shape.lineTo(-half, halfWidth)
+      shape.closePath()
+
+      return shape
+    }
+
+    // hasE: aberta a Leste (x=+half), tampa arredondada a Oeste (x=-half)
+    shape.moveTo(half, -halfWidth)
+    shape.lineTo(-half, -halfWidth)
     shape.quadraticCurveTo(
-      half + halfWidth * 0.35,
+      -half - halfWidth * 0.35,
       0,
-      half,
+      -half,
       halfWidth,
     )
-    shape.lineTo(-half, halfWidth)
+    shape.lineTo(half, halfWidth)
     shape.closePath()
 
     return shape
@@ -438,9 +469,10 @@ function CurveCurbs({
 
   const curb = 0.08
   const curbHeight = 0.05
-  const inset = 0.08
   /*
-   * Cada curva recebe dois passeios retos.
+   * Cada curva recebe dois passeios retos, centrados (0) no eixo
+   * perpendicular ao qual correm e encostados (±half ∓ 0.05) no eixo em
+   * que fecham a curva.
    *
    * N + E:
    *   passeio no lado W e no lado S
@@ -459,47 +491,15 @@ function CurveCurbs({
     return (
       <>
         {/* W */}
-        <mesh
-          position={[
-            -half + 0.05,
-            y,
-            -half + 0.95 / 2,
-          ]}
-        >
-          <boxGeometry
-            args={[
-              curb,
-              curbHeight,
-              size,
-            ]}
-          />
-
-          <meshStandardMaterial
-            color="#9aa0a6"
-            flatShading
-          />
+        <mesh position={[-half + 0.05, y, 0]}>
+          <boxGeometry args={[curb, curbHeight, size]} />
+          <meshStandardMaterial color="#9aa0a6" flatShading />
         </mesh>
 
         {/* S */}
-        <mesh
-          position={[
-            half -0.95 / 2,
-            y,
-            half - 0.05,
-          ]}
-        >
-          <boxGeometry
-            args={[
-              size,
-              curbHeight,
-              curb,
-            ]}
-          />
-
-          <meshStandardMaterial
-            color="#9aa0a6"
-            flatShading
-          />
+        <mesh position={[0, y, half - 0.05]}>
+          <boxGeometry args={[size, curbHeight, curb]} />
+          <meshStandardMaterial color="#9aa0a6" flatShading />
         </mesh>
       </>
     )
@@ -509,47 +509,15 @@ function CurveCurbs({
     return (
       <>
         {/* N */}
-        <mesh
-          position={[
-            -half +1 / 2,
-            y,
-            -half + 0.05,
-          ]}
-        >
-          <boxGeometry
-            args={[
-              size,
-              curbHeight,
-              curb,
-            ]}
-          />
-
-          <meshStandardMaterial
-            color="#9aa0a6"
-            flatShading
-          />
+        <mesh position={[0, y, -half + 0.05]}>
+          <boxGeometry args={[size, curbHeight, curb]} />
+          <meshStandardMaterial color="#9aa0a6" flatShading />
         </mesh>
 
         {/* W */}
-        <mesh
-          position={[
-            -half + 0.05,
-            y,
-            half -0.95 / 2,
-          ]}
-        >
-          <boxGeometry
-            args={[
-              curb,
-              curbHeight,
-              size,
-            ]}
-          />
-
-          <meshStandardMaterial
-            color="#9aa0a6"
-            flatShading
-          />
+        <mesh position={[-half + 0.05, y, 0]}>
+          <boxGeometry args={[curb, curbHeight, size]} />
+          <meshStandardMaterial color="#9aa0a6" flatShading />
         </mesh>
       </>
     )
@@ -559,47 +527,15 @@ function CurveCurbs({
     return (
       <>
         {/* E */}
-        <mesh
-          position={[
-            half - 0.05,
-            y,
-            half - 0.95 / 2,
-          ]}
-        >
-          <boxGeometry
-            args={[
-              curb,
-              curbHeight,
-              size,
-            ]}
-          />
-
-          <meshStandardMaterial
-            color="#9aa0a6"
-            flatShading
-          />
+        <mesh position={[half - 0.05, y, 0]}>
+          <boxGeometry args={[curb, curbHeight, size]} />
+          <meshStandardMaterial color="#9aa0a6" flatShading />
         </mesh>
 
         {/* N */}
-        <mesh
-          position={[
-            half -1 / 2,
-            y,
-            -half + 0.05,
-          ]}
-        >
-          <boxGeometry
-            args={[
-              size,
-              curbHeight,
-              curb,
-            ]}
-          />
-
-          <meshStandardMaterial
-            color="#9aa0a6"
-            flatShading
-          />
+        <mesh position={[0, y, -half + 0.05]}>
+          <boxGeometry args={[size, curbHeight, curb]} />
+          <meshStandardMaterial color="#9aa0a6" flatShading />
         </mesh>
       </>
     )
@@ -609,47 +545,15 @@ function CurveCurbs({
     return (
       <>
         {/* E */}
-        <mesh
-          position={[
-            half - 0.05,
-            y,
-            -half + 0.95 / 2,
-          ]}
-        >
-          <boxGeometry
-            args={[
-              curb,
-              curbHeight,
-              size,
-            ]}
-          />
-
-          <meshStandardMaterial
-            color="#9aa0a6"
-            flatShading
-          />
+        <mesh position={[half - 0.05, y, 0]}>
+          <boxGeometry args={[curb, curbHeight, size]} />
+          <meshStandardMaterial color="#9aa0a6" flatShading />
         </mesh>
 
         {/* S */}
-        <mesh
-          position={[
-            -half + 0.95 / 2,
-            y,
-            half - 0.05,
-          ]}
-        >
-          <boxGeometry
-            args={[
-              size,
-              curbHeight,
-              curb,
-            ]}
-          />
-
-          <meshStandardMaterial
-            color="#9aa0a6"
-            flatShading
-          />
+        <mesh position={[0, y, half - 0.05]}>
+          <boxGeometry args={[size, curbHeight, curb]} />
+          <meshStandardMaterial color="#9aa0a6" flatShading />
         </mesh>
       </>
     )
@@ -713,7 +617,7 @@ function TCurbs({
           args={[
             CURB_WIDTH,
             CURB_HEIGHT,
-            size * 0.42,
+            size,
           ]}
         />
 
@@ -736,7 +640,7 @@ function TCurbs({
       >
         <boxGeometry
           args={[
-            size * 0.42,
+            size,
             CURB_HEIGHT,
             CURB_WIDTH,
           ]}
@@ -763,7 +667,7 @@ function TCurbs({
           args={[
             CURB_WIDTH,
             CURB_HEIGHT,
-            size * 0.42,
+            size,
           ]}
         />
 
