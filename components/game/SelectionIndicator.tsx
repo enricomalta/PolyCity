@@ -1,7 +1,10 @@
 "use client"
 
+import { useMemo } from "react"
+
 import type {
   BuildingType,
+  Tile,
   ToolMode,
 } from "@/types/game"
 
@@ -14,33 +17,53 @@ import {
   getBuilding,
 } from "@/lib/game/buildings"
 
-interface Coord {
-  x: number
-  z: number
-}
+import { canPlace } from "@/lib/game/grid"
+
+import { useSelection } from "@/hooks/useGame"
 
 // Visual feedback for the cursor:
 // - tile highlight
 // - building ghost preview
 // - direction indicator
 // - selected tile marker
+//
+// hoveredTile/selectedTile são lidos diretamente do SelectionContext (via
+// useSelection), e não recebidos como props do CityScene. Isso é o que
+// mantém o Canvas inteiro fora do ciclo de render quando o usuário só está
+// passando o mouse ou selecionando um tile: apenas este componente
+// re-renderiza, não o CityScene nem seus outros filhos (GroundTiles,
+// buildings, etc).
 export function SelectionIndicator({
-  hovered,
-  selected,
+  tiles,
   tool,
   selectedBuilding,
-  valid,
   rotation,
 }: {
-  hovered: Coord | null
-  selected: Coord | null
+  tiles: Tile[][]
   tool: ToolMode
   selectedBuilding:
     | BuildingType
     | null
-  valid: boolean
   rotation: number
 }) {
+  const { hoveredTile: hovered, selectedTile: selected } =
+    useSelection()
+
+  const valid = useMemo(() => {
+    if (!hovered) {
+      return false
+    }
+
+    const tile =
+      tiles[hovered.x]?.[hovered.z]
+
+    if (tool === "DEMOLISH") {
+      return Boolean(tile?.occupiedBy)
+    }
+
+    return canPlace(tile)
+  }, [hovered, tiles, tool])
+
   const isBuilding =
     tool === "BUILD" ||
     tool === "ROAD"

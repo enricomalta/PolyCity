@@ -2,7 +2,7 @@
 
 import { useMemo } from "react"
 import { useAuth } from "@/hooks/useAuth"
-import { useGame } from "@/hooks/useGame"
+import { useGame, useSelection } from "@/hooks/useGame"
 import { ResourceBar } from "./ResourceBar"
 import { BuildMenu } from "./BuildMenu"
 import { ToolBar } from "./ToolBar"
@@ -23,7 +23,6 @@ export function GameHUD() {
     tiles,
     tool,
     selectedBuilding,
-    selectedTile,
     setTool,
     selectBuildingType,
     selectTile,
@@ -32,6 +31,11 @@ export function GameHUD() {
     lastMessage,
     clearMessage,
   } = useGame()
+
+  // selectedTile vem do SelectionContext (muda a cada clique de tile). O
+  // GameHUD é DOM 2D fora do Canvas, então re-renderizar aqui é barato e é
+  // exatamente o que faz o TileInspector abrir/fechar.
+  const { selectedTile } = useSelection()
 
   const inspected = useMemo(() => {
     if (!selectedTile) return { tile: null, building: null }

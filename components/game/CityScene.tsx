@@ -2,8 +2,8 @@
 
 import {
   Suspense,
+  useCallback,
   useEffect,
-  useMemo,
 } from "react"
 
 import { Canvas } from "@react-three/fiber"
@@ -43,15 +43,18 @@ import { PerformanceMonitor } from "./PerformanceMonitor"
  * so the canvas can never blank out waiting on a network fetch.
  */
 export function CityScene() {
+  // Nota: hoveredTile/selectedTile NÃO são lidos aqui de propósito. Eles
+  // vivem no SelectionContext (useSelection) e mudam a cada
+  // pointermove/clique. Se este componente os consumisse, o CityScene (e
+  // toda a árvore do Canvas: GroundTiles, buildings, etc.) reconciliaria a
+  // cada hover/seleção — foi essa a causa das Long Tasks. Quem precisa do
+  // valor atual (SelectionIndicator) lê o SelectionContext diretamente.
   const {
     tiles,
     state,
 
     tool,
     selectedBuilding,
-
-    hoveredTile,
-    selectedTile,
 
     buildRotation,
 
@@ -127,72 +130,67 @@ export function CityScene() {
   ])
 
   // ---------------------------------------------------------------------------
-  // Hover validity
+  // Tile interaction
+  //
+  // Memoizados com useCallback para que GroundTiles não receba novas
+  // referências de handler a cada render de CityScene (ex.: quando `state`
+  // muda após um build/demolish).
   // ---------------------------------------------------------------------------
 
-  const hoverValid =
-    useMemo(() => {
-      if (!hoveredTile) {
-        return false
-      }
+  const handleHover = useCallback(
+    (x: number, z: number) => {
+      setHoveredTile({ x, z })
+    },
+    [setHoveredTile],
+  )
 
+  const handleLeave = useCallback(() => {
+    setHoveredTile(null)
+  }, [setHoveredTile])
+
+  const handleSelect = useCallback(
+    (x: number, z: number) => {
       const tile =
-        tiles[hoveredTile.x]?.[
-          hoveredTile.z
-        ]
+        tiles[x]?.[z]
 
       if (tool === "DEMOLISH") {
-        return Boolean(
-          tile?.occupiedBy,
-        )
+        if (tile?.occupiedBy) {
+          void demolish(x, z)
+        }
+
+        return
       }
 
-      return canPlace(tile)
-    }, [
-      hoveredTile,
+      if (
+        (tool === "BUILD" ||
+          tool === "ROAD") &&
+        selectedBuilding
+      ) {
+        if (canPlace(tile)) {
+          void build(
+            x,
+            z,
+            selectedBuilding,
+            buildRotation,
+          )
+        }
+
+        return
+      }
+
+      // SELECT mode
+      selectTile({ x, z })
+    },
+    [
       tiles,
       tool,
-    ])
-
-  // ---------------------------------------------------------------------------
-  // Tile interaction
-  // ---------------------------------------------------------------------------
-
-  function handleSelect(
-    x: number,
-    z: number,
-  ) {
-    const tile =
-      tiles[x]?.[z]
-
-    if (tool === "DEMOLISH") {
-      if (tile?.occupiedBy) {
-        void demolish(x, z)
-      }
-
-      return
-    }
-
-    if (
-      (tool === "BUILD" ||
-        tool === "ROAD") &&
-      selectedBuilding
-    ) {
-      if (canPlace(tile)) {
-        void build(
-          x,
-          z,
-          selectedBuilding,
-          buildRotation,
-        )
-      }
-
-      return
-    }
-
-    // SELECT mode
-    selectTile({ x, z })
-  }
+      selectedBuilding,
+      buildRotation,
+      build,
+      demolish,
+      selectTile,
+    ],
+  )
 
   return (
     <Canvas
@@ -260,15 +258,8 @@ export function CityScene() {
       <Suspense fallback={null}>
         <GroundTiles
           tiles={tiles}
-          onHover={(x, z) =>
-            setHoveredTile({
-              x,
-              z,
-            })
-          }
-          onLeave={() =>
-            setHoveredTile(null)
-          }
+          onHover={handleHover}
+          onLeave={handleLeave}
           onSelect={handleSelect}
         />
 
@@ -312,13 +303,11 @@ export function CityScene() {
         })}
 
         <SelectionIndicator
-          hovered={hoveredTile}
-          selected={selectedTile}
+          tiles={tiles}
           tool={tool}
           selectedBuilding={
             selectedBuilding
           }
-          valid={hoverValid}
           rotation={buildRotation}
         />
 

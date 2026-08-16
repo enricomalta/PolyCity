@@ -33,10 +33,23 @@ export type LoadStatus =
   | "ready"
   | "error"
 
-interface Coord {
+// Reutilizado em toda a árvore (CityScene, SelectionIndicator, hooks de
+// slice). Não duplicar esta interface em outro arquivo.
+export interface Coord {
   x: number
   z: number
 }
+
+// ---------------------------------------------------------------------------
+// Contexto de MUNDO / BUILD
+//
+// Tudo aqui muda com baixa frequência (carregamento da cidade, build,
+// demolish, troca de ferramenta, seleção de building para construir).
+// CityScene depende deste contexto para desenhar o Canvas e por isso ele
+// NUNCA deve carregar hoveredTile/selectedTile, que mudam a cada
+// pointermove/click. Isso é o que fazia o Canvas inteiro reconciliar a cada
+// hover/seleção, gerando as Long Tasks.
+// ---------------------------------------------------------------------------
 
 interface GameContextValue {
   // ---- city data ----
@@ -49,12 +62,10 @@ interface GameContextValue {
   pending: boolean
   lastMessage: string | null
 
-  // ---- UI / selection / build-mode state ----
+  // ---- UI / build-mode state ----
 
   tool: ToolMode
   selectedBuilding: BuildingType | null
-  hoveredTile: Coord | null
-  selectedTile: Coord | null
 
   // Rotation of the object currently being placed.
   // 0 = 0°
@@ -71,6 +82,9 @@ interface GameContextValue {
     b: BuildingType | null,
   ) => void
 
+  // Setters de hover/seleção. As funções em si são estáveis (vêm de
+  // useState), então incluí-las aqui NÃO recria o contexto de mundo — só os
+  // valores (hoveredTile/selectedTile) vivem no SelectionContext, abaixo.
   setHoveredTile: (
     c: Coord | null,
   ) => void
@@ -112,6 +126,24 @@ interface GameContextValue {
 
 const GameContext =
   createContext<GameContextValue | null>(null)
+
+// ---------------------------------------------------------------------------
+// Contexto de SELEÇÃO / HOVER (UI)
+//
+// Isolado do GameContext de propósito: hoveredTile muda a cada pointermove
+// entre tiles e selectedTile muda a cada clique. Somente quem realmente
+// precisa desses valores (SelectionIndicator, GameHUD/TileInspector) deve
+// consumir este contexto. CityScene NÃO o consome, então trocar de tile
+// selecionado não força o Canvas inteiro a reconciliar.
+// ---------------------------------------------------------------------------
+
+interface SelectionContextValue {
+  hoveredTile: Coord | null
+  selectedTile: Coord | null
+}
+
+const SelectionContext =
+  createContext<SelectionContextValue | null>(null)
 
 export function GameProvider({
   cityId = DEFAULT_CITY_ID,
@@ -411,6 +443,10 @@ export function GameProvider({
   // Context
   // ---------------------------------------------------------------------------
 
+  // IMPORTANTE: hoveredTile/selectedTile NÃO entram neste objeto nem nas
+  // deps do useMemo. setHoveredTile/setSelectedTile (setters de useState)
+  // são referências estáveis entre renders, então este value só muda quando
+  // dados de mundo/build realmente mudam — não a cada hover/seleção.
   const value =
     useMemo<GameContextValue>(
       () => ({
@@ -424,8 +460,6 @@ export function GameProvider({
 
         tool,
         selectedBuilding,
-        hoveredTile,
-        selectedTile,
 
         buildRotation,
 
@@ -466,8 +500,6 @@ export function GameProvider({
 
         tool,
         selectedBuilding,
-        hoveredTile,
-        selectedTile,
 
         buildRotation,
 
@@ -489,11 +521,29 @@ export function GameProvider({
       ],
     )
 
+  // Contexto de seleção/hover: isolado para que só quem consome
+  // useSelection() re-renderize quando hoveredTile/selectedTile mudam.
+  const selectionValue =
+    useMemo<SelectionContextValue>(
+      () => ({
+        hoveredTile,
+        selectedTile,
+      }),
+      [
+        hoveredTile,
+        selectedTile,
+      ],
+    )
+
   return (
     <GameContext.Provider
       value={value}
     >
-      {children}
+      <SelectionContext.Provider
+        value={selectionValue}
+      >
+        {children}
+      </SelectionContext.Provider>
     </GameContext.Provider>
   )
 }
@@ -505,6 +555,23 @@ export function useGame(): GameContextValue {
   if (!ctx) {
     throw new Error(
       "useGame deve ser usado dentro de <GameProvider>",
+    )
+  }
+
+  return ctx
+}
+
+// Hook dedicado para hoveredTile/selectedTile. Use isto (não useGame) em
+// qualquer componente que só precisa ler esses valores — em especial dentro
+// da árvore do Canvas (ex.: SelectionIndicator) — para não acoplar seu
+// re-render ao resto do estado de mundo/build, e vice-versa.
+export function useSelection(): SelectionContextValue {
+  const ctx =
+    useContext(SelectionContext)
+
+  if (!ctx) {
+    throw new Error(
+      "useSelection deve ser usado dentro de <GameProvider>",
     )
   }
 
