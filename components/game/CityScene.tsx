@@ -4,6 +4,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useMemo
 } from "react"
 
 import { Canvas } from "@react-three/fiber"
@@ -34,6 +35,8 @@ import { GroundTiles } from "./GroundTiles"
 import { SelectionIndicator } from "./SelectionIndicator"
 import { CameraController } from "./CameraController"
 import { PerformanceMonitor } from "./PerformanceMonitor"
+
+import { createRoadSet } from "@/lib/game/roadAutoTile"
 /**
  * The full 3D city. It reads authoritative state from the game store and
  * turns pointer interactions into INTENTIONS (build/demolish/select) that the
@@ -70,6 +73,10 @@ export function CityScene() {
   const buildings =
     state?.buildings ?? []
 
+  const roadSet = useMemo(
+    () => createRoadSet(buildings),
+    [buildings],
+  )
   // ---------------------------------------------------------------------------
   // R = rotate current building preview
   // ---------------------------------------------------------------------------
@@ -276,16 +283,14 @@ export function CityScene() {
             tileToWorld(b.z),
           ]
 
-          if (
-            b.type === "ROAD"
-          ) {
+          if (b.type === "ROAD") {
             return (
               <Road
                 key={b.id}
                 position={position}
-                rotation={
-                  b.rotation
-                }
+                x={b.x}
+                z={b.z}
+                roads={roadSet}
               />
             )
           }

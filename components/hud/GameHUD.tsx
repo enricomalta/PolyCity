@@ -74,8 +74,18 @@ export function GameHUD() {
             <p>
               <span className="font-mono text-foreground">W A S D</span> mover câmera
             </p>
-            <p>Arrastar: girar {"\u00b7"} Botão direito: deslocar</p>
-            <p>Clique: construir / selecionar</p>
+            <p>
+              <span className="font-mono text-foreground">R</span> rotaciona
+            </p>
+            <p>
+              <span className="font-mono text-foreground">Arrastar:</span> girar
+            </p>
+            <p>
+              <span className="font-mono text-foreground">Botão direito:</span> deslocar
+            </p>
+            <p>
+              <span className="font-mono text-foreground">Clique:</span> construir / selecionar
+            </p>
           </div>
         </div>
 
