@@ -68,7 +68,7 @@ export function GameHUD() {
           <div className="pointer-events-none hidden rounded-lg bg-card/80 px-3 py-2 text-xs leading-relaxed text-muted-foreground shadow-sm backdrop-blur sm:block">
             <p className="font-medium text-foreground">Controles</p>
             <p>
-              <span className="font-mono text-foreground">WASD</span> mover câmera
+              <span className="font-mono text-foreground">W A S D</span> mover câmera
             </p>
             <p>Arrastar: girar {"\u00b7"} Botão direito: deslocar</p>
             <p>Clique: construir / selecionar</p>

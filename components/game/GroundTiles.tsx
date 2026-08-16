@@ -140,7 +140,7 @@ export function GroundTiles({ tiles, onHover, onLeave, onSelect }: GroundTilesPr
             if (current?.[0] === x && current?.[1] === z) {
                 return
             }
-
+            
             hoverTileRef.current = [x, z]
             onHover(x, z)
         }}
