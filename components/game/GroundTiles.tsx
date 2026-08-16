@@ -54,6 +54,7 @@ export function GroundTiles({ tiles, onHover, onLeave, onSelect }: GroundTilesPr
   // pointer barely moved between down and up, it's a tap; otherwise the user
   // was orbiting/panning the camera and we must NOT act on the tile.
   const pressRef = useRef<{ x: number; y: number } | null>(null)
+  const hoverTileRef = useRef<[number, number] | null>(null)
   const TAP_THRESHOLD_SQ = 36 // 6px of travel
 
   return (
@@ -120,12 +121,35 @@ export function GroundTiles({ tiles, onHover, onLeave, onSelect }: GroundTilesPr
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0.03, 0]}
         onPointerMove={(e) => {
-          e.stopPropagation()
-          const coord = coordFromPoint(e)
-          if (coord) onHover(coord[0], coord[1])
-          else onLeave()
+            e.stopPropagation()
+
+            const coord = coordFromPoint(e)
+
+            if (!coord) {
+                if (hoverTileRef.current !== null) {
+                    hoverTileRef.current = null
+                    onLeave()
+                }
+
+                return
+            }
+
+            const [x, z] = coord
+            const current = hoverTileRef.current
+
+            if (current?.[0] === x && current?.[1] === z) {
+                return
+            }
+
+            hoverTileRef.current = [x, z]
+            onHover(x, z)
         }}
-        onPointerOut={() => onLeave()}
+        onPointerOut={() => {
+            if (hoverTileRef.current !== null) {
+                hoverTileRef.current = null
+                onLeave()
+            }
+        }}
         onPointerDown={(e) => {
           pressRef.current = { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY }
         }}
