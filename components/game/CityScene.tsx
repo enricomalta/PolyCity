@@ -35,6 +35,7 @@ import { GroundTiles } from "./GroundTiles"
 import { SelectionIndicator } from "./SelectionIndicator"
 import { CameraController } from "./CameraController"
 import { PerformanceMonitor } from "./PerformanceMonitor"
+import { TrafficSystem } from "./TrafficSystem"
 
 import { createRoadSet } from "@/lib/game/roadAutoTile"
 /**
@@ -66,6 +67,8 @@ export function CityScene() {
 
     build,
     demolish,
+
+    occupyHouse,
 
     rotateBuilding,
   } = useGame()
@@ -216,6 +219,7 @@ export function CityScene() {
           "high-performance",
       }}
     >
+
       <PerformanceMonitor />
       <color
         attach="background"
@@ -307,6 +311,11 @@ export function CityScene() {
           )
         })}
 
+        <TrafficSystem
+          buildings={buildings}
+          occupyHouse={occupyHouse}
+        />
+
         <SelectionIndicator
           tiles={tiles}
           tool={tool}
@@ -330,7 +339,6 @@ export function CityScene() {
           far={10}
         />
       </Suspense>
-
       <CameraController />
 
       <OrbitControls
