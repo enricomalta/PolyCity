@@ -72,8 +72,13 @@ export function TileInspector({
           </h3>
 
           <p className="text-xs text-muted-foreground">
-            Tile {tile.x}, {tile.z} —{" "}
-            {terrainLabel(tile.terrain)}
+            Tile {tile.x}, {tile.z}
+            {!def && (
+              <>
+                {" — "}
+                {terrainLabel(tile.terrain)}
+              </>
+            )}
           </p>
         </div>
 
@@ -147,6 +152,24 @@ export function TileInspector({
               />
             )}
 
+            {def.population > 0 && (
+              <Detail
+                label="Ocupação"
+                value={
+                  building?.occupied
+                    ? "Ocupada"
+                    : "Desocupada"
+                }
+              />
+            )}
+
+            {building?.type === "ROAD" && (
+              <Detail
+                label="Estado de conservação"
+                value="Boa"
+              />
+            )}
+
             {building && (
               <Detail
                 label="Rotação"
@@ -215,6 +238,9 @@ function terrainLabel(
 
     case "GRASS":
       return "Grama"
+
+    case "BUILDING":
+      return "Construção"
 
     default:
       return "Terreno"
