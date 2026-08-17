@@ -1,8 +1,8 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useEffect, useState } from "react"
 import { useAuth } from "@/hooks/useAuth"
-import { useGame, useSelection } from "@/hooks/useGame"
+import { useGame, useGameClock, useSelection } from "@/hooks/useGame"
 import { ResourceBar } from "./ResourceBar"
 import { BuildMenu } from "./BuildMenu"
 import { ToolBar } from "./ToolBar"
@@ -10,6 +10,7 @@ import { TileInspector } from "./TileInspector"
 import { GameToast } from "./GameToast"
 import { TopBar } from "./TopBar"
 import {
+  createGameClock,
   formatGameTime,
 } from "@/lib/game/clock"
 
@@ -44,7 +45,39 @@ export function GameHUD() {
   // exatamente o que faz o TileInspector abrir/fechar.
   const { selectedTile } = useSelection()
 
-  const gameClock = state?.clock ?? null
+  const [clockNow, setClockNow] =
+    useState(() => Date.now())
+
+  useEffect(() => {
+    const intervalId =
+      window.setInterval(() => {
+        setClockNow(Date.now())
+      }, 1000)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [])
+
+  const gameClock = useMemo(() => {
+    if (
+      !city ||
+      !Number.isFinite(
+        city.clockStartedAt,
+      )
+    ) {
+      return null
+    }
+
+    return createGameClock(
+      city.clockStartedAt,
+      clockNow,
+    )
+  }, [
+    city?.clockStartedAt,
+    clockNow,
+  ])
+
 
   const inspected = useMemo(() => {
     if (!selectedTile) return { tile: null, building: null }

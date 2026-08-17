@@ -312,8 +312,9 @@ export function CityScene() {
         })}
 
         <TrafficSystem
-          buildings={buildings}
+          buildings={state?.buildings ?? []}
           occupyHouse={occupyHouse}
+          timeStage={state?.timeStage ?? "NIGHT"}
         />
 
         <SelectionIndicator

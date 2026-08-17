@@ -27,9 +27,6 @@ import {
   applyOccupancy,
   generateTerrain,
 } from "@/lib/game/grid"
-import {
-  createGameClock,
-} from "@/lib/game/clock"
 
 export type LoadStatus =
   | "loading"
@@ -211,33 +208,6 @@ export function GameProvider({
     useState(0)
 
 
-  // Atualiza o relógio visual localmente sem alterar a autoridade
-  // do servidor sobre economia/população/dinheiro.
-  const [clockNow, setClockNow] = useState(() =>
-    Date.now(),
-  )
-
-  useEffect(() => {
-    const intervalId =
-      window.setInterval(() => {
-        setClockNow(Date.now())
-      }, 1000)
-
-    return () => {
-      window.clearInterval(intervalId)
-    }
-  }, [])
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setClockNow(Date.now())
-    }, 1000)
-
-    return () => {
-      window.clearInterval(intervalId)
-    }
-  }, [])
-
   // ---------------------------------------------------------------------------
   // Terrain
   // ---------------------------------------------------------------------------
@@ -262,24 +232,6 @@ export function GameProvider({
     ],
   )
 
-  const gameClock = useMemo(() => {
-    if (
-      !city ||
-      !Number.isFinite(
-        city.clockStartedAt,
-      )
-    ) {
-      return null
-    }
-
-    return createGameClock(
-      city.clockStartedAt,
-      clockNow,
-    )
-  }, [
-    city?.clockStartedAt,
-    clockNow,
-  ])
   // ---------------------------------------------------------------------------
   // Load city
   // ---------------------------------------------------------------------------
@@ -670,16 +622,7 @@ export function GameProvider({
     useMemo<GameContextValue>(
       () => ({
         city,
-        state: state
-          ? {
-              ...state,
-              clock:
-                gameClock ?? state.clock,
-              timeStage:
-                gameClock?.stage ??
-                state.timeStage,
-            }
-          : null,
+        state,
         tiles,
         status,
         error,
@@ -690,8 +633,6 @@ export function GameProvider({
         selectedBuilding,
 
         buildRotation,
-
-        gameClock,
 
         setTool,
 
@@ -741,7 +682,6 @@ export function GameProvider({
 
         buildRotation,
         
-        gameClock,
 
         selectBuildingType,
 
@@ -783,10 +723,9 @@ export function GameProvider({
       ],
     )
 
+
   return (
-    <GameContext.Provider
-      value={value}
-    >
+    <GameContext.Provider value={value}>
       <SelectionContext.Provider
         value={selectionValue}
       >

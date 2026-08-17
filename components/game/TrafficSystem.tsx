@@ -48,12 +48,14 @@ let carSeq = 0
 export function TrafficSystem({
   buildings,
   occupyHouse,
+  timeStage,
 }: {
   buildings: Building[]
   occupyHouse: (
     x: number,
     z: number,
   ) => Promise<void>
+  timeStage: "DAY" | "NIGHT"
 }) {
   const [cars, setCars] = useState<
     ActiveCar[]
@@ -215,7 +217,9 @@ export function TrafficSystem({
       // ---------------------------------------------------------------
       // ESTÁGIO 1 — morador saindo de casa para trabalhar
       // ---------------------------------------------------------------
-
+      if (timeStage !== "DAY") {
+        return
+      }
       const availableTrips =
         workTripRoutes.filter(
           (trip) =>
