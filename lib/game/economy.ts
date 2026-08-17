@@ -1,4 +1,7 @@
 import type { Budget, Building, CityPolicy, CityState, PublicService, ResourceState, ServiceIndices } from "@/types/city"
+import {
+  createGameClock,
+} from "@/lib/game/clock"
 import { getBuilding } from "./buildings"
 
 // IMPORTANT: economy math here is the SAME code the backend runs. The server
@@ -84,7 +87,7 @@ export function deriveBudget(policy: CityPolicy, population: number, jobs: numbe
 
 // Recompute the full authoritative city state from the building list, the
 // treasury and the mayor's policy.
-export function deriveState(buildings: Building[], money: number, policy: CityPolicy): CityState {
+export function deriveState(buildings: Building[], money: number, policy: CityPolicy, clockStartedAt: number, now: number = Date.now()): CityState {
   let population = 0
   let jobs = 0
   let buildingHappiness = 0
@@ -120,6 +123,11 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
 
   const happiness = clamp(Math.round(60 + buildingHappiness + serviceBonus - taxPenalty))
 
+  const clock = createGameClock(
+    clockStartedAt,
+    now,
+  )
+
   return {
     money: Math.round(money),
     population,
@@ -130,6 +138,11 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
     policy,
     services,
     budget,
+    timeStage:
+      clock.stage === "WORK"
+        ? 1
+        : 0,
+    clock,
   }
 }
 

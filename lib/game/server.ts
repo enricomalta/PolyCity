@@ -91,21 +91,13 @@ function sanitizePolicy(input: unknown): CityPolicy {
 }
 
 function docToState(doc: CityDoc): CityState {
-  const state = deriveState(
+  return deriveState(
     doc.buildings,
     doc.money,
     doc.policy,
-  )
-
-  const clock = createGameClock(
     doc.clockStartedAt,
     Date.now(),
   )
-
-  return {
-    ...state,
-    clock,
-  }
 }
 
 function docToCity(doc: CityDoc): City {

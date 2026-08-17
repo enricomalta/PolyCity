@@ -27,6 +27,9 @@ import {
   applyOccupancy,
   generateTerrain,
 } from "@/lib/game/grid"
+import {
+  createGameClock,
+} from "@/lib/game/clock"
 
 export type LoadStatus =
   | "loading"
@@ -207,6 +210,23 @@ export function GameProvider({
   const [buildRotation, setBuildRotation] =
     useState(0)
 
+
+  // Atualiza o relógio visual localmente sem alterar a autoridade
+  // do servidor sobre economia/população/dinheiro.
+  const [clockNow, setClockNow] = useState(() =>
+    Date.now(),
+  )
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setClockNow(Date.now())
+    }, 1000)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [])
+
   // ---------------------------------------------------------------------------
   // Terrain
   // ---------------------------------------------------------------------------
@@ -230,6 +250,17 @@ export function GameProvider({
       state?.buildings,
     ],
   )
+
+  const gameClock = useMemo(() => {
+    if (!city?.clockStartedAt) {
+      return null
+    }
+
+    return createGameClock(
+      city.clockStartedAt,
+      clockNow,
+    )
+  }, [city?.clockStartedAt, clockNow])
 
   // ---------------------------------------------------------------------------
   // Load city
@@ -621,7 +652,17 @@ export function GameProvider({
     useMemo<GameContextValue>(
       () => ({
         city,
-        state,
+        state: state
+          ? {
+              ...state,
+              clock:
+                gameClock ?? state.clock,
+              timeStage:
+                gameClock?.stage === "WORK"
+                  ? 1
+                  : 0,
+            }
+          : null,
         tiles,
         status,
         error,
@@ -632,6 +673,8 @@ export function GameProvider({
         selectedBuilding,
 
         buildRotation,
+
+        gameClock,
 
         setTool,
 
