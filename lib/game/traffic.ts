@@ -161,7 +161,9 @@ export function findVacantConnectedHouses(
   const result: VacantHouse[] = []
 
   for (const b of buildings) {
+    // Casas ocupadas ou fechadas não podem receber novos moradores.
     if (b.occupied) continue
+    if (b.closed) continue
 
     const def = getBuilding(b.type)
     if (def.category !== "RESIDENTIAL") continue

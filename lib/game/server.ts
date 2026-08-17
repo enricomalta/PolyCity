@@ -257,6 +257,10 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
       return reject("Esta casa já está ocupada.")
     }
 
+    if (building.closed) {
+      return reject("Esta residência está fechada.")
+    }
+
     // Nunca confia na palavra do cliente de que "o carro chegou": revalida
     // que a casa está mesmo conectada à rede viária a partir de uma
     // rodovia que toca a borda do mapa.
@@ -271,6 +275,149 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
       success: true,
       state: docToState(doc),
       message: `Uma família se mudou para ${def.name.toLowerCase()}.`,
+    }
+  }
+
+  if (action.type === "VACATE") {
+    const idx = doc.buildings.findIndex(
+      (b) => b.x === action.x && b.z === action.z,
+    )
+
+    if (idx === -1) {
+      return reject(
+        "Nenhuma construção encontrada aqui.",
+      )
+    }
+
+    const building = doc.buildings[idx]
+    const def = getBuilding(building.type)
+
+    if (
+      def.category !== "RESIDENTIAL" &&
+      def.category !== "COMMERCIAL" &&
+      def.category !== "INDUSTRIAL"
+    ) {
+      return reject(
+        "Esta construção não possui ocupação.",
+      )
+    }
+
+    if (!building.occupied) {
+      return reject(
+        "Esta construção já está desocupada.",
+      )
+    }
+
+    if (building.closed) {
+      return reject(
+        "Esta construção está fechada.",
+      )
+    }
+
+    doc.buildings[idx] = {
+      ...building,
+      occupied: false,
+    }
+
+    doc.updatedAt =
+      new Date(now).toISOString()
+
+    await cityRef.update({
+      buildings: doc.buildings,
+      money: doc.money,
+      lastTickAt: doc.lastTickAt,
+      updatedAt: doc.updatedAt,
+    })
+
+    return {
+      success: true,
+      state: docToState(doc),
+      message:
+        def.category === "RESIDENTIAL"
+          ? "Os moradores deixaram a residência."
+          : "Os trabalhadores deixaram a construção.",
+    }
+  }
+
+  if (action.type === "CLOSE") {
+    const idx = doc.buildings.findIndex(
+      (b) => b.x === action.x && b.z === action.z,
+    )
+
+    if (idx === -1) {
+      return reject(
+        "Nenhuma construção encontrada aqui.",
+      )
+    }
+
+    const building = doc.buildings[idx]
+
+    if (building.closed) {
+      return reject(
+        "Esta construção já está fechada.",
+      )
+    }
+
+    doc.buildings[idx] = {
+      ...building,
+      closed: true,
+    }
+
+    doc.updatedAt =
+      new Date(now).toISOString()
+
+    await cityRef.update({
+      buildings: doc.buildings,
+      money: doc.money,
+      lastTickAt: doc.lastTickAt,
+      updatedAt: doc.updatedAt,
+    })
+
+    return {
+      success: true,
+      state: docToState(doc),
+      message: "Construção fechada.",
+    }
+  }
+
+  if (action.type === "OPEN") {
+    const idx = doc.buildings.findIndex(
+      (b) => b.x === action.x && b.z === action.z,
+    )
+
+    if (idx === -1) {
+      return reject(
+        "Nenhuma construção encontrada aqui.",
+      )
+    }
+
+    const building = doc.buildings[idx]
+
+    if (!building.closed) {
+      return reject(
+        "Esta construção já está aberta.",
+      )
+    }
+
+    doc.buildings[idx] = {
+      ...building,
+      closed: false,
+    }
+
+    doc.updatedAt =
+      new Date(now).toISOString()
+
+    await cityRef.update({
+      buildings: doc.buildings,
+      money: doc.money,
+      lastTickAt: doc.lastTickAt,
+      updatedAt: doc.updatedAt,
+    })
+
+    return {
+      success: true,
+      state: docToState(doc),
+      message: "Construção reaberta.",
     }
   }
 

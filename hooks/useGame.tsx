@@ -122,6 +122,21 @@ interface GameContextValue {
     z: number,
   ) => Promise<void>
 
+  vacateBuilding: (
+    x: number,
+    z: number,
+  ) => Promise<void>
+
+  closeBuilding: (
+    x: number,
+    z: number,
+  ) => Promise<void>
+
+  openBuilding: (
+    x: number,
+    z: number,
+  ) => Promise<void>
+
   updatePolicy: (
     policy: CityPolicy,
   ) => Promise<boolean>
@@ -364,6 +379,120 @@ export function GameProvider({
     )
 
   // ---------------------------------------------------------------------------
+  // Vacate
+  // ---------------------------------------------------------------------------
+
+  const vacateBuilding =
+    useCallback<
+      GameContextValue["vacateBuilding"]
+    >(
+      async (x, z) => {
+        setPending(true)
+
+        try {
+          const res =
+            await gameService.performAction(
+              cityId,
+              {
+                type: "VACATE",
+                x,
+                z,
+              },
+            )
+
+          setState(res.state)
+
+          setLastMessage(
+            res.message ?? null,
+          )
+        } catch {
+          setLastMessage(
+            "Não foi possível desocupar a construção.",
+          )
+        } finally {
+          setPending(false)
+        }
+      },
+      [cityId],
+    )
+
+  // ---------------------------------------------------------------------------
+  // Close
+  // ---------------------------------------------------------------------------
+
+  const closeBuilding =
+    useCallback<
+      GameContextValue["closeBuilding"]
+    >(
+      async (x, z) => {
+        setPending(true)
+
+        try {
+          const res =
+            await gameService.performAction(
+              cityId,
+              {
+                type: "CLOSE",
+                x,
+                z,
+              },
+            )
+
+          setState(res.state)
+
+          setLastMessage(
+            res.message ?? null,
+          )
+        } catch {
+          setLastMessage(
+            "Não foi possível fechar a construção.",
+          )
+        } finally {
+          setPending(false)
+        }
+      },
+      [cityId],
+    )
+
+  // ---------------------------------------------------------------------------
+  // Open
+  // ---------------------------------------------------------------------------
+
+  const openBuilding =
+    useCallback<
+      GameContextValue["openBuilding"]
+    >(
+      async (x, z) => {
+        setPending(true)
+
+        try {
+          const res =
+            await gameService.performAction(
+              cityId,
+              {
+                type: "OPEN",
+                x,
+                z,
+              },
+            )
+
+          setState(res.state)
+
+          setLastMessage(
+            res.message ?? null,
+          )
+        } catch {
+          setLastMessage(
+            "Não foi possível reabrir a construção.",
+          )
+        } finally {
+          setPending(false)
+        }
+      },
+      [cityId],
+    )
+
+  // ---------------------------------------------------------------------------
   // Rotatate Select
   // ---------------------------------------------------------------------------
   const rotateSelectedBuilding = useCallback(
@@ -403,8 +532,6 @@ export function GameProvider({
     },
     [cityId],
   )
-
-
 
   // ---------------------------------------------------------------------------
   // Policy
@@ -525,6 +652,12 @@ export function GameProvider({
 
         occupyHouse,
 
+        vacateBuilding,
+
+        closeBuilding,
+
+        openBuilding,
+
         rotateSelectedBuilding,
 
         updatePolicy,
@@ -555,6 +688,12 @@ export function GameProvider({
         demolish,
 
         occupyHouse,
+
+        vacateBuilding,
+
+        closeBuilding,
+
+        openBuilding,
 
         updatePolicy,
 

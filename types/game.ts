@@ -66,6 +66,21 @@ export type GameAction =
       x: number
       z: number
     }
+  | {
+      type: "VACATE"
+      x: number
+      z: number
+    }
+  | {
+      type: "CLOSE"
+      x: number
+      z: number
+    }
+  | {
+      type: "OPEN"
+      x: number
+      z: number
+    }
 
 export interface GameResponse {
   success: boolean

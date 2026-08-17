@@ -28,6 +28,10 @@ export function GameHUD() {
     selectTile,
     demolish,
     rotateSelectedBuilding,
+    // occupyHouse,
+    vacateBuilding,
+    closeBuilding,
+    openBuilding,
     lastMessage,
     clearMessage,
   } = useGame()
@@ -149,6 +153,9 @@ export function GameHUD() {
                   rotation,
                 )
               }}
+              onVacate={vacateBuilding}
+              onCloseBuilding={closeBuilding}
+              onOpenBuilding={openBuilding}
             />
           )}
         </div>

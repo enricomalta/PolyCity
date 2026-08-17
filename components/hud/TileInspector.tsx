@@ -2,6 +2,9 @@
 
 import {
   X,
+  Users,
+  Lock,
+  Unlock,
 } from "lucide-react"
 
 import type { Building } from "@/types/city"
@@ -23,6 +26,18 @@ interface TileInspectorProps {
     x: number,
     z: number,
     rotation: number,
+  ) => void
+  onVacate: (
+    x: number,
+    z: number,
+  ) => void
+  onCloseBuilding: (
+    x: number,
+    z: number,
+  ) => void
+  onOpenBuilding: (
+    x: number,
+    z: number,
   ) => void
 }
 
@@ -46,12 +61,36 @@ function Detail({
   )
 }
 
+function isResidential(
+  type: Building["type"],
+): boolean {
+  return (
+    type === "HOUSE" ||
+    type === "SMALL_APARTMENT"
+  )
+}
+
+function hasJobs(
+  type: Building["type"],
+): boolean {
+  return (
+    type === "SHOP" ||
+    type === "FACTORY" ||
+    type === "PARK" ||
+    type === "POWER_PLANT" ||
+    type === "WATER_TOWER"
+  )
+}
+
 export function TileInspector({
   tile,
   building,
   onClose,
   onDemolish,
   onRotate,
+  onVacate,
+  onCloseBuilding,
+  onOpenBuilding,
 }: TileInspectorProps) {
   if (!tile) {
     return null
@@ -60,6 +99,14 @@ export function TileInspector({
   const def = building
     ? getBuilding(building.type)
     : null
+
+  const residential =
+    building &&
+    isResidential(building.type)
+
+  const canVacate =
+    residential &&
+    building.occupied === true
 
   return (
     <div className="pointer-events-auto w-64 rounded-2xl border border-border bg-card/95 p-4 shadow-lg shadow-black/30 backdrop-blur">
@@ -73,6 +120,7 @@ export function TileInspector({
 
           <p className="text-xs text-muted-foreground">
             Tile {tile.x}, {tile.z}
+
             {!def && (
               <>
                 {" — "}
@@ -152,16 +200,28 @@ export function TileInspector({
               />
             )}
 
-            {def.population > 0 && (
+            {residential && (
               <Detail
                 label="Ocupação"
                 value={
-                  building?.occupied
+                  building.occupied
                     ? "Ocupada"
                     : "Desocupada"
                 }
               />
             )}
+
+            {building &&
+              hasJobs(building.type) && (
+                <Detail
+                  label="Empregos"
+                  value={
+                    building.occupied
+                      ? "Cheio"
+                      : "Vazio"
+                  }
+                />
+              )}
 
             {building?.type === "ROAD" && (
               <Detail
@@ -176,36 +236,95 @@ export function TileInspector({
                 value={`${building.rotation * 90}°`}
               />
             )}
+
+            {building && (
+              <Detail
+                label="Estado"
+                value={
+                  building.closed
+                    ? "Fechada"
+                    : "Ativa"
+                }
+              />
+            )}
           </div>
 
           {building && (
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <Button
-                variant="secondary"
-                className="w-full"
-                onClick={() =>
-                  onRotate(
-                    building.x,
-                    building.z,
-                    (building.rotation + 1) % 4,
-                  )
-                }
-              >
-                Girar
-              </Button>
+            <div className="mt-3 flex flex-col gap-2">
+              {canVacate && (
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() =>
+                    onVacate(
+                      building.x,
+                      building.z,
+                    )
+                  }
+                >
+                  <Users className="size-4" />
+                  Desocupar
+                </Button>
+              )}
 
-              <Button
-                variant="destructive"
-                className="w-full"
-                onClick={() =>
-                  onDemolish(
-                    building.x,
-                    building.z,
-                  )
-                }
-              >
-                Demolir
-              </Button>
+              {building.closed ? (
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() =>
+                    onOpenBuilding(
+                      building.x,
+                      building.z,
+                    )
+                  }
+                >
+                  <Unlock className="size-4" />
+                  Abrir
+                </Button>
+              ) : (
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() =>
+                    onCloseBuilding(
+                      building.x,
+                      building.z,
+                    )
+                  }
+                >
+                  <Lock className="size-4" />
+                  Fechar
+                </Button>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() =>
+                    onRotate(
+                      building.x,
+                      building.z,
+                      (building.rotation + 1) % 4,
+                    )
+                  }
+                >
+                  Girar
+                </Button>
+
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() =>
+                    onDemolish(
+                      building.x,
+                      building.z,
+                    )
+                  }
+                >
+                  Demolir
+                </Button>
+              </div>
             </div>
           )}
         </>
@@ -238,9 +357,6 @@ function terrainLabel(
 
     case "GRASS":
       return "Grama"
-
-    case "BUILDING":
-      return "Construção"
 
     default:
       return "Terreno"

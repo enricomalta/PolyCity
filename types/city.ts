@@ -58,6 +58,10 @@ export interface Building {
   // isso acontece quando um NPC dirige até ela pela rede viária, não no
   // instante em que é construída. Ver lib/game/traffic.ts e a ação OCCUPY.
   occupied?: boolean
+
+  // A closed building remains physically present but is inactive.
+  // This will later be used by economy/infrastructure systems.
+  closed?: boolean
 }
 
 // Monthly budget breakdown so the mayor page can show revenue vs expenses.
