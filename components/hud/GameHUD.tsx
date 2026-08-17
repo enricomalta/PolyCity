@@ -47,28 +47,57 @@ export function GameHUD() {
 
   if (!state) return null
 
+  const showBuildMenu =
+    tool === "BUILD_MENU" ||
+    tool === "BUILD" ||
+    tool === "ROAD"
+
+  const showEditMenu =
+    tool === "EDIT"
+
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex flex-col p-3 sm:p-4">
+
       {/* Top row */}
       <div className="flex items-start justify-between gap-3">
         <ResourceBar state={state} />
-        <TopBar cityName={city?.name ?? "PolyCity"} user={user} onLogout={logout} />
+
+        <TopBar
+          cityName={city?.name ?? "PolyCity"}
+          user={user}
+          onLogout={logout}
+        />
       </div>
 
-      {/* Middle row: tools left, inspector right */}
+      {/* Middle row */}
       <div className="mt-3 flex flex-1 items-start justify-between gap-3">
+
+        {/* Left side */}
         <div className="flex flex-col items-start gap-3">
+
           <ToolBar
             tool={tool}
+            selectedBuilding={selectedBuilding}
             onSelect={() => {
               setTool("SELECT")
               selectBuildingType(null)
             }}
+
             onDemolish={() => {
               setTool("DEMOLISH")
               selectBuildingType(null)
             }}
+
+            onBuild={() => {
+              setTool("BUILD_MENU")
+            }}
+
+            onEdit={() => {
+              setTool("EDIT")
+              selectBuildingType(null)
+            }}
           />
+
           <div className="pointer-events-none hidden rounded-lg bg-card/80 px-3 py-2 text-xs leading-relaxed text-muted-foreground shadow-sm backdrop-blur sm:block">
             <p className="font-medium text-foreground">Controles</p>
             <p>
@@ -89,17 +118,26 @@ export function GameHUD() {
           </div>
         </div>
 
+
+        {/* Right side */}
         <div className="flex flex-col items-end gap-3">
-          <GameToast message={lastMessage} onDismiss={clearMessage} />
+
+          <GameToast
+            message={lastMessage}
+            onDismiss={clearMessage}
+          />
+
           {selectedTile && (
             <TileInspector
               tile={inspected.tile}
               building={inspected.building}
               onClose={() => selectTile(null)}
+
               onDemolish={(x, z) => {
                 void demolish(x, z)
                 selectTile(null)
               }}
+
               onRotate={(
                 x,
                 z,
@@ -116,9 +154,57 @@ export function GameHUD() {
         </div>
       </div>
 
-      {/* Bottom row: build menu */}
+      {/* Bottom row */}
       <div className="mt-3 flex justify-center">
-        <BuildMenu state={state} selected={selectedBuilding} onSelect={selectBuildingType} />
+
+        {showBuildMenu && (
+          <BuildMenu
+            state={state}
+            selected={selectedBuilding}
+            onSelect={selectBuildingType}
+          />
+        )}
+
+        {showEditMenu && (
+          <div className="pointer-events-auto w-full max-w-xl rounded-2xl border border-border bg-card/90 p-3 shadow-lg shadow-black/30 backdrop-blur">
+
+            <div className="mb-3">
+              <p className="text-sm font-semibold text-card-foreground">
+                Edição do mapa
+              </p>
+
+              <p className="text-xs text-muted-foreground">
+                Selecione o tipo de terreno.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+
+              <button
+                type="button"
+                className="rounded-xl border border-border bg-secondary/60 p-3 text-sm font-medium text-card-foreground transition-colors hover:border-primary/50 hover:bg-secondary"
+              >
+                Areia
+              </button>
+
+              <button
+                type="button"
+                className="rounded-xl border border-border bg-secondary/60 p-3 text-sm font-medium text-card-foreground transition-colors hover:border-primary/50 hover:bg-secondary"
+              >
+                Grama
+              </button>
+
+              <button
+                type="button"
+                className="rounded-xl border border-border bg-secondary/60 p-3 text-sm font-medium text-card-foreground transition-colors hover:border-primary/50 hover:bg-secondary"
+              >
+                Água
+              </button>
+
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   )

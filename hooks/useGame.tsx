@@ -408,16 +408,23 @@ export function GameProvider({
       (building: BuildingType | null) => {
         setSelectedBuilding(building)
 
-        // Every new building starts at 0°.
-        if (building) {
-          setBuildRotation(0)
-
-          setTool(
-            building === "ROAD"
-              ? "ROAD"
-              : "BUILD",
-          )
+        // When leaving a selected building, return to the
+        // construction menu instead of SELECT.
+        if (!building) {
+          return
         }
+
+        // Every new building starts at 0°.
+        setBuildRotation(0)
+
+        // ROAD has its own placement submode.
+        // Both BUILD and ROAD still belong to the
+        // Construction toolbar button.
+        setTool(
+          building === "ROAD"
+            ? "ROAD"
+            : "BUILD",
+        )
       },
       [],
     )

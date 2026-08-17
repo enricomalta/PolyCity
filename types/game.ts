@@ -66,6 +66,8 @@ export interface GameResponse {
 
 export type ToolMode =
   | "SELECT"
+  | "DEMOLISH"
+  | "BUILD_MENU"
   | "BUILD"
   | "ROAD"
-  | "DEMOLISH"
+  | "EDIT"

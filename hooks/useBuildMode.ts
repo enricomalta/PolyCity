@@ -18,6 +18,7 @@ export function useBuildMode() {
   } = useGame()
 
   const isBuilding =
+    tool === "BUILD_MENU" ||
     tool === "BUILD" ||
     tool === "ROAD"
 
