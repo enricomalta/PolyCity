@@ -11,6 +11,7 @@ export interface City {
   // The same seed always reproduces the exact same map, so the terrain is
   // persistent without storing every tile.
   seed: number
+  clockStartedAt: number
   createdAt: string
   updatedAt: string
 }
@@ -83,4 +84,11 @@ export interface CityState extends ResourceState {
   services: ServiceIndices
   budget: Budget
   timeStage: number
+  clock: {
+    day: number
+    hour: number
+    minute: number
+    totalMinutes: number
+    stage: "HOME" | "WORK"
+  }
 }

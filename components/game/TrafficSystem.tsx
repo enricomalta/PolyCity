@@ -17,10 +17,9 @@ import {
   findRoadPath,
   findSpawnPoints,
   findVacantConnectedHouses,
-  findWorkTrips,
+  findWorkTripRoutes,
   type Coord,
 } from "@/lib/game/traffic"
-
 // Quantos tiles por segundo o carro percorre.
 const CAR_SPEED = 2.4
 
@@ -36,6 +35,7 @@ interface ActiveCar {
   path: Coord[]
   houseX: number
   houseZ: number
+  homeBuildingId?: string
   workplaceId?: string
   tripType: "OCCUPY" | "WORK" | "HOME"
 }
@@ -80,23 +80,34 @@ export function TrafficSystem({
   )
 
   const vacantHouses = useMemo(
-    () => findVacantConnectedHouses(buildings),
+    () =>
+      findVacantConnectedHouses(
+        buildings,
+      ),
     [buildings],
   )
 
-  const workTrips = useMemo(
-    () => findWorkTrips(buildings),
+  const workTripRoutes = useMemo(
+    () => findWorkTripRoutes(buildings),
     [buildings],
   )
 
   // Casas que sumiram (demolidas, ou já ocupadas por outro caminho) não
   // continuam reservadas indefinidamente.
   useEffect(() => {
-    const validKeys = new Set(
-      vacantHouses.map(
-        (h) => `${h.x}:${h.z}`,
-      ),
-    )
+    const validKeys = new Set<string>()
+
+    for (const house of vacantHouses) {
+      validKeys.add(
+        `${house.x}:${house.z}`,
+      )
+    }
+
+    for (const trip of workTripRoutes) {
+      validKeys.add(
+        `${trip.buildingId}:WORK`,
+      )
+    }
 
     for (const key of Array.from(
       claimedHouses.current,
@@ -105,14 +116,24 @@ export function TrafficSystem({
         claimedHouses.current.delete(key)
       }
     }
-  }, [vacantHouses])
+  }, [vacantHouses, workTripRoutes])
 
+  /*
+   * Spawn loop.
+   *
+   * Priority:
+   *
+   * 1. New residents entering the city.
+   * 2. Existing residents going to work.
+   */
   useEffect(() => {
     let cancelled = false
     let timeoutId: number
 
     function trySpawn() {
-      if (spawnPoints.length === 0) return
+      if (spawnPoints.length === 0) {
+        return
+      }
 
       if (
         carsRef.current.length >= MAX_CARS
@@ -120,15 +141,15 @@ export function TrafficSystem({
         return
       }
 
-      // -------------------------------------------------------------------------
-      // ESTÁGIO 0 — carros entrando na cidade para ocupar casas
-      // -------------------------------------------------------------------------
+      // ---------------------------------------------------------------
+      // ESTÁGIO 0 — novo morador entrando na cidade
+      // ---------------------------------------------------------------
 
       const availableHouses =
         vacantHouses.filter(
-          (h) =>
+          (house) =>
             !claimedHouses.current.has(
-              `${h.x}:${h.z}`,
+              `${house.x}:${house.z}`,
             ),
         )
 
@@ -161,8 +182,11 @@ export function TrafficSystem({
           path &&
           path.length > 0
         ) {
+          const houseKey =
+            `${house.x}:${house.z}`
+
           claimedHouses.current.add(
-            `${house.x}:${house.z}`,
+            houseKey,
           )
 
           carSeq += 1
@@ -188,21 +212,19 @@ export function TrafficSystem({
         }
       }
 
-      // -------------------------------------------------------------------------
-      // ESTÁGIO 1 — moradores indo trabalhar
-      // -------------------------------------------------------------------------
+      // ---------------------------------------------------------------
+      // ESTÁGIO 1 — morador saindo de casa para trabalhar
+      // ---------------------------------------------------------------
 
       const availableTrips =
-        workTrips.filter(
+        workTripRoutes.filter(
           (trip) =>
             !claimedHouses.current.has(
               `${trip.buildingId}:WORK`,
             ),
         )
 
-      if (
-        availableTrips.length === 0
-      ) {
+      if (availableTrips.length === 0) {
         return
       }
 
@@ -214,28 +236,6 @@ export function TrafficSystem({
           )
         ]
 
-      const spawn = spawnPoints[
-        Math.floor(
-          Math.random() *
-            spawnPoints.length,
-        )
-      ]
-
-      const path = findRoadPath(
-        spawn.intoX,
-        spawn.intoZ,
-        trip.roadX,
-        trip.roadZ,
-        buildings,
-      )
-
-      if (
-        !path ||
-        path.length === 0
-      ) {
-        return
-      }
-
       claimedHouses.current.add(
         `${trip.buildingId}:WORK`,
       )
@@ -246,17 +246,11 @@ export function TrafficSystem({
         ...prev,
         {
           id: `car_${carSeq}`,
-          path: [
-            {
-              x: spawn.x,
-              z: spawn.z,
-            },
-            ...path,
-          ],
-          houseX: trip.x,
-          houseZ: trip.z,
-          workplaceId:
-            trip.workplaceId,
+          path: trip.path,
+          houseX: trip.homeRoadX,
+          houseZ: trip.homeRoadZ,
+          homeBuildingId: trip.buildingId,
+          workplaceId: trip.workplaceId,
           tripType: "WORK",
         },
       ])
@@ -269,11 +263,13 @@ export function TrafficSystem({
           (SPAWN_INTERVAL_MAX -
             SPAWN_INTERVAL_MIN)
 
-      timeoutId = window.setTimeout(() => {
-        if (cancelled) return
-        trySpawn()
-        scheduleNext()
-      }, delaySeconds * 1000)
+      timeoutId =
+        window.setTimeout(() => {
+          if (cancelled) return
+
+          trySpawn()
+          scheduleNext()
+        }, delaySeconds * 1000)
     }
 
     scheduleNext()
@@ -282,23 +278,25 @@ export function TrafficSystem({
       cancelled = true
       window.clearTimeout(timeoutId)
     }
-    // Recalcula o agendamento só quando a malha viária/casas disponíveis
-    // mudam de verdade (build/demolish) — não a cada carro que entra/sai.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spawnPoints, vacantHouses, buildings])
 
-  function handleArrive(
-    car: ActiveCar,
-  ) {
+    // O loop reinicia apenas quando a malha
+    // ou os destinos realmente mudam.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    spawnPoints,
+    vacantHouses,
+    workTripRoutes,
+    buildings,
+  ])
+
+  function handleArrive(car: ActiveCar) {
     setCars((prev) =>
       prev.filter(
         (c) => c.id !== car.id,
       ),
     )
 
-    if (
-      car.tripType === "OCCUPY"
-    ) {
+    if (car.tripType === "OCCUPY") {
       claimedHouses.current.delete(
         `${car.houseX}:${car.houseZ}`,
       )
@@ -311,22 +309,55 @@ export function TrafficSystem({
       return
     }
 
-    if (
-      car.tripType === "WORK"
-    ) {
+    if (car.tripType === "WORK") {
       claimedHouses.current.delete(
-        `${car.houseX}:WORK`,
+        `${car.homeBuildingId}:WORK`,
       )
+
+      if (!car.homeBuildingId || !car.workplaceId) {
+        return
+      }
+
+      const trip = workTripRoutes.find(
+        (t) =>
+          t.buildingId === car.homeBuildingId &&
+          t.workplaceId === car.workplaceId,
+      )
+
+      if (!trip) {
+        return
+      }
+
+      claimedHouses.current.add(
+        `${car.homeBuildingId}:HOME`,
+      )
+
+      carSeq += 1
+
+      setCars((prev) => [
+        ...prev,
+        {
+          id: `car_${carSeq}`,
+          path: [...trip.path].reverse(),
+          houseX: trip.homeRoadX,
+          houseZ: trip.homeRoadZ,
+          homeBuildingId:
+            trip.buildingId,
+          workplaceId:
+            trip.workplaceId,
+          tripType: "HOME",
+        },
+      ])
 
       return
     }
 
-    if (
-      car.tripType === "HOME"
-    ) {
+    if (car.tripType === "HOME") {
       claimedHouses.current.delete(
-        `${car.houseX}:HOME`,
+        `${car.homeBuildingId}:HOME`,
       )
+
+      return
     }
   }
 
@@ -344,10 +375,52 @@ export function TrafficSystem({
     </>
   )
 }
-
 // Um único carro. Anima sua posição imperativamente via useFrame (sem
 // re-render React a cada frame — mesmo princípio de performance do resto
 // do jogo), avançando por segmentos do caminho de tile em tile.
+
+/*
+ * Retorna a primeira rua adjacente ao prédio.
+ */
+function findWorkplaceRoad(
+  workplace: Building,
+  buildings: Building[],
+): Coord | null {
+  const neighbors: Coord[] = [
+    {
+      x: workplace.x,
+      z: workplace.z - 1,
+    },
+    {
+      x: workplace.x + 1,
+      z: workplace.z,
+    },
+    {
+      x: workplace.x,
+      z: workplace.z + 1,
+    },
+    {
+      x: workplace.x - 1,
+      z: workplace.z,
+    },
+  ]
+
+  for (const neighbor of neighbors) {
+    const road = buildings.find(
+      (building) =>
+        building.type === "ROAD" &&
+        building.x === neighbor.x &&
+        building.z === neighbor.z,
+    )
+
+    if (road) {
+      return neighbor
+    }
+  }
+
+  return null
+}
+
 function Car({
   path,
   onArrive,
@@ -380,9 +453,15 @@ function Car({
       return
     }
 
-    let from = worldPath[segmentRef.current]
+    let from =
+      worldPath[
+        segmentRef.current
+      ]
+
     let to =
-      worldPath[segmentRef.current + 1]
+      worldPath[
+        segmentRef.current + 1
+      ]
 
     if (!to) {
       arrivedRef.current = true
@@ -397,9 +476,12 @@ function Car({
       ) || 1
 
     progressRef.current +=
-      (CAR_SPEED * delta) / segLength
+      (CAR_SPEED * delta) /
+      segLength
 
-    if (progressRef.current >= 1) {
+    if (
+      progressRef.current >= 1
+    ) {
       progressRef.current = 0
       segmentRef.current += 1
 
@@ -423,7 +505,11 @@ function Car({
         return
       }
 
-      from = worldPath[segmentRef.current]
+      from =
+        worldPath[
+          segmentRef.current
+        ]
+
       to =
         worldPath[
           segmentRef.current + 1
@@ -453,10 +539,11 @@ function Car({
       )
   })
 
-  const start = worldPath[0] ?? {
-    x: 0,
-    z: 0,
-  }
+  const start =
+    worldPath[0] ?? {
+      x: 0,
+      z: 0,
+    }
 
   return (
     <group
@@ -472,18 +559,30 @@ function Car({
         position={[0, 0.05, 0]}
       >
         <boxGeometry
-          args={[0.34, 0.16, 0.55]}
+          args={[
+            0.34,
+            0.16,
+            0.55,
+          ]}
         />
+
         <meshStandardMaterial
           color="#d64545"
           flatShading
         />
       </mesh>
 
-      <mesh position={[0, 0.13, -0.03]}>
+      <mesh
+        position={[0, 0.13, -0.03]}
+      >
         <boxGeometry
-          args={[0.26, 0.1, 0.28]}
+          args={[
+            0.26,
+            0.1,
+            0.28,
+          ]}
         />
+
         <meshStandardMaterial
           color="#cfe8ff"
           flatShading

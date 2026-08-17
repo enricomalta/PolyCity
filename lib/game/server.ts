@@ -13,6 +13,9 @@ import {
   advanceGameTime,
   type GameTime,
 } from "./time"
+import {
+  createGameClock,
+} from "@/lib/game/clock"
 
 // The authoritative game state, stored one document per city (keyed by the
 // owner's Firebase uid). This module is the ONLY place that mutates game data.
@@ -26,6 +29,7 @@ interface CityDoc {
   updatedAt: string
   money: number
   lastTickAt: number
+  clockStartedAt: number
   gameTime: GameTime
   timeStage: number
   policy: CityPolicy
@@ -86,17 +90,21 @@ function sanitizePolicy(input: unknown): CityPolicy {
   return { taxRate, services }
 }
 
-function docToState(
-  doc: CityDoc,
-): CityState {
+function docToState(doc: CityDoc): CityState {
+  const state = deriveState(
+    doc.buildings,
+    doc.money,
+    doc.policy,
+  )
+
+  const clock = createGameClock(
+    doc.clockStartedAt,
+    Date.now(),
+  )
+
   return {
-    ...deriveState(
-      doc.buildings,
-      doc.money,
-      doc.policy,
-    ),
-    timeStage:
-      doc.timeStage ?? 0,
+    ...state,
+    clock,
   }
 }
 
@@ -108,6 +116,7 @@ function docToCity(doc: CityDoc): City {
     seed: doc.seed,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
+    clockStartedAt: doc.clockStartedAt,
   }
 }
 
@@ -135,6 +144,7 @@ export async function getOrCreateCity(
       updatedAt: nowIso,
       money: STARTING_MONEY,
       lastTickAt: now,
+      clockStartedAt: now,
       gameTime: createGameTime(),
       timeStage: 0,
       policy: DEFAULT_POLICY,
@@ -153,6 +163,10 @@ export async function getOrCreateCity(
   }
 
   const doc = snap.data() as CityDoc
+  const clock = createGameClock(
+    doc.clockStartedAt,
+    now,
+  )
   // Apply elapsed budget ticks to the treasury.
   if (!doc.gameTime) {
     doc.gameTime = createGameTime()

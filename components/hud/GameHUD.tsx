@@ -9,6 +9,9 @@ import { ToolBar } from "./ToolBar"
 import { TileInspector } from "./TileInspector"
 import { GameToast } from "./GameToast"
 import { TopBar } from "./TopBar"
+import {
+  formatGameTime,
+} from "@/lib/game/clock"
 
 /**
  * All 2D overlay UI. It sits above the 3D canvas with pointer-events disabled
@@ -41,6 +44,8 @@ export function GameHUD() {
   // exatamente o que faz o TileInspector abrir/fechar.
   const { selectedTile } = useSelection()
 
+  const gameClock = state?.clock ?? null
+
   const inspected = useMemo(() => {
     if (!selectedTile) return { tile: null, building: null }
     const tile = tiles[selectedTile.x]?.[selectedTile.z] ?? null
@@ -65,7 +70,35 @@ export function GameHUD() {
       {/* Top row */}
       <div className="flex items-start justify-between gap-3">
         <ResourceBar state={state} />
+        {gameClock && (
+          <div className="pointer-events-auto hidden rounded-2xl border border-border bg-card/90 px-4 py-2 shadow-lg shadow-black/20 backdrop-blur sm:block">
+            <div className="flex items-center gap-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Dia {gameClock.day}
+                </p>
 
+                <p className="font-mono text-lg font-bold tabular-nums text-card-foreground">
+                  {formatGameTime(gameClock)}
+                </p>
+              </div>
+
+              <div className="h-8 w-px bg-border" />
+
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Estado
+                </p>
+
+                <p className="text-sm font-semibold text-card-foreground">
+                  {gameClock.stage === "WORK"
+                    ? "Trabalho"
+                    : "Casa"}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         <TopBar
           cityName={city?.name ?? "PolyCity"}
           user={user}
