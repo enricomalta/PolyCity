@@ -8,6 +8,7 @@ import {
   ROAD_S,
   ROAD_W,
 } from "./roadAutoTile"
+import { GRID_SIZE } from "./constants"
 
 // ---------------------------------------------------------------------------
 // Rede viária: pontos de entrada/saída da cidade (rodovias END que tocam a
@@ -82,10 +83,17 @@ export function findSpawnPoints(
       roads,
     )
 
-    if (
-      autoTile.shape !== "END" ||
-      !autoTile.edgeExit
-    ) {
+    if (autoTile.shape !== "END") {
+      continue
+    }
+
+    const isMapEdge =
+      b.x === 0 ||
+      b.x === GRID_SIZE - 1 ||
+      b.z === 0 ||
+      b.z === GRID_SIZE - 1
+
+    if (!isMapEdge) {
       continue
     }
 
