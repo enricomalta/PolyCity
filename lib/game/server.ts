@@ -6,6 +6,7 @@ import { adminDb } from "@/lib/firebase/admin"
 import { getBuilding } from "./buildings"
 import { applyBudgetTicks, deriveState, DEFAULT_POLICY, PUBLIC_SERVICES } from "./economy"
 import { generateTerrain, applyOccupancy, canPlace } from "./grid"
+import { isHouseReachable } from "./traffic"
 import { GRID_SIZE, STARTING_MONEY } from "./constants"
 
 // The authoritative game state, stored one document per city (keyed by the
@@ -171,7 +172,7 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
     if (doc.money < def.cost) return reject("Dinheiro insuficiente.")
     doc.buildings = [
       ...doc.buildings,
-      { id: makeId(), type: action.buildingType, x: action.x, z: action.z, rotation: action.rotation, level: 1 },
+      { id: makeId(), type: action.buildingType, x: action.x, z: action.z, rotation: action.rotation, level: 1, occupied: false },
     ]
     doc.money -= def.cost
     doc.updatedAt = new Date(now).toISOString()
@@ -234,6 +235,43 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
     doc.updatedAt = new Date(now).toISOString()
     await cityRef.update({ policy: doc.policy, money: doc.money, lastTickAt: doc.lastTickAt, updatedAt: doc.updatedAt })
     return { success: true, state: docToState(doc), message: "Política municipal atualizada." }
+  }
+
+  if (action.type === "OCCUPY") {
+    const idx = doc.buildings.findIndex(
+      (b) => b.x === action.x && b.z === action.z,
+    )
+
+    if (idx === -1) {
+      return reject("Nenhuma construção encontrada aqui.")
+    }
+
+    const building = doc.buildings[idx]
+    const def = getBuilding(building.type)
+
+    if (def.category !== "RESIDENTIAL") {
+      return reject("Esta construção não é residencial.")
+    }
+
+    if (building.occupied) {
+      return reject("Esta casa já está ocupada.")
+    }
+
+    // Nunca confia na palavra do cliente de que "o carro chegou": revalida
+    // que a casa está mesmo conectada à rede viária a partir de uma
+    // rodovia que toca a borda do mapa.
+    if (!isHouseReachable(action.x, action.z, doc.buildings)) {
+      return reject("Esta casa não está conectada à rede viária da cidade.")
+    }
+
+    doc.buildings[idx] = { ...building, occupied: true }
+    doc.updatedAt = new Date(now).toISOString()
+    await cityRef.update({ buildings: doc.buildings, money: doc.money, lastTickAt: doc.lastTickAt, updatedAt: doc.updatedAt })
+    return {
+      success: true,
+      state: docToState(doc),
+      message: `Uma família se mudou para ${def.name.toLowerCase()}.`,
+    }
   }
 
   return reject("Ação desconhecida.")

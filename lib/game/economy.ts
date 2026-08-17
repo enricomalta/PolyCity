@@ -35,6 +35,15 @@ const SERVICE_COST_PER_CITIZEN = 1.2
 const INCOME_PER_CITIZEN = 9
 const INCOME_PER_JOB = 5
 
+// Uma casa (RESIDENTIAL) só soma população e consome energia/água quando
+// ocupada — ou seja, quando um NPC já dirigiu até ela pela rede viária (ver
+// lib/game/traffic.ts). Prédios não-residenciais (loja, fábrica, parque
+// etc.) sempre contam integralmente, não têm esse conceito de ocupação.
+function isActiveResident(b: Building, def: ReturnType<typeof getBuilding>): boolean {
+  if (def.category !== "RESIDENTIAL") return true
+  return b.occupied === true
+}
+
 export function affordable(state: ResourceState, cost: number): boolean {
   return state.money >= cost
 }
@@ -86,13 +95,18 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
 
   for (const b of buildings) {
     const def = getBuilding(b.type)
-    population += def.population
+    const active = isActiveResident(b, def)
+
+    if (active) {
+      population += def.population
+      energyConsumption += def.energyConsumption
+      waterConsumption += def.waterConsumption
+    }
+
     jobs += def.jobs
     buildingHappiness += def.happiness
     energyProduction += def.energyProduction
-    energyConsumption += def.energyConsumption
     waterProduction += def.waterProduction
-    waterConsumption += def.waterConsumption
   }
 
   const services = deriveServiceIndices(policy, population)
@@ -140,7 +154,9 @@ export function applyBudgetTicks(
   let jobs = 0
   for (const b of buildings) {
     const def = getBuilding(b.type)
-    population += def.population
+    if (isActiveResident(b, def)) {
+      population += def.population
+    }
     jobs += def.jobs
   }
   const { net } = deriveBudget(policy, population, jobs)

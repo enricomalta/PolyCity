@@ -115,6 +115,13 @@ interface GameContextValue {
     z: number,
   ) => Promise<void>
 
+  // Disparada pelo TrafficSystem quando um carro chega a uma casa vaga. O
+  // servidor revalida tudo (ver lib/game/traffic.ts) antes de aceitar.
+  occupyHouse: (
+    x: number,
+    z: number,
+  ) => Promise<void>
+
   updatePolicy: (
     policy: CityPolicy,
   ) => Promise<boolean>
@@ -321,6 +328,42 @@ export function GameProvider({
     )
 
   // ---------------------------------------------------------------------------
+  // Occupy (chamado pelo TrafficSystem quando um carro chega numa casa vaga)
+  // ---------------------------------------------------------------------------
+
+  const occupyHouse =
+    useCallback<GameContextValue["occupyHouse"]>(
+      async (x, z) => {
+        setPending(true)
+
+        try {
+          const res =
+            await gameService.performAction(
+              cityId,
+              {
+                type: "OCCUPY",
+                x,
+                z,
+              },
+            )
+
+          setState(res.state)
+
+          setLastMessage(
+            res.message ?? null,
+          )
+        } catch {
+          setLastMessage(
+            "Não foi possível concluir a ação.",
+          )
+        } finally {
+          setPending(false)
+        }
+      },
+      [cityId],
+    )
+
+  // ---------------------------------------------------------------------------
   // Rotatate Select
   // ---------------------------------------------------------------------------
   const rotateSelectedBuilding = useCallback(
@@ -408,23 +451,16 @@ export function GameProvider({
       (building: BuildingType | null) => {
         setSelectedBuilding(building)
 
-        // When leaving a selected building, return to the
-        // construction menu instead of SELECT.
-        if (!building) {
-          return
-        }
-
         // Every new building starts at 0°.
-        setBuildRotation(0)
+        if (building) {
+          setBuildRotation(0)
 
-        // ROAD has its own placement submode.
-        // Both BUILD and ROAD still belong to the
-        // Construction toolbar button.
-        setTool(
-          building === "ROAD"
-            ? "ROAD"
-            : "BUILD",
-        )
+          setTool(
+            building === "ROAD"
+              ? "ROAD"
+              : "BUILD",
+          )
+        }
       },
       [],
     )
@@ -487,6 +523,8 @@ export function GameProvider({
 
         demolish,
 
+        occupyHouse,
+
         rotateSelectedBuilding,
 
         updatePolicy,
@@ -515,6 +553,8 @@ export function GameProvider({
         build,
 
         demolish,
+
+        occupyHouse,
 
         updatePolicy,
 

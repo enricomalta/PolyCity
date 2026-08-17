@@ -53,6 +53,11 @@ export interface Building {
   z: number
   rotation: number // in 90deg steps: 0,1,2,3
   level: number
+  // Só é relevante para buildings RESIDENTIAL (HOUSE, SMALL_APARTMENT).
+  // Uma casa só soma população (e consome energia/água) quando ocupada —
+  // isso acontece quando um NPC dirige até ela pela rede viária, não no
+  // instante em que é construída. Ver lib/game/traffic.ts e a ação OCCUPY.
+  occupied?: boolean
 }
 
 // Monthly budget breakdown so the mayor page can show revenue vs expenses.

@@ -57,6 +57,15 @@ export type GameAction =
       type: "SET_POLICY"
       policy: CityPolicy
     }
+  | {
+      // Disparada pelo sistema de tráfego (client) quando um carro chega a
+      // uma casa vaga. O servidor revalida tudo: a casa existe, é
+      // residencial, está vaga, e está conectada à rede viária a partir de
+      // uma rodovia que toca a borda do mapa — nunca confia só no cliente.
+      type: "OCCUPY"
+      x: number
+      z: number
+    }
 
 export interface GameResponse {
   success: boolean
@@ -66,8 +75,6 @@ export interface GameResponse {
 
 export type ToolMode =
   | "SELECT"
-  | "DEMOLISH"
-  | "BUILD_MENU"
   | "BUILD"
   | "ROAD"
-  | "EDIT"
+  | "DEMOLISH"
