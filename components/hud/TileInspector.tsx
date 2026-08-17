@@ -2,8 +2,6 @@
 
 import {
   X,
-  Trash2,
-  RotateCw,
 } from "lucide-react"
 
 import type { Building } from "@/types/city"
@@ -170,7 +168,6 @@ export function TileInspector({
                   )
                 }
               >
-                <RotateCw className="mr-1.5 size-4" />
                 Girar
               </Button>
 
@@ -184,7 +181,6 @@ export function TileInspector({
                   )
                 }
               >
-                <Trash2 className="mr-1.5 size-4" />
                 Demolir
               </Button>
             </div>
@@ -202,16 +198,25 @@ export function TileInspector({
 }
 
 function terrainLabel(
-  t: Tile["terrain"],
+  terrain: Tile["terrain"],
 ): string {
-  switch (t) {
+  switch (terrain) {
     case "WATER":
       return "Água"
 
     case "ROCK":
       return "Rocha"
 
-    default:
+    case "SAND":
+      return "Areia"
+
+    case "FOREST":
+      return "Árvore"
+
+    case "GRASS":
       return "Grama"
+
+    default:
+      return "Terreno"
   }
 }
