@@ -6,8 +6,13 @@ import { adminDb } from "@/lib/firebase/admin"
 import { getBuilding } from "./buildings"
 import { applyBudgetTicks, deriveState, DEFAULT_POLICY, PUBLIC_SERVICES } from "./economy"
 import { generateTerrain, applyOccupancy, canPlace } from "./grid"
-import { isHouseReachable } from "./traffic"
+import { isHouseReachable, findWorkTrips } from "./traffic"
 import { GRID_SIZE, STARTING_MONEY } from "./constants"
+import {
+  createGameTime,
+  advanceGameTime,
+  type GameTime,
+} from "./time"
 
 // The authoritative game state, stored one document per city (keyed by the
 // owner's Firebase uid). This module is the ONLY place that mutates game data.
@@ -21,6 +26,8 @@ interface CityDoc {
   updatedAt: string
   money: number
   lastTickAt: number
+  gameTime: GameTime
+  timeStage: number
   policy: CityPolicy
   buildings: Building[]
 }
@@ -79,8 +86,18 @@ function sanitizePolicy(input: unknown): CityPolicy {
   return { taxRate, services }
 }
 
-function docToState(doc: CityDoc): CityState {
-  return deriveState(doc.buildings, doc.money, doc.policy)
+function docToState(
+  doc: CityDoc,
+): CityState {
+  return {
+    ...deriveState(
+      doc.buildings,
+      doc.money,
+      doc.policy,
+    ),
+    timeStage:
+      doc.timeStage ?? 0,
+  }
 }
 
 function docToCity(doc: CityDoc): City {
@@ -118,6 +135,8 @@ export async function getOrCreateCity(
       updatedAt: nowIso,
       money: STARTING_MONEY,
       lastTickAt: now,
+      gameTime: createGameTime(),
+      timeStage: 0,
       policy: DEFAULT_POLICY,
       buildings: starterBuildings(seed),
     }
@@ -135,13 +154,140 @@ export async function getOrCreateCity(
 
   const doc = snap.data() as CityDoc
   // Apply elapsed budget ticks to the treasury.
+  if (!doc.gameTime) {
+    doc.gameTime = createGameTime()
+  }
+
+  if (
+    typeof doc.timeStage !== "number"
+  ) {
+    doc.timeStage = 0
+  }
+
   const ticked = applyBudgetTicks(doc.money, doc.buildings, doc.policy, doc.lastTickAt ?? now, now)
-  if (ticked.money !== doc.money || ticked.lastTickAt !== doc.lastTickAt) {
+  const timeAdvanced = advanceGameTime(
+    doc.gameTime,
+    doc.lastTickAt ?? now,
+    now,
+  )
+
+  doc.gameTime = timeAdvanced.time
+  const shouldPersist =
+    ticked.money !== doc.money ||
+    ticked.lastTickAt !== doc.lastTickAt ||
+    timeAdvanced.elapsedGameMinutes > 0
+
+  if (shouldPersist) {
     doc.money = ticked.money
     doc.lastTickAt = ticked.lastTickAt
-    await cityRef.update({ money: doc.money, lastTickAt: doc.lastTickAt })
+
+    await cityRef.update({
+      money: doc.money,
+      lastTickAt: doc.lastTickAt,
+      gameTime: doc.gameTime,
+      timeStage: doc.timeStage,
+    })
   }
   return { city: docToCity(doc), state: docToState(doc) }
+}
+
+function assignWorkersToBuildings(
+  buildings: Building[],
+): Building[] {
+  const residential = buildings.filter(
+    (b) =>
+      b.occupied &&
+      !b.closed &&
+      getBuilding(b.type).category ===
+        "RESIDENTIAL",
+  )
+
+  const workplaces = buildings.filter(
+    (b) =>
+      b.occupied &&
+      !b.closed &&
+      getBuilding(b.type).category !==
+        "RESIDENTIAL" &&
+      getBuilding(b.type).jobs > 0,
+  )
+
+  if (
+    residential.length === 0 ||
+    workplaces.length === 0
+  ) {
+    return buildings.map((b) => ({
+      ...b,
+      workerBuildingId:
+        undefined,
+    }))
+  }
+
+  const assignments =
+    new Map<string, string>()
+
+  let workplaceIndex = 0
+
+  for (const home of residential) {
+    const workplace =
+      workplaces[
+        workplaceIndex %
+          workplaces.length
+      ]
+
+    assignments.set(
+      home.id,
+      workplace.id,
+    )
+
+    workplaceIndex += 1
+  }
+
+  return buildings.map((building) => {
+    if (!assignments.has(building.id)) {
+      return {
+        ...building,
+        workerBuildingId:
+          undefined,
+      }
+    }
+
+    return {
+      ...building,
+      workerBuildingId:
+        assignments.get(building.id),
+    }
+  })
+}
+
+function processWorkStage(
+  buildings: Building[],
+): Building[] {
+  const workTrips =
+    findWorkTrips(buildings)
+
+  const assigned =
+    new Set(
+      workTrips.map(
+        (trip) =>
+          trip.buildingId,
+      ),
+    )
+
+  return buildings.map(
+    (building) => {
+      if (
+        assigned.has(building.id)
+      ) {
+        return {
+          ...building,
+          workerState:
+            "WORK",
+        }
+      }
+
+      return building
+    },
+  )
 }
 
 // Apply a player INTENTION authoritatively and return the new state.
@@ -156,13 +302,95 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
   const fresh = await cityRef.get()
   const doc = fresh.data() as CityDoc
   const now = Date.now()
+  if (!doc.gameTime) {
+    doc.gameTime = createGameTime()
+  }
 
+  const timeAdvanced = advanceGameTime(
+    doc.gameTime,
+    doc.lastTickAt ?? now,
+    now,
+  )
+
+  const stageChanged =
+    timeAdvanced.stageChanges > 0
+
+  const dayCompleted =
+    timeAdvanced.completedDays > 0
+
+  if (stageChanged) {
+    doc.timeStage =
+      timeAdvanced.currentStage
+
+    doc.buildings =
+      assignWorkersToBuildings(
+        doc.buildings,
+      )
+
+    if (
+      doc.timeStage === 1
+    ) {
+      doc.buildings =
+        processWorkStage(
+          doc.buildings,
+        )
+    } else {
+      doc.buildings =
+        doc.buildings.map(
+          (building) => {
+            if (
+              building.workerState ===
+              "WORK"
+            ) {
+              return {
+                ...building,
+                workerState:
+                  "TO_HOME",
+              }
+            }
+
+            if (
+              building.workerState ===
+              "TO_WORK"
+            ) {
+              return {
+                ...building,
+                workerState:
+                  "HOME",
+              }
+            }
+
+            return building
+          },
+        )
+    }
+  }
+
+  doc.gameTime = timeAdvanced.time
   // Keep the treasury current before spending/earning.
   const ticked = applyBudgetTicks(doc.money, doc.buildings, doc.policy, doc.lastTickAt ?? now, now)
   doc.money = ticked.money
   doc.lastTickAt = ticked.lastTickAt
 
   const reject = (message: string): GameResponse => ({ success: false, state: docToState(doc), message })
+  if (
+    stageChanged ||
+    dayCompleted
+  ) {
+    doc.updatedAt =
+      new Date(now).toISOString()
+
+    doc.lastTickAt = now
+
+    await cityRef.update({
+      buildings: doc.buildings,
+      gameTime: doc.gameTime,
+      timeStage: doc.timeStage,
+      lastTickAt: doc.lastTickAt,
+      money: doc.money,
+      updatedAt: doc.updatedAt,
+    })
+  }
 
   if (action.type === "BUILD") {
     const def = getBuilding(action.buildingType)
@@ -172,7 +400,18 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
     if (doc.money < def.cost) return reject("Dinheiro insuficiente.")
     doc.buildings = [
       ...doc.buildings,
-      { id: makeId(), type: action.buildingType, x: action.x, z: action.z, rotation: action.rotation, level: 1, occupied: false },
+        {
+          id: makeId(),
+          type: action.buildingType,
+          x: action.x,
+          z: action.z,
+          rotation: action.rotation,
+          level: 1,
+          occupied: false,
+          closed: false,
+          workerBuildingId: undefined,
+          workerState: "HOME",
+        }
     ]
     doc.money -= def.cost
     doc.updatedAt = new Date(now).toISOString()
@@ -269,6 +508,10 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
     }
 
     doc.buildings[idx] = { ...building, occupied: true }
+    doc.buildings =
+      assignWorkersToBuildings(
+        doc.buildings,
+      )
     doc.updatedAt = new Date(now).toISOString()
     await cityRef.update({ buildings: doc.buildings, money: doc.money, lastTickAt: doc.lastTickAt, updatedAt: doc.updatedAt })
     return {
@@ -318,7 +561,10 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
       ...building,
       occupied: false,
     }
-
+    doc.buildings =
+      assignWorkersToBuildings(
+        doc.buildings,
+      )
     doc.updatedAt =
       new Date(now).toISOString()
 

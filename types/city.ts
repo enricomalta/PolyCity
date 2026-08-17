@@ -62,6 +62,12 @@ export interface Building {
   // A closed building remains physically present but is inactive.
   // This will later be used by economy/infrastructure systems.
   closed?: boolean
+  workerBuildingId?: string
+  workerState?:
+  | "HOME"
+  | "TO_WORK"
+  | "WORK"
+  | "TO_HOME"
 }
 
 // Monthly budget breakdown so the mayor page can show revenue vs expenses.
@@ -76,4 +82,5 @@ export interface CityState extends ResourceState {
   policy: CityPolicy
   services: ServiceIndices
   budget: Budget
+  timeStage: number
 }

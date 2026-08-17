@@ -275,3 +275,158 @@ export function findRoadPath(
 
   return path
 }
+
+export interface WorkTrip extends Coord {
+  buildingId: string
+  workplaceId: string
+  roadX: number
+  roadZ: number
+}
+
+export function findWorkTrips(
+  buildings: Building[],
+): WorkTrip[] {
+  const reachable =
+    reachableRoadTiles(buildings)
+
+  const result: WorkTrip[] = []
+
+  for (const home of buildings) {
+    if (!home.occupied) continue
+    if (home.closed) continue
+    if (!home.workerBuildingId) continue
+
+    const workplace =
+      buildings.find(
+        (b) =>
+          b.id ===
+          home.workerBuildingId,
+      )
+
+    if (!workplace) continue
+    if (workplace.closed) continue
+
+    const workplaceDef =
+      getBuilding(workplace.type)
+
+    if (
+      workplaceDef.category ===
+      "RESIDENTIAL"
+    ) {
+      continue
+    }
+
+    if (workplaceDef.jobs <= 0) {
+      continue
+    }
+
+    for (const n of neighbors4(
+      home.x,
+      home.z,
+    )) {
+      if (
+        reachable.has(
+          tileKey(n.x, n.z),
+        )
+      ) {
+        result.push({
+          x: home.x,
+          z: home.z,
+          buildingId: home.id,
+          workplaceId:
+            workplace.id,
+          roadX: n.x,
+          roadZ: n.z,
+        })
+
+        break
+      }
+    }
+  }
+
+  return result
+}
+
+export interface WorkTripRoute {
+  buildingId: string
+  workplaceId: string
+  homeRoadX: number
+  homeRoadZ: number
+  workplaceRoadX: number
+  workplaceRoadZ: number
+  path: Coord[]
+}
+
+export function findWorkTripRoutes(
+  buildings: Building[],
+): WorkTripRoute[] {
+  const trips =
+    findWorkTrips(buildings)
+
+  const result: WorkTripRoute[] = []
+
+  for (const trip of trips) {
+    const workplace =
+      buildings.find(
+        (b) =>
+          b.id ===
+          trip.workplaceId,
+      )
+
+    if (!workplace) continue
+
+    const workplaceNeighbors =
+      neighbors4(
+        workplace.x,
+        workplace.z,
+      )
+
+    let workplaceRoad:
+      Coord | null = null
+
+    for (const n of workplaceNeighbors) {
+      if (
+        buildings.some(
+          (b) =>
+            b.type === "ROAD" &&
+            b.x === n.x &&
+            b.z === n.z,
+        )
+      ) {
+        workplaceRoad = n
+        break
+      }
+    }
+
+    if (!workplaceRoad) continue
+
+    const path =
+      findRoadPath(
+        trip.roadX,
+        trip.roadZ,
+        workplaceRoad.x,
+        workplaceRoad.z,
+        buildings,
+      )
+
+    if (!path) continue
+
+    result.push({
+      buildingId:
+        trip.buildingId,
+      workplaceId:
+        trip.workplaceId,
+      homeRoadX:
+        trip.roadX,
+      homeRoadZ:
+        trip.roadZ,
+      workplaceRoadX:
+        workplaceRoad.x,
+      workplaceRoadZ:
+        workplaceRoad.z,
+      path,
+    })
+  }
+
+  return result
+}

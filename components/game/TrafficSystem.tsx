@@ -17,6 +17,7 @@ import {
   findRoadPath,
   findSpawnPoints,
   findVacantConnectedHouses,
+  findWorkTrips,
   type Coord,
 } from "@/lib/game/traffic"
 
@@ -35,6 +36,8 @@ interface ActiveCar {
   path: Coord[]
   houseX: number
   houseZ: number
+  workplaceId?: string
+  tripType: "OCCUPY" | "WORK" | "HOME"
 }
 
 let carSeq = 0
@@ -81,6 +84,11 @@ export function TrafficSystem({
     [buildings],
   )
 
+  const workTrips = useMemo(
+    () => findWorkTrips(buildings),
+    [buildings],
+  )
+
   // Casas que sumiram (demolidas, ou já ocupadas por outro caminho) não
   // continuam reservadas indefinidamente.
   useEffect(() => {
@@ -105,13 +113,18 @@ export function TrafficSystem({
 
     function trySpawn() {
       if (spawnPoints.length === 0) return
+
       if (
         carsRef.current.length >= MAX_CARS
       ) {
         return
       }
 
-      const available =
+      // -------------------------------------------------------------------------
+      // ESTÁGIO 0 — carros entrando na cidade para ocupar casas
+      // -------------------------------------------------------------------------
+
+      const availableHouses =
         vacantHouses.filter(
           (h) =>
             !claimedHouses.current.has(
@@ -119,38 +132,112 @@ export function TrafficSystem({
             ),
         )
 
-      if (available.length === 0) return
+      if (availableHouses.length > 0) {
+        const spawn =
+          spawnPoints[
+            Math.floor(
+              Math.random() *
+                spawnPoints.length,
+            )
+          ]
 
-      const spawn =
-        spawnPoints[
+        const house =
+          availableHouses[
+            Math.floor(
+              Math.random() *
+                availableHouses.length,
+            )
+          ]
+
+        const path = findRoadPath(
+          spawn.intoX,
+          spawn.intoZ,
+          house.roadX,
+          house.roadZ,
+          buildings,
+        )
+
+        if (
+          path &&
+          path.length > 0
+        ) {
+          claimedHouses.current.add(
+            `${house.x}:${house.z}`,
+          )
+
+          carSeq += 1
+
+          setCars((prev) => [
+            ...prev,
+            {
+              id: `car_${carSeq}`,
+              path: [
+                {
+                  x: spawn.x,
+                  z: spawn.z,
+                },
+                ...path,
+              ],
+              houseX: house.x,
+              houseZ: house.z,
+              tripType: "OCCUPY",
+            },
+          ])
+
+          return
+        }
+      }
+
+      // -------------------------------------------------------------------------
+      // ESTÁGIO 1 — moradores indo trabalhar
+      // -------------------------------------------------------------------------
+
+      const availableTrips =
+        workTrips.filter(
+          (trip) =>
+            !claimedHouses.current.has(
+              `${trip.buildingId}:WORK`,
+            ),
+        )
+
+      if (
+        availableTrips.length === 0
+      ) {
+        return
+      }
+
+      const trip =
+        availableTrips[
           Math.floor(
             Math.random() *
-              spawnPoints.length,
+              availableTrips.length,
           )
         ]
 
-      const house =
-        available[
-          Math.floor(
-            Math.random() *
-              available.length,
-          )
-        ]
+      const spawn = spawnPoints[
+        Math.floor(
+          Math.random() *
+            spawnPoints.length,
+        )
+      ]
 
       const path = findRoadPath(
         spawn.intoX,
         spawn.intoZ,
-        house.roadX,
-        house.roadZ,
+        trip.roadX,
+        trip.roadZ,
         buildings,
       )
 
-      if (!path || path.length === 0) {
+      if (
+        !path ||
+        path.length === 0
+      ) {
         return
       }
 
       claimedHouses.current.add(
-        `${house.x}:${house.z}`,
+        `${trip.buildingId}:WORK`,
       )
 
       carSeq += 1
@@ -166,8 +253,11 @@ export function TrafficSystem({
             },
             ...path,
           ],
-          houseX: house.x,
-          houseZ: house.z,
+          houseX: trip.x,
+          houseZ: trip.z,
+          workplaceId:
+            trip.workplaceId,
+          tripType: "WORK",
         },
       ])
     }
@@ -197,19 +287,47 @@ export function TrafficSystem({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spawnPoints, vacantHouses, buildings])
 
-  function handleArrive(car: ActiveCar) {
+  function handleArrive(
+    car: ActiveCar,
+  ) {
     setCars((prev) =>
-      prev.filter((c) => c.id !== car.id),
+      prev.filter(
+        (c) => c.id !== car.id,
+      ),
     )
 
-    claimedHouses.current.delete(
-      `${car.houseX}:${car.houseZ}`,
-    )
+    if (
+      car.tripType === "OCCUPY"
+    ) {
+      claimedHouses.current.delete(
+        `${car.houseX}:${car.houseZ}`,
+      )
 
-    void occupyHouse(
-      car.houseX,
-      car.houseZ,
-    )
+      void occupyHouse(
+        car.houseX,
+        car.houseZ,
+      )
+
+      return
+    }
+
+    if (
+      car.tripType === "WORK"
+    ) {
+      claimedHouses.current.delete(
+        `${car.houseX}:WORK`,
+      )
+
+      return
+    }
+
+    if (
+      car.tripType === "HOME"
+    ) {
+      claimedHouses.current.delete(
+        `${car.houseX}:HOME`,
+      )
+    }
   }
 
   return (
