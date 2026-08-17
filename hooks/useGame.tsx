@@ -218,6 +218,17 @@ export function GameProvider({
   )
 
   useEffect(() => {
+    const intervalId =
+      window.setInterval(() => {
+        setClockNow(Date.now())
+      }, 1000)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [])
+
+  useEffect(() => {
     const intervalId = window.setInterval(() => {
       setClockNow(Date.now())
     }, 1000)
@@ -252,7 +263,12 @@ export function GameProvider({
   )
 
   const gameClock = useMemo(() => {
-    if (!city?.clockStartedAt) {
+    if (
+      !city ||
+      !Number.isFinite(
+        city.clockStartedAt,
+      )
+    ) {
       return null
     }
 
@@ -260,8 +276,10 @@ export function GameProvider({
       city.clockStartedAt,
       clockNow,
     )
-  }, [city?.clockStartedAt, clockNow])
-
+  }, [
+    city?.clockStartedAt,
+    clockNow,
+  ])
   // ---------------------------------------------------------------------------
   // Load city
   // ---------------------------------------------------------------------------
@@ -658,9 +676,8 @@ export function GameProvider({
               clock:
                 gameClock ?? state.clock,
               timeStage:
-                gameClock?.stage === "WORK"
-                  ? 1
-                  : 0,
+                gameClock?.stage ??
+                state.timeStage,
             }
           : null,
         tiles,
@@ -723,6 +740,8 @@ export function GameProvider({
         selectedBuilding,
 
         buildRotation,
+        
+        gameClock,
 
         selectBuildingType,
 

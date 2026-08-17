@@ -138,10 +138,7 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
     policy,
     services,
     budget,
-    timeStage:
-      clock.stage === "WORK"
-        ? 1
-        : 0,
+    timeStage: clock.stage,
     clock,
   }
 }

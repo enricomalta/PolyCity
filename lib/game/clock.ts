@@ -1,6 +1,6 @@
 export type TimeStage =
-  | "HOME"
-  | "WORK"
+  | "DAY"
+  | "NIGHT"
 
 export interface GameClock {
   day: number
@@ -49,10 +49,10 @@ export function getTimeStage(
     normalized >= 10 * 60 &&
     normalized < 20 * 60
   ) {
-    return "WORK"
+    return "DAY"
   }
 
-  return "HOME"
+  return "NIGHT"
 }
 
 /**

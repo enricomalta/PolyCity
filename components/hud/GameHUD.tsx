@@ -91,9 +91,9 @@ export function GameHUD() {
                 </p>
 
                 <p className="text-sm font-semibold text-card-foreground">
-                  {gameClock.stage === "WORK"
-                    ? "Trabalho"
-                    : "Casa"}
+                  {gameClock.stage === "DAY"
+                    ? "Dia"
+                    : "Noite"}
                 </p>
               </div>
             </div>

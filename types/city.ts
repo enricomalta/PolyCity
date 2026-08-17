@@ -83,12 +83,12 @@ export interface CityState extends ResourceState {
   policy: CityPolicy
   services: ServiceIndices
   budget: Budget
-  timeStage: number
+  timeStage: "DAY" | "NIGHT"
   clock: {
     day: number
     hour: number
     minute: number
     totalMinutes: number
-    stage: "HOME" | "WORK"
+    stage: "DAY" | "NIGHT"
   }
 }

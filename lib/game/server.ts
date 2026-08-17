@@ -155,10 +155,18 @@ export async function getOrCreateCity(
   }
 
   const doc = snap.data() as CityDoc
-  const clock = createGameClock(
-    doc.clockStartedAt,
-    now,
-  )
+  
+  if (
+    typeof doc.clockStartedAt !== "number" ||
+    !Number.isFinite(doc.clockStartedAt)
+  ) {
+    doc.clockStartedAt = now
+
+    await cityRef.update({
+      clockStartedAt:
+        doc.clockStartedAt,
+    })
+  }
   // Apply elapsed budget ticks to the treasury.
   if (!doc.gameTime) {
     doc.gameTime = createGameTime()
