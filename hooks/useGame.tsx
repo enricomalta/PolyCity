@@ -122,6 +122,14 @@ interface GameContextValue {
     z: number,
   ) => Promise<void>
 
+  arriveWork: (
+    citizenId: string,
+  ) => Promise<void>
+
+  arriveHome: (
+    citizenId: string,
+  ) => Promise<void>
+
   vacateBuilding: (
     x: number,
     z: number,
@@ -379,6 +387,62 @@ export function GameProvider({
       [cityId],
     )
 
+
+
+
+  const arriveWork =
+    useCallback<GameContextValue["arriveWork"]>(
+      async (citizenId) => {
+        try {
+          const res =
+            await gameService.performAction(
+              cityId,
+              {
+                type: "ARRIVE_WORK",
+                citizenId,
+              },
+            )
+
+          setState(res.state)
+
+          setLastMessage(
+            res.message ?? null,
+          )
+        } catch {
+          setLastMessage(
+            "Não foi possível registrar a chegada ao trabalho.",
+          )
+        }
+      },
+      [cityId],
+    )
+
+  const arriveHome =
+    useCallback<GameContextValue["arriveHome"]>(
+      async (citizenId) => {
+        try {
+          const res =
+            await gameService.performAction(
+              cityId,
+              {
+                type: "ARRIVE_HOME",
+                citizenId,
+              },
+            )
+
+          setState(res.state)
+
+          setLastMessage(
+            res.message ?? null,
+          )
+        } catch {
+          setLastMessage(
+            "Não foi possível registrar a chegada em casa.",
+          )
+        }
+      },
+      [cityId],
+    )
   // ---------------------------------------------------------------------------
   // Vacate
   // ---------------------------------------------------------------------------
@@ -652,6 +716,9 @@ export function GameProvider({
         demolish,
 
         occupyHouse,
+        
+        arriveWork,
+        arriveHome,
 
         vacateBuilding,
 
@@ -690,6 +757,9 @@ export function GameProvider({
         demolish,
 
         occupyHouse,
+
+        arriveWork,
+        arriveHome,
 
         vacateBuilding,
 

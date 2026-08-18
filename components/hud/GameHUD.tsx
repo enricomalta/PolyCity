@@ -219,6 +219,7 @@ export function GameHUD() {
                   rotation,
                 )
               }}
+              
               onVacate={vacateBuilding}
               onCloseBuilding={closeBuilding}
               onOpenBuilding={openBuilding}

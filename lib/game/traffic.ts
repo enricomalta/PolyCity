@@ -9,6 +9,7 @@ import {
   ROAD_W,
 } from "./roadAutoTile"
 import { GRID_SIZE } from "./constants"
+import type { Citizen } from "@/types/city"
 
 // ---------------------------------------------------------------------------
 // Rede viária: pontos de entrada/saída da cidade (rodovias END que tocam a
@@ -276,38 +277,65 @@ export function findRoadPath(
   return path
 }
 
-export interface WorkTrip extends Coord {
+export interface WorkTripRoute {
+  citizenId: string
   buildingId: string
   workplaceId: string
-  roadX: number
-  roadZ: number
+  homeRoadX: number
+  homeRoadZ: number
+  workplaceRoadX: number
+  workplaceRoadZ: number
+  path: Coord[]
 }
 
-export function findWorkTrips(
+export function findWorkTripRoutes(
   buildings: Building[],
-): WorkTrip[] {
+  citizens: Citizen[],
+): WorkTripRoute[] {
   const reachable =
     reachableRoadTiles(buildings)
 
-  const result: WorkTrip[] = []
+  const result: WorkTripRoute[] = []
 
-  for (const home of buildings) {
-    if (!home.occupied) continue
-    if (home.closed) continue
-    if (!home.workerBuildingId) continue
+  for (const citizen of citizens) {
+    if (!citizen.employed) continue
+    if (!citizen.workplaceBuildingId) {
+      continue
+    }
+
+    if (
+      citizen.workState !==
+      "TO_WORK"
+    ) {
+      continue
+    }
+
+    const home =
+      buildings.find(
+        (b) =>
+          b.id ===
+          citizen.homeBuildingId,
+      )
 
     const workplace =
       buildings.find(
         (b) =>
           b.id ===
-          home.workerBuildingId,
+          citizen.workplaceBuildingId,
       )
 
-    if (!workplace) continue
-    if (workplace.closed) continue
+    if (!home || !workplace) {
+      continue
+    }
+
+    if (home.closed || workplace.closed) {
+      continue
+    }
 
     const workplaceDef =
-      getBuilding(workplace.type)
+      getBuilding(
+        workplace.type,
+      )
 
     if (
       workplaceDef.category ===
@@ -320,6 +348,9 @@ export function findWorkTrips(
       continue
     }
 
+    let homeRoad: Coord | null =
+      null
+
     for (const n of neighbors4(
       home.x,
       home.z,
@@ -329,62 +360,23 @@ export function findWorkTrips(
           tileKey(n.x, n.z),
         )
       ) {
-        result.push({
-          x: home.x,
-          z: home.z,
-          buildingId: home.id,
-          workplaceId:
-            workplace.id,
-          roadX: n.x,
-          roadZ: n.z,
-        })
-
+        homeRoad = n
         break
       }
     }
-  }
 
-  return result
-}
-
-export interface WorkTripRoute {
-  buildingId: string
-  workplaceId: string
-  homeRoadX: number
-  homeRoadZ: number
-  workplaceRoadX: number
-  workplaceRoadZ: number
-  path: Coord[]
-}
-
-export function findWorkTripRoutes(
-  buildings: Building[],
-): WorkTripRoute[] {
-  const trips =
-    findWorkTrips(buildings)
-
-  const result: WorkTripRoute[] = []
-
-  for (const trip of trips) {
-    const workplace =
-      buildings.find(
-        (b) =>
-          b.id ===
-          trip.workplaceId,
-      )
-
-    if (!workplace) continue
-
-    const workplaceNeighbors =
-      neighbors4(
-        workplace.x,
-        workplace.z,
-      )
+    if (!homeRoad) {
+      continue
+    }
 
     let workplaceRoad:
-      Coord | null = null
+      | Coord
+      | null = null
 
-    for (const n of workplaceNeighbors) {
+    for (const n of neighbors4(
+      workplace.x,
+      workplace.z,
+    )) {
       if (
         buildings.some(
           (b) =>
@@ -398,28 +390,29 @@ export function findWorkTripRoutes(
       }
     }
 
-    if (!workplaceRoad) continue
+    if (!workplaceRoad) {
+      continue
+    }
 
     const path =
       findRoadPath(
-        trip.roadX,
-        trip.roadZ,
+        homeRoad.x,
+        homeRoad.z,
         workplaceRoad.x,
         workplaceRoad.z,
         buildings,
       )
 
-    if (!path) continue
+    if (!path) {
+      continue
+    }
 
     result.push({
-      buildingId:
-        trip.buildingId,
-      workplaceId:
-        trip.workplaceId,
-      homeRoadX:
-        trip.roadX,
-      homeRoadZ:
-        trip.roadZ,
+      citizenId: citizen.id,
+      buildingId: home.id,
+      workplaceId: workplace.id,
+      homeRoadX: homeRoad.x,
+      homeRoadZ: homeRoad.z,
       workplaceRoadX:
         workplaceRoad.x,
       workplaceRoadZ:

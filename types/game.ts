@@ -67,6 +67,19 @@ export type GameAction =
       z: number
     }
   | {
+      // Disparada pelo sistema de tráfego quando um cidadão chega
+      // ao local de trabalho. O servidor valida o cidadão e o emprego.
+      type: "ARRIVE_WORK"
+      citizenId: string
+    }
+
+  | {
+      // Disparada pelo sistema de tráfego quando um cidadão retorna
+      // para sua residência.
+      type: "ARRIVE_HOME"
+      citizenId: string
+    }
+  | {
       type: "VACATE"
       x: number
       z: number

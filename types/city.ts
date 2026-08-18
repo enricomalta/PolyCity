@@ -16,6 +16,7 @@ export interface City {
   updatedAt: string
 }
 
+
 // The four public services the mayor funds. Each has a funding level that the
 // mayor controls from the "Gabinete do Prefeito" page.
 export type PublicService = "education" | "health" | "security" | "prevention"
@@ -80,6 +81,7 @@ export interface Budget {
 
 export interface CityState extends ResourceState {
   buildings: Building[]
+  citizens: Citizen[]
   policy: CityPolicy
   services: ServiceIndices
   budget: Budget
@@ -91,4 +93,38 @@ export interface CityState extends ResourceState {
     totalMinutes: number
     stage: "DAY" | "NIGHT"
   }
+}
+
+
+export type CitizenLifeStage =
+  | "BABY"
+  | "CHILD"
+  | "TEEN"
+  | "ADULT"
+  | "ELDERLY"
+
+export type CitizenEducation =
+  | "NONE"
+  | "ELEMENTARY"
+  | "HIGH_SCHOOL"
+  | "TECHNICAL"
+  | "COLLEGE"
+  | "POSTGRADUATE"
+
+export type CitizenWorkState =
+  | "HOME"
+  | "TO_WORK"
+  | "WORK"
+  | "TO_HOME"
+
+export interface Citizen {
+  id: string
+  name: string
+  age: number
+  lifeStage: CitizenLifeStage
+  education: CitizenEducation
+  homeBuildingId: string
+  workplaceBuildingId?: string
+  employed: boolean
+  workerState: CitizenWorkState
 }

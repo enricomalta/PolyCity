@@ -10,7 +10,7 @@ import {
 import { useFrame } from "@react-three/fiber"
 import * as THREE from "three"
 
-import type { Building } from "@/types/city"
+import type { Building, Citizen } from "@/types/city"
 import { tileToWorld } from "@/lib/game/constants"
 
 import {
@@ -37,6 +37,7 @@ interface ActiveCar {
   houseZ: number
   homeBuildingId?: string
   workplaceId?: string
+  citizenId?: string
   tripType: "OCCUPY" | "WORK" | "HOME"
 }
 
@@ -46,13 +47,25 @@ interface ActiveCar {
 // alcançável — nesse caso simplesmente não spawna carros, silenciosamente.
 export function TrafficSystem({
   buildings,
+  citizens,
   occupyHouse,
+  arriveWork,
+  arriveHome,
   timeStage,
 }: {
   buildings: Building[]
+  citizens: Citizen[]
   occupyHouse: (
     x: number,
     z: number,
+  ) => Promise<void>
+
+  arriveWork: (
+    citizenId: string,
+  ) => Promise<void>
+
+  arriveHome: (
+    citizenId: string,
   ) => Promise<void>
   timeStage: "DAY" | "NIGHT"
 }) {
@@ -93,8 +106,12 @@ export function TrafficSystem({
   )
 
   const workTripRoutes = useMemo(
-    () => findWorkTripRoutes(buildings),
-    [buildings],
+    () =>
+      findWorkTripRoutes(
+        buildings,
+        citizens,
+      ),
+    [buildings, citizens],
   )
 
   // Casas que sumiram (demolidas, ou já ocupadas por outro caminho) não
@@ -254,6 +271,7 @@ export function TrafficSystem({
           houseZ: trip.homeRoadZ,
           homeBuildingId: trip.buildingId,
           workplaceId: trip.workplaceId,
+          citizenId: trip.citizenId,
           tripType: "WORK",
         },
       ])
@@ -312,50 +330,17 @@ export function TrafficSystem({
       return
     }
 
-    // if (car.tripType === "WORK") {
-    //   claimedHouses.current.delete(
-    //     `${car.homeBuildingId}:WORK`,
-    //   )
-
-    //   if (!car.homeBuildingId || !car.workplaceId) {
-    //     return
-    //   }
-
-    //   const trip = workTripRoutes.find(
-    //     (t) =>
-    //       t.buildingId === car.homeBuildingId &&
-    //       t.workplaceId === car.workplaceId,
-    //   )
-
-    //   if (!trip) {
-    //     return
-    //   }
-
-    //   claimedHouses.current.add(
-    //     `${car.homeBuildingId}:HOME`,
-    //   )
-
-    //   setCars((prev) => [
-    //     ...prev,
-    //     {
-    //       id: createCarId(),
-    //       path: [...trip.path].reverse(),
-    //       houseX: trip.homeRoadX,
-    //       houseZ: trip.homeRoadZ,
-    //       homeBuildingId:
-    //         trip.buildingId,
-    //       workplaceId:
-    //         trip.workplaceId,
-    //       tripType: "HOME",
-    //     },
-    //   ])
-
-    //   return
-    // }
-
     if (car.tripType === "WORK") {
       claimedHouses.current.delete(
         `${car.homeBuildingId}:WORK`,
+      )
+
+      if (!car.citizenId) {
+        return
+      }
+
+      void arriveWork(
+        car.citizenId,
       )
 
       return
@@ -365,6 +350,12 @@ export function TrafficSystem({
       claimedHouses.current.delete(
         `${car.homeBuildingId}:HOME`,
       )
+
+      if (car.citizenId) {
+        void arriveHome(
+          car.citizenId,
+        )
+      }
 
       return
     }

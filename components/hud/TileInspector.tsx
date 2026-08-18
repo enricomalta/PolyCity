@@ -111,12 +111,13 @@ export function TileInspector({
   const { state } = useGame()
   const workerCount =
     building
-      ? state?.buildings.filter(
-          (b) =>
-            b.workerBuildingId === building.id,
+      ? state?.citizens.filter(
+          (citizen) =>
+            citizen.workplaceBuildingId ===
+            building.id &&
+            citizen.employed,
         ).length ?? 0
       : 0
-
   return (
     <div className="pointer-events-auto w-64 rounded-2xl border border-border bg-card/95 p-4 shadow-lg shadow-black/30 backdrop-blur">
       <div className="mb-3 flex items-start justify-between">

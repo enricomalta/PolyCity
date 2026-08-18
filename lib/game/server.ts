@@ -1,6 +1,6 @@
 import "server-only"
 import type { DecodedIdToken } from "firebase-admin/auth"
-import type { City, CityPolicy, CityState, Building, FundingLevel } from "@/types/city"
+import type { City, CityPolicy, CityState, Building, Citizen, FundingLevel } from "@/types/city"
 import type { GameAction, GameResponse } from "@/types/game"
 import { adminDb } from "@/lib/firebase/admin"
 import { getBuilding } from "./buildings"
@@ -13,9 +13,13 @@ import {
   advanceGameTime,
   type GameTime,
 } from "./time"
+
 import {
-  createGameClock,
-} from "@/lib/game/clock"
+  canCitizenWork,
+  createCitizen,
+  updateCitizenWorkStates,
+} from "./citizens"
+
 
 // The authoritative game state, stored one document per city (keyed by the
 // owner's Firebase uid). This module is the ONLY place that mutates game data.
@@ -34,6 +38,7 @@ interface CityDoc {
   timeStage: number
   policy: CityPolicy
   buildings: Building[]
+  citizens: Citizen[]
 }
 
 function makeId(): string {
@@ -91,13 +96,18 @@ function sanitizePolicy(input: unknown): CityPolicy {
 }
 
 function docToState(doc: CityDoc): CityState {
-  return deriveState(
+  const state = deriveState(
     doc.buildings,
     doc.money,
     doc.policy,
     doc.clockStartedAt,
     Date.now(),
   )
+
+  return {
+    ...state,
+    citizens: doc.citizens ?? [],
+  }
 }
 
 function docToCity(doc: CityDoc): City {
@@ -112,6 +122,10 @@ function docToCity(doc: CityDoc): City {
   }
 }
 
+
+function makeCitizenId(): string {
+  return `c_${Math.random().toString(36).slice(2, 10)}`
+}
 // Load the caller's city, creating the account + city on first login. Applies
 // any pending budget ticks and persists the updated treasury.
 export async function getOrCreateCity(
@@ -141,6 +155,7 @@ export async function getOrCreateCity(
       timeStage: 0,
       policy: DEFAULT_POLICY,
       buildings: starterBuildings(seed),
+      citizens: [],
     }
     await db.collection("users").doc(user.uid).set({
       uid: user.uid,
@@ -155,7 +170,9 @@ export async function getOrCreateCity(
   }
 
   const doc = snap.data() as CityDoc
-  
+  if (!Array.isArray(doc.citizens)) {
+    doc.citizens = []
+  }
   if (
     typeof doc.clockStartedAt !== "number" ||
     !Number.isFinite(doc.clockStartedAt)
@@ -205,126 +222,189 @@ export async function getOrCreateCity(
   return { city: docToCity(doc), state: docToState(doc) }
 }
 
-function assignWorkersToBuildings(
-  buildings: Building[],
-): Building[] {
-  const residential = buildings.filter(
-    (b) =>
-      b.occupied &&
-      !b.closed &&
-      getBuilding(b.type).category ===
-        "RESIDENTIAL",
-  )
-
-  const workplaces = buildings.filter(
-    (b) =>
-      !b.closed &&
-      getBuilding(b.type).category !==
-        "RESIDENTIAL" &&
-      getBuilding(b.type).jobs > 0,
-  )
-
-  const assignments =
-    new Map<string, string>()
-
-  if (
-    residential.length > 0 &&
-    workplaces.length > 0
-  ) {
-    let workplaceIndex = 0
-
-    for (const home of residential) {
-      let assigned = false
-
-      for (
-        let attempt = 0;
-        attempt < workplaces.length;
-        attempt++
-      ) {
-        const workplace =
-          workplaces[
-            (workplaceIndex + attempt) %
-              workplaces.length
-          ]
-
-        const currentWorkers =
-          [...assignments.values()].filter(
-            (id) => id === workplace.id,
-          ).length
-
-        const maxWorkers =
-          getBuilding(workplace.type).jobs
-
-        if (currentWorkers < maxWorkers) {
-          assignments.set(
-            home.id,
-            workplace.id,
-          )
-
-          workplaceIndex =
-            (workplaceIndex + attempt + 1) %
-            workplaces.length
-
-          assigned = true
-          break
-        }
-      }
-
-      if (!assigned) {
-        break
-      }
-    }
-  }
-
-  return buildings.map((building) => {
-    const workerBuildingId =
-      assignments.get(building.id)
-
-    if (workerBuildingId) {
-      return {
-        ...building,
-        workerBuildingId,
-      }
+function processWorkStage(
+  citizens: Citizen[],
+): Citizen[] {
+  return citizens.map((citizen) => {
+    if (
+      citizen.lifeStage !== "ADULT" ||
+      !citizen.employed ||
+      !citizen.workplaceBuildingId
+    ) {
+      return citizen
     }
 
-    const {
-      workerBuildingId: _oldWorkerBuildingId,
-      ...buildingWithoutWorker
-    } = building
-
-    return buildingWithoutWorker
+    return {
+      ...citizen,
+      workerState: "WORK",
+    }
   })
 }
 
-function processWorkStage(
-  buildings: Building[],
-): Building[] {
-  const workTrips =
-    findWorkTrips(buildings)
+/*
+Toda residência criada terá pelo menos 1 adulto.
 
-  const assigned =
-    new Set(
-      workTrips.map(
-        (trip) =>
-          trip.buildingId,
+Portanto:
+
+👶 bebê → nunca sozinho
+🧒 criança → nunca sozinha
+🧑 adolescente → nunca sozinho
+🧑 adulto → pode morar sozinho
+👴 idoso → pode morar sozinho
+
+E uma casa de 4 pessoas poderá gerar, por exemplo:
+*/
+function createHousehold(
+  size: number,
+  homeBuildingId: string,
+): Citizen[] {
+  const citizens: Citizen[] = []
+
+  const adultAge =
+    18 + Math.floor(Math.random() * 47)
+
+  citizens.push(
+    createCitizen(
+      `c_${Math.random().toString(36).slice(2, 10)}`,
+      `Cidadão 1`,
+      adultAge,
+      homeBuildingId,
+    ),
+  )
+
+  for (let i = 1; i < size; i++) {
+    let age: number
+
+    const roll = Math.random()
+
+    if (roll < 0.15) {
+      age =
+        Math.floor(
+          Math.random() * 4,
+        )
+    } else if (roll < 0.40) {
+      age =
+        4 +
+        Math.floor(
+          Math.random() * 8,
+        )
+    } else if (roll < 0.65) {
+      age =
+        12 +
+        Math.floor(
+          Math.random() * 6,
+        )
+    } else if (roll < 0.92) {
+      age =
+        18 +
+        Math.floor(
+          Math.random() * 47,
+        )
+    } else {
+      age =
+        65 +
+        Math.floor(
+          Math.random() * 25,
+        )
+    }
+
+    citizens.push(
+      createCitizen(
+        `c_${Math.random().toString(36).slice(2, 10)}`,
+        `Cidadão ${i + 1}`,
+        age,
+        homeBuildingId,
       ),
     )
+  }
 
-  return buildings.map(
+  return citizens
+}
+
+function assignCitizensToWorkplaces(
+  citizens: Citizen[],
+  buildings: Building[],
+): Citizen[] {
+  const workplaces = buildings.filter(
     (building) => {
-      if (
-        assigned.has(building.id)
-      ) {
-        return {
-          ...building,
-          workerState:
-            "WORK",
-        }
-      }
+      const def = getBuilding(building.type)
 
-      return building
+      return (
+        !building.closed &&
+        def.category !== "RESIDENTIAL" &&
+        def.jobs > 0
+      )
     },
   )
+
+  const employedByWorkplace =
+    new Map<string, number>()
+
+  return citizens.map((citizen) => {
+    if (!canCitizenWork(citizen)) {
+      const {
+        workplaceBuildingId: _oldWorkplaceBuildingId,
+        ...citizenWithoutWorkplace
+      } = citizen
+
+      return {
+        ...citizenWithoutWorkplace,
+        employed: false,
+      }
+    }
+
+    let selectedWorkplace:
+      | Building
+      | undefined
+
+    for (const workplace of workplaces) {
+      const current =
+        employedByWorkplace.get(
+          workplace.id,
+        ) ?? 0
+
+      const capacity =
+        getBuilding(
+          workplace.type,
+        ).jobs
+
+      if (current < capacity) {
+        selectedWorkplace =
+          workplace
+        break
+      }
+    }
+
+    if (!selectedWorkplace) {
+      const {
+        workplaceBuildingId: _oldWorkplaceBuildingId,
+        ...citizenWithoutWorkplace
+      } = citizen
+
+      return {
+        ...citizenWithoutWorkplace,
+        employed: false,
+      }
+    }
+
+    const current =
+      employedByWorkplace.get(
+        selectedWorkplace.id,
+      ) ?? 0
+
+    employedByWorkplace.set(
+      selectedWorkplace.id,
+      current + 1,
+    )
+
+    return {
+      ...citizen,
+      employed: true,
+      workplaceBuildingId:
+        selectedWorkplace.id,
+      workState: "HOME",
+    }
+  })
 }
 
 // Apply a player INTENTION authoritatively and return the new state.
@@ -338,6 +418,9 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
   }
   const fresh = await cityRef.get()
   const doc = fresh.data() as CityDoc
+  if (!doc.citizens) {
+    doc.citizens = []
+  }
   const now = Date.now()
   if (!doc.gameTime) {
     doc.gameTime = createGameTime()
@@ -359,16 +442,21 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
     doc.timeStage =
       timeAdvanced.currentStage
 
-    doc.buildings =
-      assignWorkersToBuildings(
+    doc.citizens =
+      updateCitizenWorkStates(
+        doc.citizens,
+        doc.timeStage,
+      )
+
+    doc.citizens =
+      assignCitizensToWorkplaces(
+        doc.citizens,
         doc.buildings,
       )
-    if (
-      doc.timeStage === 1
-    ) {
-      doc.buildings =
+    if (doc.timeStage === 1) {
+      doc.citizens =
         processWorkStage(
-          doc.buildings,
+          doc.citizens,
         )
     } else {
       doc.buildings =
@@ -419,6 +507,7 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
 
     await cityRef.update({
       buildings: doc.buildings,
+      citizens: doc.citizens,
       gameTime: doc.gameTime,
       timeStage: doc.timeStage,
       lastTickAt: doc.lastTickAt,
@@ -446,8 +535,9 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
           closed: false,
         }
     ]
-    doc.buildings =
-      assignWorkersToBuildings(
+    doc.citizens =
+      assignCitizensToWorkplaces(
+        doc.citizens,
         doc.buildings,
       )
     doc.money -= def.cost
@@ -544,17 +634,176 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
       return reject("Esta casa não está conectada à rede viária da cidade.")
     }
 
-    doc.buildings[idx] = { ...building, occupied: true }
-    doc.buildings =
-      assignWorkersToBuildings(
+    doc.buildings[idx] = {
+      ...building,
+      occupied: true,
+    }
+
+    const householdSize =
+      getBuilding(building.type).population
+
+    const household =
+      createHousehold(
+        householdSize,
+        building.id,
+      )
+
+    doc.citizens = [
+      ...doc.citizens,
+      ...household,
+    ]
+
+    doc.citizens =
+      assignCitizensToWorkplaces(
+        doc.citizens,
         doc.buildings,
       )
+
+    doc.citizens =
+      updateCitizenWorkStates(
+        doc.citizens,
+        doc.timeStage,
+      )
     doc.updatedAt = new Date(now).toISOString()
-    await cityRef.update({ buildings: doc.buildings, money: doc.money, lastTickAt: doc.lastTickAt, updatedAt: doc.updatedAt })
+    await cityRef.update({ buildings: doc.buildings, citizens: doc.citizens, money: doc.money, lastTickAt: doc.lastTickAt, updatedAt: doc.updatedAt })
     return {
       success: true,
       state: docToState(doc),
       message: `Uma família se mudou para ${def.name.toLowerCase()}.`,
+    }
+  }
+
+  if (action.type === "ARRIVE_WORK") {
+    const citizen = doc.citizens.find(
+      (c) => c.id === action.citizenId,
+    )
+
+    if (!citizen) {
+      return reject("Cidadão não encontrado.")
+    }
+
+    if (
+      citizen.lifeStage !== "ADULT" ||
+      !citizen.employed ||
+      !citizen.workplaceBuildingId
+    ) {
+      return reject(
+        "Este cidadão não possui um emprego válido.",
+      )
+    }
+
+    if (citizen.workState !== "TO_WORK") {
+      return reject(
+        "Este cidadão não está indo para o trabalho.",
+      )
+    }
+
+    const workplace =
+      doc.buildings.find(
+        (b) =>
+          b.id ===
+          citizen.workplaceBuildingId,
+      )
+
+    if (!workplace) {
+      return reject(
+        "Local de trabalho não encontrado.",
+      )
+    }
+
+    if (workplace.closed) {
+      return reject(
+        "O local de trabalho está fechado.",
+      )
+    }
+
+    doc.citizens =
+      doc.citizens.map((c) =>
+        c.id === citizen.id
+          ? {
+              ...c,
+              workState: "WORK",
+            }
+          : c,
+      )
+
+    doc.updatedAt =
+      new Date(now).toISOString()
+
+    await cityRef.update({
+      citizens: doc.citizens,
+      lastTickAt: doc.lastTickAt,
+      updatedAt: doc.updatedAt,
+    })
+
+    return {
+      success: true,
+      state: docToState(doc),
+      message: "Cidadão chegou ao trabalho.",
+    }
+  }
+
+  if (action.type === "ARRIVE_HOME") {
+    const citizen = doc.citizens.find(
+      (c) => c.id === action.citizenId,
+    )
+
+    if (!citizen) {
+      return reject("Cidadão não encontrado.")
+    }
+
+    if (
+      citizen.lifeStage !== "ADULT" ||
+      !citizen.employed ||
+      !citizen.workplaceBuildingId
+    ) {
+      return reject(
+        "Este cidadão não possui um emprego válido.",
+      )
+    }
+
+    if (citizen.workState !== "TO_HOME") {
+      return reject(
+        "Este cidadão não está retornando para casa.",
+      )
+    }
+
+    const home =
+      doc.buildings.find(
+        (b) =>
+          b.id ===
+          citizen.homeBuildingId,
+      )
+
+    if (!home) {
+      return reject(
+        "Residência do cidadão não encontrada.",
+      )
+    }
+
+    doc.citizens =
+      doc.citizens.map((c) =>
+        c.id === citizen.id
+          ? {
+              ...c,
+              workState: "HOME",
+            }
+          : c,
+      )
+
+    doc.updatedAt =
+      new Date(now).toISOString()
+
+    await cityRef.update({
+      citizens: doc.citizens,
+      lastTickAt: doc.lastTickAt,
+      updatedAt: doc.updatedAt,
+    })
+
+    return {
+      success: true,
+      state: docToState(doc),
+      message: "Cidadão chegou em casa.",
     }
   }
 
@@ -598,8 +847,16 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
       ...building,
       occupied: false,
     }
-    doc.buildings =
-      assignWorkersToBuildings(
+
+    doc.citizens = doc.citizens.filter(
+      (citizen) =>
+        citizen.homeBuildingId !==
+        building.id,
+    )
+
+    doc.citizens =
+      assignCitizensToWorkplaces(
+        doc.citizens,
         doc.buildings,
       )
     doc.updatedAt =
@@ -607,6 +864,7 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
 
     await cityRef.update({
       buildings: doc.buildings,
+      citizens: doc.citizens,
       money: doc.money,
       lastTickAt: doc.lastTickAt,
       updatedAt: doc.updatedAt,

@@ -69,12 +69,17 @@ export function CityScene() {
     demolish,
 
     occupyHouse,
+    arriveWork,
+    arriveHome,
 
     rotateBuilding,
   } = useGame()
 
   const buildings =
     state?.buildings ?? []
+
+  const citizens =
+    state?.citizens ?? []
 
   const roadSet = useMemo(
     () => createRoadSet(buildings),
@@ -312,9 +317,16 @@ export function CityScene() {
         })}
 
         <TrafficSystem
-          buildings={state?.buildings ?? []}
+          buildings={buildings}
+          citizens={citizens}
           occupyHouse={occupyHouse}
-          timeStage={state?.timeStage ?? "NIGHT"}
+          arriveWork={arriveWork}
+          arriveHome={arriveHome}
+          timeStage={
+            state?.timeStage === "DAY"
+              ? "DAY"
+              : "NIGHT"
+          }
         />
 
         <SelectionIndicator
