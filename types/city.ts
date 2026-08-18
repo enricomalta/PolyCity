@@ -65,11 +65,6 @@ export interface Building {
   // This will later be used by economy/infrastructure systems.
   closed?: boolean
   workerBuildingId?: string
-  workerState?:
-  | "HOME"
-  | "TO_WORK"
-  | "WORK"
-  | "TO_HOME"
 }
 
 // Monthly budget breakdown so the mayor page can show revenue vs expenses.
@@ -126,5 +121,5 @@ export interface Citizen {
   homeBuildingId: string
   workplaceBuildingId?: string
   employed: boolean
-  workerState: CitizenWorkState
+  workState: string
 }

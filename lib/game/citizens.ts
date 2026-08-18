@@ -80,24 +80,24 @@ export function updateCitizenWorkStates(
       }
     }
 
+    // DIA:
+    // Só quem está realmente em casa começa uma nova ida ao trabalho.
+    // Quem já está TO_HOME continua terminando a viagem.
     if (timeStage === 1) {
-    if (
-        citizen.workState === "HOME" ||
-        citizen.workState === "TO_HOME"
-    ) {
+      if (citizen.workState === "HOME") {
         return {
-        ...citizen,
-        workState: "TO_WORK",
+          ...citizen,
+          workState: "TO_WORK",
         }
+      }
+
+      return citizen
     }
 
-    return citizen
-    }
-
-    if (
-      citizen.workState === "WORK" ||
-      citizen.workState === "TO_WORK"
-    ) {
+    // NOITE:
+    // Só quem já chegou ao trabalho começa o retorno.
+    // Quem ainda está TO_WORK termina a viagem atual.
+    if (citizen.workState === "WORK") {
       return {
         ...citizen,
         workState: "TO_HOME",

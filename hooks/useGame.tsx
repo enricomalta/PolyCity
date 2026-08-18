@@ -6,9 +6,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
-
+import {
+  createGameClock,
+} from "@/lib/game/clock"
 import type {
   City,
   CityPolicy,
@@ -130,6 +133,7 @@ interface GameContextValue {
     citizenId: string,
   ) => Promise<void>
 
+
   vacateBuilding: (
     x: number,
     z: number,
@@ -215,6 +219,8 @@ export function GameProvider({
   const [buildRotation, setBuildRotation] =
     useState(0)
 
+  const lastClockStageRef =
+    useRef<"DAY" | "NIGHT" | null>(null)
 
   // ---------------------------------------------------------------------------
   // Terrain
@@ -268,6 +274,64 @@ export function GameProvider({
     void load()
   }, [load])
 
+  useEffect(() => {
+    if (!city?.clockStartedAt) {
+      return
+    }
+
+    const initialStage =
+      createGameClock(
+        city.clockStartedAt,
+        Date.now(),
+      ).stage
+
+    lastClockStageRef.current =
+      initialStage
+
+    const intervalId =
+      window.setInterval(() => {
+        const currentStage =
+          createGameClock(
+            city.clockStartedAt,
+            Date.now(),
+          ).stage
+
+        if (
+          currentStage ===
+          lastClockStageRef.current
+        ) {
+          return
+        }
+
+        lastClockStageRef.current =
+          currentStage
+
+        void gameService
+          .performAction(
+            cityId,
+            {
+              type: "SYNC_TIME_STAGE",
+            },
+          )
+          .then((res) => {
+            if (!res.success) {
+              return
+            }
+
+            setState(res.state)
+          })
+          .catch(() => {
+            // sincronização silenciosa
+          })
+      }, 1000)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [
+    cityId,
+    city?.clockStartedAt,
+  ])
   // ---------------------------------------------------------------------------
   // Build
   // ---------------------------------------------------------------------------

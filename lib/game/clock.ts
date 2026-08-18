@@ -27,7 +27,7 @@ export interface GameClockConfig {
 }
 
 export const DEFAULT_GAME_CLOCK_CONFIG: GameClockConfig = {
-  realMinutesPerGameDay: 20,
+  realMinutesPerGameDay: 24,
   initialGameMinute: 7 * 60,
 }
 
@@ -36,8 +36,8 @@ export const DEFAULT_GAME_CLOCK_CONFIG: GameClockConfig = {
  *
  * Atualmente:
  *
- * 00:00 → 09:59 = moradores em casa
- * 10:00 → 19:59 = moradores trabalhando
+ * 20:00 → 05:59 = moradores em casa
+ * 06:00 → 19:59 = moradores trabalhando
  */
 export function getTimeStage(
   minuteOfDay: number,
@@ -45,9 +45,12 @@ export function getTimeStage(
   const normalized =
     ((minuteOfDay % 1440) + 1440) % 1440
 
+  const dayStart = 6 * 60
+  const nightStart = 18 * 60
+
   if (
-    normalized >= 10 * 60 &&
-    normalized < 20 * 60
+    normalized >= dayStart &&
+    normalized < nightStart
   ) {
     return "DAY"
   }

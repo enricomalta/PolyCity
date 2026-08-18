@@ -423,3 +423,117 @@ export function findWorkTripRoutes(
 
   return result
 }
+
+export function findReturnTripRoutes(
+  buildings: Building[],
+  citizens: Citizen[],
+): WorkTripRoute[] {
+  const reachable =
+    reachableRoadTiles(buildings)
+
+  const result: WorkTripRoute[] = []
+
+  for (const citizen of citizens) {
+    if (!citizen.employed) continue
+    if (!citizen.workplaceBuildingId) continue
+
+    if (citizen.workState !== "TO_HOME") {
+      continue
+    }
+
+    const home =
+      buildings.find(
+        (b) =>
+          b.id === citizen.homeBuildingId,
+      )
+
+    const workplace =
+      buildings.find(
+        (b) =>
+          b.id === citizen.workplaceBuildingId,
+      )
+
+    if (!home || !workplace) {
+      continue
+    }
+
+    if (home.closed) {
+      continue
+    }
+
+    let workplaceRoad:
+      | Coord
+      | null = null
+
+    for (const n of neighbors4(
+      workplace.x,
+      workplace.z,
+    )) {
+      if (
+        buildings.some(
+          (b) =>
+            b.type === "ROAD" &&
+            b.x === n.x &&
+            b.z === n.z,
+        )
+      ) {
+        workplaceRoad = n
+        break
+      }
+    }
+
+    if (!workplaceRoad) {
+      continue
+    }
+
+    let homeRoad:
+      | Coord
+      | null = null
+
+    for (const n of neighbors4(
+      home.x,
+      home.z,
+    )) {
+      if (
+        reachable.has(
+          tileKey(n.x, n.z),
+        )
+      ) {
+        homeRoad = n
+        break
+      }
+    }
+
+    if (!homeRoad) {
+      continue
+    }
+
+    const path =
+      findRoadPath(
+        workplaceRoad.x,
+        workplaceRoad.z,
+        homeRoad.x,
+        homeRoad.z,
+        buildings,
+      )
+
+    if (!path) {
+      continue
+    }
+
+    result.push({
+      citizenId: citizen.id,
+      buildingId: home.id,
+      workplaceId: workplace.id,
+      homeRoadX: homeRoad.x,
+      homeRoadZ: homeRoad.z,
+      workplaceRoadX:
+        workplaceRoad.x,
+      workplaceRoadZ:
+        workplaceRoad.z,
+      path,
+    })
+  }
+
+  return result
+}

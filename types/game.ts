@@ -80,6 +80,9 @@ export type GameAction =
       citizenId: string
     }
   | {
+      type: "SYNC_TIME_STAGE"
+    }
+  | {
       type: "VACATE"
       x: number
       z: number

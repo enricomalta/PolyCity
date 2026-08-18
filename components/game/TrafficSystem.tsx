@@ -18,6 +18,7 @@ import {
   findSpawnPoints,
   findVacantConnectedHouses,
   findWorkTripRoutes,
+  findReturnTripRoutes,
   type Coord,
 } from "@/lib/game/traffic"
 // Quantos tiles por segundo o carro percorre.
@@ -108,6 +109,15 @@ export function TrafficSystem({
   const workTripRoutes = useMemo(
     () =>
       findWorkTripRoutes(
+        buildings,
+        citizens,
+      ),
+    [buildings, citizens],
+  )
+
+  const returnTripRoutes = useMemo(
+    () =>
+      findReturnTripRoutes(
         buildings,
         citizens,
       ),
@@ -231,7 +241,55 @@ export function TrafficSystem({
           return
         }
       }
+      // ---------------------------------------------------------------
+      // ESTÁGIO 0 — morador voltando pra casa do trabalho
+      // ---------------------------------------------------------------
+      if (timeStage === "NIGHT") {
+        const availableReturnTrips =
+          returnTripRoutes.filter(
+            (trip) =>
+              !claimedHouses.current.has(
+                `${trip.citizenId}:HOME`,
+              ),
+          )
 
+        if (
+          availableReturnTrips.length === 0
+        ) {
+          return
+        }
+
+        const trip =
+          availableReturnTrips[
+            Math.floor(
+              Math.random() *
+                availableReturnTrips.length,
+            )
+          ]
+
+        claimedHouses.current.add(
+          `${trip.citizenId}:HOME`,
+        )
+
+        setCars((prev) => [
+          ...prev,
+          {
+            id: createCarId(),
+            path: trip.path,
+            houseX: trip.homeRoadX,
+            houseZ: trip.homeRoadZ,
+            homeBuildingId:
+              trip.buildingId,
+            workplaceId:
+              trip.workplaceId,
+            citizenId:
+              trip.citizenId,
+            tripType: "HOME",
+          },
+        ])
+
+        return
+      }
       // ---------------------------------------------------------------
       // ESTÁGIO 1 — morador saindo de casa para trabalhar
       // ---------------------------------------------------------------
@@ -307,6 +365,7 @@ export function TrafficSystem({
     spawnPoints,
     vacantHouses,
     workTripRoutes,
+    returnTripRoutes,
     buildings,
   ])
 
@@ -347,9 +406,11 @@ export function TrafficSystem({
     }
 
     if (car.tripType === "HOME") {
-      claimedHouses.current.delete(
-        `${car.homeBuildingId}:HOME`,
-      )
+      if (car.citizenId) {
+        claimedHouses.current.delete(
+          `${car.citizenId}:HOME`,
+        )
+      }
 
       if (car.citizenId) {
         void arriveHome(
