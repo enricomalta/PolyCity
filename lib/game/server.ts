@@ -218,58 +218,81 @@ function assignWorkersToBuildings(
 
   const workplaces = buildings.filter(
     (b) =>
-      b.occupied &&
       !b.closed &&
       getBuilding(b.type).category !==
         "RESIDENTIAL" &&
       getBuilding(b.type).jobs > 0,
   )
 
-  if (
-    residential.length === 0 ||
-    workplaces.length === 0
-  ) {
-    return buildings.map((b) => ({
-      ...b,
-      workerBuildingId:
-        undefined,
-    }))
-  }
-
   const assignments =
     new Map<string, string>()
 
-  let workplaceIndex = 0
+  if (
+    residential.length > 0 &&
+    workplaces.length > 0
+  ) {
+    let workplaceIndex = 0
 
-  for (const home of residential) {
-    const workplace =
-      workplaces[
-        workplaceIndex %
-          workplaces.length
-      ]
+    for (const home of residential) {
+      let assigned = false
 
-    assignments.set(
-      home.id,
-      workplace.id,
-    )
+      for (
+        let attempt = 0;
+        attempt < workplaces.length;
+        attempt++
+      ) {
+        const workplace =
+          workplaces[
+            (workplaceIndex + attempt) %
+              workplaces.length
+          ]
 
-    workplaceIndex += 1
+        const currentWorkers =
+          [...assignments.values()].filter(
+            (id) => id === workplace.id,
+          ).length
+
+        const maxWorkers =
+          getBuilding(workplace.type).jobs
+
+        if (currentWorkers < maxWorkers) {
+          assignments.set(
+            home.id,
+            workplace.id,
+          )
+
+          workplaceIndex =
+            (workplaceIndex + attempt + 1) %
+            workplaces.length
+
+          assigned = true
+          break
+        }
+      }
+
+      if (!assigned) {
+        break
+      }
+    }
   }
 
   return buildings.map((building) => {
-    if (!assignments.has(building.id)) {
+    const workerBuildingId =
+      assignments.get(building.id)
+
+    if (workerBuildingId) {
       return {
         ...building,
-        workerBuildingId:
-          undefined,
+        workerBuildingId,
       }
     }
 
-    return {
-      ...building,
-      workerBuildingId:
-        assignments.get(building.id),
-    }
+    const {
+      workerBuildingId: _oldWorkerBuildingId,
+      ...buildingWithoutWorker
+    } = building
+
+    return buildingWithoutWorker
   })
 }
 
@@ -340,7 +363,6 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
       assignWorkersToBuildings(
         doc.buildings,
       )
-
     if (
       doc.timeStage === 1
     ) {
@@ -379,7 +401,6 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
         )
     }
   }
-
   doc.gameTime = timeAdvanced.time
   // Keep the treasury current before spending/earning.
   const ticked = applyBudgetTicks(doc.money, doc.buildings, doc.policy, doc.lastTickAt ?? now, now)
@@ -423,10 +444,12 @@ export async function performAction(user: DecodedIdToken, action: GameAction): P
           level: 1,
           occupied: false,
           closed: false,
-          workerBuildingId: undefined,
-          workerState: "HOME",
         }
     ]
+    doc.buildings =
+      assignWorkersToBuildings(
+        doc.buildings,
+      )
     doc.money -= def.cost
     doc.updatedAt = new Date(now).toISOString()
     await cityRef.update({ buildings: doc.buildings, money: doc.money, lastTickAt: doc.lastTickAt, updatedAt: doc.updatedAt })

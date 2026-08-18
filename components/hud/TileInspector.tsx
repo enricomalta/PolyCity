@@ -9,7 +9,7 @@ import {
 
 import type { Building } from "@/types/city"
 import type { Tile } from "@/types/game"
-
+import { useGame } from "@/hooks/useGame"
 import { getBuilding } from "@/lib/game/buildings"
 
 import { Button } from "@/components/ui/button"
@@ -107,6 +107,15 @@ export function TileInspector({
   const canVacate =
     residential &&
     building.occupied === true
+
+  const { state } = useGame()
+  const workerCount =
+    building
+      ? state?.buildings.filter(
+          (b) =>
+            b.workerBuildingId === building.id,
+        ).length ?? 0
+      : 0
 
   return (
     <div className="pointer-events-auto w-64 rounded-2xl border border-border bg-card/95 p-4 shadow-lg shadow-black/30 backdrop-blur">
@@ -211,17 +220,13 @@ export function TileInspector({
               />
             )}
 
-            {building &&
-              hasJobs(building.type) && (
-                <Detail
-                  label="Empregos"
-                  value={
-                    building.occupied
-                      ? "Cheio"
-                      : "Vazio"
-                  }
-                />
-              )}
+          {building &&
+            hasJobs(building.type) && (
+              <Detail
+                label="Empregos"
+                value={`${workerCount}/${def.jobs}`}
+              />
+            )}
 
             {building?.type === "ROAD" && (
               <Detail

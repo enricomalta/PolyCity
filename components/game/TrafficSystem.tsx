@@ -40,7 +40,6 @@ interface ActiveCar {
   tripType: "OCCUPY" | "WORK" | "HOME"
 }
 
-let carSeq = 0
 
 // Renderiza e anima o tráfego. Não desenha nada quando não há pontos de
 // entrada (nenhuma rodovia tocando a borda do mapa) ou nenhuma casa vaga
@@ -65,7 +64,11 @@ export function TrafficSystem({
   // render, num setTimeout) sempre ver a contagem atual sem precisar
   // reiniciar o agendamento a cada carro que entra/sai.
   const carsRef = useRef<ActiveCar[]>([])
-
+  const carSeqRef = useRef(0)
+  const createCarId = () => {
+    carSeqRef.current += 1
+    return `car_${carSeqRef.current}`
+  }
   useEffect(() => {
     carsRef.current = cars
   }, [cars])
@@ -191,12 +194,10 @@ export function TrafficSystem({
             houseKey,
           )
 
-          carSeq += 1
-
           setCars((prev) => [
             ...prev,
             {
-              id: `car_${carSeq}`,
+              id: createCarId(),
               path: [
                 {
                   x: spawn.x,
@@ -244,12 +245,10 @@ export function TrafficSystem({
         `${trip.buildingId}:WORK`,
       )
 
-      carSeq += 1
-
       setCars((prev) => [
         ...prev,
         {
-          id: `car_${carSeq}`,
+          id: createCarId(),
           path: trip.path,
           houseX: trip.homeRoadX,
           houseZ: trip.homeRoadZ,
@@ -313,45 +312,51 @@ export function TrafficSystem({
       return
     }
 
+    // if (car.tripType === "WORK") {
+    //   claimedHouses.current.delete(
+    //     `${car.homeBuildingId}:WORK`,
+    //   )
+
+    //   if (!car.homeBuildingId || !car.workplaceId) {
+    //     return
+    //   }
+
+    //   const trip = workTripRoutes.find(
+    //     (t) =>
+    //       t.buildingId === car.homeBuildingId &&
+    //       t.workplaceId === car.workplaceId,
+    //   )
+
+    //   if (!trip) {
+    //     return
+    //   }
+
+    //   claimedHouses.current.add(
+    //     `${car.homeBuildingId}:HOME`,
+    //   )
+
+    //   setCars((prev) => [
+    //     ...prev,
+    //     {
+    //       id: createCarId(),
+    //       path: [...trip.path].reverse(),
+    //       houseX: trip.homeRoadX,
+    //       houseZ: trip.homeRoadZ,
+    //       homeBuildingId:
+    //         trip.buildingId,
+    //       workplaceId:
+    //         trip.workplaceId,
+    //       tripType: "HOME",
+    //     },
+    //   ])
+
+    //   return
+    // }
+
     if (car.tripType === "WORK") {
       claimedHouses.current.delete(
         `${car.homeBuildingId}:WORK`,
       )
-
-      if (!car.homeBuildingId || !car.workplaceId) {
-        return
-      }
-
-      const trip = workTripRoutes.find(
-        (t) =>
-          t.buildingId === car.homeBuildingId &&
-          t.workplaceId === car.workplaceId,
-      )
-
-      if (!trip) {
-        return
-      }
-
-      claimedHouses.current.add(
-        `${car.homeBuildingId}:HOME`,
-      )
-
-      carSeq += 1
-
-      setCars((prev) => [
-        ...prev,
-        {
-          id: `car_${carSeq}`,
-          path: [...trip.path].reverse(),
-          houseX: trip.homeRoadX,
-          houseZ: trip.homeRoadZ,
-          homeBuildingId:
-            trip.buildingId,
-          workplaceId:
-            trip.workplaceId,
-          tripType: "HOME",
-        },
-      ])
 
       return
     }
@@ -386,44 +391,44 @@ export function TrafficSystem({
 /*
  * Retorna a primeira rua adjacente ao prédio.
  */
-function findWorkplaceRoad(
-  workplace: Building,
-  buildings: Building[],
-): Coord | null {
-  const neighbors: Coord[] = [
-    {
-      x: workplace.x,
-      z: workplace.z - 1,
-    },
-    {
-      x: workplace.x + 1,
-      z: workplace.z,
-    },
-    {
-      x: workplace.x,
-      z: workplace.z + 1,
-    },
-    {
-      x: workplace.x - 1,
-      z: workplace.z,
-    },
-  ]
+// function findWorkplaceRoad(
+//   workplace: Building,
+//   buildings: Building[],
+// ): Coord | null {
+//   const neighbors: Coord[] = [
+//     {
+//       x: workplace.x,
+//       z: workplace.z - 1,
+//     },
+//     {
+//       x: workplace.x + 1,
+//       z: workplace.z,
+//     },
+//     {
+//       x: workplace.x,
+//       z: workplace.z + 1,
+//     },
+//     {
+//       x: workplace.x - 1,
+//       z: workplace.z,
+//     },
+//   ]
 
-  for (const neighbor of neighbors) {
-    const road = buildings.find(
-      (building) =>
-        building.type === "ROAD" &&
-        building.x === neighbor.x &&
-        building.z === neighbor.z,
-    )
+//   for (const neighbor of neighbors) {
+//     const road = buildings.find(
+//       (building) =>
+//         building.type === "ROAD" &&
+//         building.x === neighbor.x &&
+//         building.z === neighbor.z,
+//     )
 
-    if (road) {
-      return neighbor
-    }
-  }
+//     if (road) {
+//       return neighbor
+//     }
+//   }
 
-  return null
-}
+//   return null
+// }
 
 function Car({
   path,
