@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -43,6 +44,11 @@ import { createRoadSet } from "@/lib/game/roadAutoTile"
 import type {
   Building,
 } from "@/types/city"
+
+import type {
+  SelectionIndicatorHandle,
+} from "./SelectionIndicator"
+
 /**
  * The full 3D city. It reads authoritative state from the game store and
  * turns pointer interactions into INTENTIONS (build/demolish/select) that the
@@ -67,7 +73,6 @@ export function CityScene() {
 
     buildRotation,
 
-    setHoveredTile,
     selectTile,
 
     build,
@@ -96,6 +101,11 @@ export function CityScene() {
     editingRotation,
     setEditingRotation,
   ] = useState(0)
+
+  const hoverControllerRef =
+    useRef<SelectionIndicatorHandle | null>(
+      null,
+    )
 
   const roadSet = useMemo(
     () => createRoadSet(buildings),
@@ -190,16 +200,6 @@ export function CityScene() {
   // muda após um build/demolish).
   // ---------------------------------------------------------------------------
 
-  const handleHover = useCallback(
-    (x: number, z: number) => {
-      setHoveredTile({ x, z })
-    },
-    [setHoveredTile],
-  )
-
-  const handleLeave = useCallback(() => {
-    setHoveredTile(null)
-  }, [setHoveredTile])
 
   const handleSelect = useCallback(
     (x: number, z: number) => {
@@ -246,6 +246,20 @@ export function CityScene() {
 
         // Segundo clique:
         // move a construção para o tile escolhido.
+
+        const isSameBuilding =
+          tile?.occupiedBy === editingBuilding.id
+
+        // Se estamos clicando no próprio tile da
+        // construção em edição, permitimos.
+        // Isso permite alterar somente a rotação.
+        if (
+          !isSameBuilding &&
+          !canPlace(tile)
+        ) {
+          return
+        }
+
         void moveBuilding(
           editingBuilding.x,
           editingBuilding.z,
@@ -256,7 +270,6 @@ export function CityScene() {
 
         setEditingBuilding(null)
         setEditingRotation(0)
-
         return
       }
 
@@ -372,9 +385,10 @@ export function CityScene() {
       <Suspense fallback={null}>
         <GroundTiles
           tiles={tiles}
-          onHover={handleHover}
-          onLeave={handleLeave}
           onSelect={handleSelect}
+          hoverControllerRef={
+            hoverControllerRef
+          }
         />
 
         {/* Placed buildings */}
@@ -428,6 +442,7 @@ export function CityScene() {
         />
 
         <SelectionIndicator
+          ref={hoverControllerRef}
           tiles={tiles}
           tool={tool}
           selectedBuilding={selectedBuilding}

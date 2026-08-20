@@ -6,11 +6,15 @@ import type { Tile } from "@/types/game"
 import { GRID_SIZE, TILE_SIZE, tileToWorld } from "@/lib/game/constants"
 import { Tree } from "./Tree"
 
+import type {
+  SelectionIndicatorHandle,
+} from "./SelectionIndicator"
+
+
 interface GroundTilesProps {
   tiles: Tile[][]
-  onHover: (x: number, z: number) => void
-  onLeave: () => void
   onSelect: (x: number, z: number) => void
+  hoverControllerRef: React.RefObject<SelectionIndicatorHandle | null>
 }
 
 /**
@@ -19,7 +23,7 @@ interface GroundTilesProps {
  * the pointer's world position instead of rendering thousands of meshes, which
  * keeps the scene light even on a 30x30 grid.
  */
-export function GroundTiles({ tiles, onHover, onLeave, onSelect }: GroundTilesProps) {
+export function GroundTiles({ tiles, onSelect, hoverControllerRef, }: GroundTilesProps) {
   const worldSize = GRID_SIZE * TILE_SIZE
   const half = worldSize / 2
 
@@ -128,7 +132,6 @@ export function GroundTiles({ tiles, onHover, onLeave, onSelect }: GroundTilesPr
             if (!coord) {
                 if (hoverTileRef.current !== null) {
                     hoverTileRef.current = null
-                    onLeave()
                 }
 
                 return
@@ -142,12 +145,17 @@ export function GroundTiles({ tiles, onHover, onLeave, onSelect }: GroundTilesPr
             }
             
             hoverTileRef.current = [x, z]
-            onHover(x, z)
+
+            hoverControllerRef.current?.setHover(
+              x,
+              z,
+            )
         }}
         onPointerOut={() => {
             if (hoverTileRef.current !== null) {
-                hoverTileRef.current = null
-                onLeave()
+              hoverTileRef.current = null
+
+              hoverControllerRef.current?.clearHover()
             }
         }}
         onPointerDown={(e) => {

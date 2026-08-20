@@ -993,7 +993,7 @@ export async function performAction(
         action.toZ
       ]
 
-    if (!canPlace(targetTile)) {
+    if (!targetTile) {
       return reject(
         "Não é possível mover a construção para esse local.",
       )
