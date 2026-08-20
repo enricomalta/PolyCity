@@ -8,6 +8,10 @@ import type {
   ToolMode,
 } from "@/types/game"
 
+import type {
+  Building,
+} from "@/types/city"
+
 import {
   TILE_SIZE,
   tileToWorld,
@@ -38,6 +42,8 @@ export function SelectionIndicator({
   tool,
   selectedBuilding,
   rotation,
+  editingBuilding,
+  editingRotation,
 }: {
   tiles: Tile[][]
   tool: ToolMode
@@ -45,6 +51,11 @@ export function SelectionIndicator({
     | BuildingType
     | null
   rotation: number
+    editingBuilding:
+    | Building
+    | null
+
+  editingRotation: number
 }) {
   const { hoveredTile: hovered, selectedTile: selected } =
     useSelection()
@@ -58,30 +69,69 @@ export function SelectionIndicator({
       tiles[hovered.x]?.[hovered.z]
 
     if (tool === "DEMOLISH") {
-      return Boolean(tile?.occupiedBy)
+      return Boolean(
+        tile?.occupiedBy,
+      )
+    }
+
+    if (tool === "EDIT") {
+      if (!editingBuilding) {
+        return Boolean(
+          tile?.occupiedBy,
+        )
+      }
+
+      if (
+        tile?.occupiedBy &&
+        tile.occupiedBy !==
+          editingBuilding.id
+      ) {
+        return false
+      }
+
+      return canPlace(tile)
     }
 
     return canPlace(tile)
-  }, [hovered, tiles, tool])
+  }, [
+    hovered,
+    tiles,
+    tool,
+    editingBuilding,
+  ])
 
   const isBuilding =
     tool === "BUILD" ||
-    tool === "ROAD"
+    tool === "ROAD" ||
+    tool === "EDIT"
 
   const highlight =
     valid
       ? "#4ade80"
       : "#f87171"
 
+  const previewType =
+    tool === "EDIT" &&
+    editingBuilding
+      ? editingBuilding.type
+      : selectedBuilding
+
   const building =
-    selectedBuilding
+    previewType
       ? getBuilding(
-          selectedBuilding,
+          previewType,
         )
       : null
 
+const previewRotation =
+    tool === "EDIT"
+      ? editingRotation
+      : rotation
+
   const rotationRadians =
-    (rotation * Math.PI) / 2
+    (previewRotation *
+      Math.PI) /
+    2
 
   return (
     <group>
@@ -133,7 +183,7 @@ export function SelectionIndicator({
           {/* ============================================================= */}
 
           {isBuilding &&
-            selectedBuilding &&
+            previewType &&
             building && (
               <group
                 rotation={[

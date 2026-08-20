@@ -2,7 +2,7 @@
 
 import { useMemo, useEffect, useState } from "react"
 import { useAuth } from "@/hooks/useAuth"
-import { useGame, useGameClock, useSelection } from "@/hooks/useGame"
+import { useGame, useSelection } from "@/hooks/useGame"
 import { ResourceBar } from "./ResourceBar"
 import { BuildMenu } from "./BuildMenu"
 import { ToolBar } from "./ToolBar"
@@ -32,7 +32,7 @@ export function GameHUD() {
     selectTile,
     demolish,
     rotateSelectedBuilding,
-    // occupyHouse,
+    moveBuilding,
     vacateBuilding,
     closeBuilding,
     openBuilding,
@@ -94,8 +94,8 @@ export function GameHUD() {
     tool === "BUILD" ||
     tool === "ROAD"
 
-  const showEditMenu =
-    tool === "EDIT"
+  const showTerrainEditMenu =
+    tool === "TERRAIN_EDIT"
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex flex-col p-3 sm:p-4">
@@ -147,23 +147,34 @@ export function GameHUD() {
 
           <ToolBar
             tool={tool}
-            selectedBuilding={selectedBuilding}
+            selectedBuilding={
+              selectedBuilding
+            }
             onSelect={() => {
               setTool("SELECT")
               selectBuildingType(null)
             }}
-
+            onBuild={() => {
+              setTool("BUILD_MENU")
+            }}
+            onTerrainEdit={() => {
+              setTool("TERRAIN_EDIT")
+              selectBuildingType(null)
+            }}
+            onEdit={() => {
+              setTool("EDIT")
+              selectBuildingType(null)
+            }}
             onDemolish={() => {
               setTool("DEMOLISH")
               selectBuildingType(null)
             }}
-
-            onBuild={() => {
-              setTool("BUILD_MENU")
+            onGovernance={() => {
+              setTool("GOVERNANCE")
+              selectBuildingType(null)
             }}
-
-            onEdit={() => {
-              setTool("EDIT")
+            onHeatmap={() => {
+              setTool("HEATMAP")
               selectBuildingType(null)
             }}
           />
@@ -239,7 +250,7 @@ export function GameHUD() {
           />
         )}
 
-        {showEditMenu && (
+        {showTerrainEditMenu && (
           <div className="pointer-events-auto w-full max-w-xl rounded-2xl border border-border bg-card/90 p-3 shadow-lg shadow-black/30 backdrop-blur">
 
             <div className="mb-3">

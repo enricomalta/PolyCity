@@ -54,6 +54,14 @@ export type GameAction =
       rotation: number
     }
   | {
+      type: "MOVE"
+      x: number
+      z: number
+      toX: number
+      toZ: number
+      rotation: number
+    }
+  | {
       type: "SET_POLICY"
       policy: CityPolicy
     }
@@ -106,6 +114,11 @@ export interface GameResponse {
 
 export type ToolMode =
   | "SELECT"
+  | "BUILD_MENU"
   | "BUILD"
   | "ROAD"
+  | "TERRAIN_EDIT"
+  | "EDIT"
   | "DEMOLISH"
+  | "GOVERNANCE"
+  | "HEATMAP"

@@ -4,7 +4,8 @@ import {
   Suspense,
   useCallback,
   useEffect,
-  useMemo
+  useMemo,
+  useState,
 } from "react"
 
 import { Canvas } from "@react-three/fiber"
@@ -29,7 +30,7 @@ import { canPlace } from "@/lib/game/grid"
 
 import { useGame } from "@/hooks/useGame"
 
-import { Building } from "./Building"
+import { BuildingMesh } from "./Building"
 import { Road } from "./Road"
 import { GroundTiles } from "./GroundTiles"
 import { SelectionIndicator } from "./SelectionIndicator"
@@ -38,6 +39,10 @@ import { PerformanceMonitor } from "./PerformanceMonitor"
 import { TrafficSystem } from "./TrafficSystem"
 
 import { createRoadSet } from "@/lib/game/roadAutoTile"
+
+import type {
+  Building,
+} from "@/types/city"
 /**
  * The full 3D city. It reads authoritative state from the game store and
  * turns pointer interactions into INTENTIONS (build/demolish/select) that the
@@ -73,6 +78,7 @@ export function CityScene() {
     arriveHome,
 
     rotateBuilding,
+    moveBuilding,
   } = useGame()
 
   const buildings =
@@ -80,6 +86,16 @@ export function CityScene() {
 
   const citizens =
     state?.citizens ?? []
+
+  const [
+    editingBuilding,
+    setEditingBuilding,
+  ] = useState<Building | null>(null)
+
+  const [
+    editingRotation,
+    setEditingRotation,
+  ] = useState(0)
 
   const roadSet = useMemo(
     () => createRoadSet(buildings),
@@ -99,13 +115,24 @@ export function CityScene() {
         return
       }
 
-      if (!selectedBuilding) {
+      if (
+        tool !== "BUILD" &&
+        tool !== "ROAD" &&
+        tool !== "EDIT"
+      ) {
         return
       }
 
       if (
-        tool !== "BUILD" &&
-        tool !== "ROAD"
+        tool === "EDIT" &&
+        !editingBuilding
+      ) {
+        return
+      }
+
+      if (
+        tool !== "EDIT" &&
+        !selectedBuilding
       ) {
         return
       }
@@ -124,6 +151,15 @@ export function CityScene() {
 
       event.preventDefault()
 
+      if (tool === "EDIT") {
+        setEditingRotation(
+          (current) =>
+            (current + 1) % 4,
+        )
+
+        return
+      }
+
       rotateBuilding()
     }
 
@@ -140,8 +176,10 @@ export function CityScene() {
     }
   }, [
     selectedBuilding,
+    editingBuilding,
     tool,
     rotateBuilding,
+    setEditingRotation,
   ])
 
   // ---------------------------------------------------------------------------
@@ -167,6 +205,60 @@ export function CityScene() {
     (x: number, z: number) => {
       const tile =
         tiles[x]?.[z]
+
+      if (tool === "EDIT") {
+        // Primeiro clique:
+        // seleciona a construção que será editada.
+        if (!editingBuilding) {
+          const buildingId =
+            tile?.occupiedBy
+
+          if (!buildingId) {
+            return
+          }
+
+          const building =
+            buildings.find(
+              (b) =>
+                b.id ===
+                buildingId,
+            )
+
+          if (!building) {
+            return
+          }
+
+          setEditingBuilding(
+            building,
+          )
+
+          setEditingRotation(
+            building.rotation,
+          )
+
+          selectTile({
+            x,
+            z,
+          })
+
+          return
+        }
+
+        // Segundo clique:
+        // move a construção para o tile escolhido.
+        void moveBuilding(
+          editingBuilding.x,
+          editingBuilding.z,
+          x,
+          z,
+          editingRotation,
+        )
+
+        setEditingBuilding(null)
+        setEditingRotation(0)
+
+        return
+      }
 
       if (tool === "DEMOLISH") {
         if (tile?.occupiedBy) {
@@ -201,6 +293,12 @@ export function CityScene() {
       tool,
       selectedBuilding,
       buildRotation,
+      buildings,
+      editingBuilding,
+      editingRotation,
+      moveBuilding,
+      setEditingBuilding,
+      setEditingRotation,
       build,
       demolish,
       selectTile,
@@ -305,7 +403,7 @@ export function CityScene() {
           }
 
           return (
-            <Building
+            <BuildingMesh
               key={b.id}
               type={b.type}
               position={position}
@@ -332,10 +430,10 @@ export function CityScene() {
         <SelectionIndicator
           tiles={tiles}
           tool={tool}
-          selectedBuilding={
-            selectedBuilding
-          }
+          selectedBuilding={selectedBuilding}
           rotation={buildRotation}
+          editingBuilding={editingBuilding}
+          editingRotation={editingRotation}
         />
 
         <ContactShadows

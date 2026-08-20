@@ -106,6 +106,14 @@ interface GameContextValue {
     rotation: number,
   ) => Promise<void>
 
+  moveBuilding: (
+    x: number,
+    z: number,
+    toX: number,
+    toZ: number,
+    rotation: number,
+  ) => Promise<void>
+
   build: (
     x: number,
     z: number,
@@ -415,6 +423,49 @@ export function GameProvider({
       [cityId],
     )
 
+
+  // ---------------------------------------------------------------------------
+  // Move
+  // ---------------------------------------------------------------------------
+  const moveBuilding =
+    useCallback<
+      GameContextValue["moveBuilding"]
+    >(
+      async (
+        x,
+        z,
+        toX,
+        toZ,
+        rotation,
+      ) => {
+        try {
+          const res =
+            await gameService.performAction(
+              cityId,
+              {
+                type: "MOVE",
+                x,
+                z,
+                toX,
+                toZ,
+                rotation,
+              },
+            )
+
+          setState(res.state)
+
+          setLastMessage(
+            res.message ?? null,
+          )
+        } catch {
+          setLastMessage(
+            "Não foi possível mover a construção.",
+          )
+        }
+      },
+      [cityId],
+    )
+
   // ---------------------------------------------------------------------------
   // Occupy (chamado pelo TrafficSystem quando um carro chega numa casa vaga)
   // ---------------------------------------------------------------------------
@@ -450,8 +501,6 @@ export function GameProvider({
       },
       [cityId],
     )
-
-
 
 
   const arriveWork =
@@ -661,7 +710,6 @@ export function GameProvider({
     },
     [cityId],
   )
-
   // ---------------------------------------------------------------------------
   // Policy
   // ---------------------------------------------------------------------------
@@ -779,6 +827,8 @@ export function GameProvider({
 
         demolish,
 
+        moveBuilding,
+
         occupyHouse,
         
         arriveWork,
@@ -819,6 +869,8 @@ export function GameProvider({
         build,
 
         demolish,
+
+        moveBuilding,
 
         occupyHouse,
 

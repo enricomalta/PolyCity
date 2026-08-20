@@ -25,11 +25,11 @@ import {
 const CAR_SPEED = 2.4
 
 // Intervalo (em segundos) entre tentativas de spawnar um novo carro.
-const SPAWN_INTERVAL_MIN = 4
-const SPAWN_INTERVAL_MAX = 9
+const SPAWN_INTERVAL_MIN = 1
+const SPAWN_INTERVAL_MAX = 2
 
 // Quantos carros podem estar circulando ao mesmo tempo.
-const MAX_CARS = 6
+const MAX_CARS = 20
 
 interface ActiveCar {
   id: string

@@ -123,32 +123,32 @@ function starterBuildings(
     dx: number
     dz: number
   }[] = [
-    {
-      type: "HOUSE",
-      dx: 0,
-      dz: 0,
-    },
-    {
-      type: "HOUSE",
-      dx: 1,
-      dz: 0,
-    },
-    {
-      type: "ROAD",
-      dx: 0,
-      dz: 1,
-    },
-    {
-      type: "ROAD",
-      dx: 1,
-      dz: 1,
-    },
-    {
-      type: "SHOP",
-      dx: 2,
-      dz: 0,
-    },
-  ]
+      {
+        type: "HOUSE",
+        dx: 0,
+        dz: 0,
+      },
+      {
+        type: "HOUSE",
+        dx: 1,
+        dz: 0,
+      },
+      {
+        type: "ROAD",
+        dx: 0,
+        dz: 1,
+      },
+      {
+        type: "ROAD",
+        dx: 1,
+        dz: 1,
+      },
+      {
+        type: "SHOP",
+        dx: 2,
+        dz: 0,
+      },
+    ]
 
   const placed: Building[] = []
 
@@ -214,7 +214,7 @@ function sanitizePolicy(
         Math.round(
           Number(
             p.taxRate ??
-              DEFAULT_POLICY.taxRate,
+            DEFAULT_POLICY.taxRate,
           ),
         ),
       ),
@@ -229,10 +229,10 @@ function sanitizePolicy(
       Number(
         (
           p.services as
-            | Record<string, number>
-            | undefined
+          | Record<string, number>
+          | undefined
         )?.[s] ??
-          DEFAULT_POLICY.services[s],
+        DEFAULT_POLICY.services[s],
       )
 
     services[s] =
@@ -378,7 +378,7 @@ function assignCitizensToWorkplaces(
         return (
           !building.closed &&
           def.category !==
-            "RESIDENTIAL" &&
+          "RESIDENTIAL" &&
           def.jobs > 0
         )
       },
@@ -399,7 +399,7 @@ function assignCitizensToWorkplaces(
       ) {
         const {
           workplaceBuildingId:
-            _oldWorkplaceBuildingId,
+          _oldWorkplaceBuildingId,
           ...citizenWithoutWorkplace
         } = citizen
 
@@ -443,7 +443,7 @@ function assignCitizensToWorkplaces(
       ) {
         const {
           workplaceBuildingId:
-            _oldWorkplaceBuildingId,
+          _oldWorkplaceBuildingId,
           ...citizenWithoutWorkplace
         } = citizen
 
@@ -586,7 +586,7 @@ export async function getOrCreateCity(
 
   if (
     typeof doc.clockStartedAt !==
-      "number" ||
+    "number" ||
     !Number.isFinite(
       doc.clockStartedAt,
     )
@@ -622,7 +622,7 @@ export async function getOrCreateCity(
 
   const currentTimeStage =
     currentClock.stage ===
-    "DAY"
+      "DAY"
       ? 1
       : 0
 
@@ -656,15 +656,15 @@ export async function getOrCreateCity(
       doc.buildings,
       doc.policy,
       doc.lastTickAt ??
-        now,
+      now,
       now,
     )
 
   const economyChanged =
     ticked.money !==
-      doc.money ||
+    doc.money ||
     ticked.lastTickAt !==
-      doc.lastTickAt
+    doc.lastTickAt
 
   doc.money =
     ticked.money
@@ -744,7 +744,7 @@ export async function performAction(
 
   if (
     typeof doc.clockStartedAt !==
-      "number" ||
+    "number" ||
     !Number.isFinite(
       doc.clockStartedAt,
     )
@@ -762,7 +762,7 @@ export async function performAction(
     createGameClock(
       doc.clockStartedAt,
       doc.lastTickAt ??
-        now,
+      now,
     )
 
   const currentClock =
@@ -773,7 +773,7 @@ export async function performAction(
 
   const currentTimeStage =
     currentClock.stage ===
-    "DAY"
+      "DAY"
       ? 1
       : 0
 
@@ -810,7 +810,7 @@ export async function performAction(
       doc.buildings,
       doc.policy,
       doc.lastTickAt ??
-        now,
+      now,
       now,
     )
 
@@ -885,7 +885,7 @@ export async function performAction(
 
     const tile =
       terrain[action.x]?.[
-        action.z
+      action.z
       ]
 
     if (
@@ -954,6 +954,95 @@ export async function performAction(
         docToState(doc),
       message:
         `${def.name} construída.`,
+    }
+  }
+
+  if (action.type === "MOVE") {
+    const idx =
+      doc.buildings.findIndex(
+        (b) =>
+          b.x === action.x &&
+          b.z === action.z,
+      )
+
+    if (idx === -1) {
+      return reject(
+        "Nenhuma construção encontrada aqui.",
+      )
+    }
+
+    const building =
+      doc.buildings[idx]
+
+    if (
+      building.type === "ROAD"
+    ) {
+      return reject(
+        "Estradas não podem ser movidas por este modo.",
+      )
+    }
+
+    const terrain =
+      applyOccupancy(
+        generateTerrain(doc.seed),
+        doc.buildings,
+      )
+
+    const targetTile =
+      terrain[action.toX]?.[
+        action.toZ
+      ]
+
+    if (!canPlace(targetTile)) {
+      return reject(
+        "Não é possível mover a construção para esse local.",
+      )
+    }
+
+    const occupiedByOther =
+      doc.buildings.some(
+        (b, buildingIndex) =>
+          buildingIndex !== idx &&
+          b.x === action.toX &&
+          b.z === action.toZ,
+      )
+
+    if (occupiedByOther) {
+      return reject(
+        "Esse terreno já está ocupado.",
+      )
+    }
+
+    const normalizedRotation =
+      ((action.rotation % 4) + 4) %
+      4
+
+    doc.buildings[idx] = {
+      ...building,
+      x: action.toX,
+      z: action.toZ,
+      rotation:
+        normalizedRotation,
+    }
+
+    doc.updatedAt =
+      new Date(now).toISOString()
+
+    await cityRef.update({
+      buildings: doc.buildings,
+      citizens: doc.citizens,
+      money: doc.money,
+      lastTickAt: doc.lastTickAt,
+      updatedAt:
+        doc.updatedAt,
+    })
+
+    return {
+      success: true,
+      state:
+        docToState(doc),
+      message:
+        "Construção movida.",
     }
   }
 
@@ -1248,7 +1337,7 @@ export async function performAction(
 
     if (
       citizen.lifeStage !==
-        "ADULT" ||
+      "ADULT" ||
       !citizen.employed ||
       !citizen.workplaceBuildingId
     ) {
@@ -1291,12 +1380,12 @@ export async function performAction(
       doc.citizens.map(
         (c) =>
           c.id ===
-          citizen.id
+            citizen.id
             ? {
-                ...c,
-                workState:
-                  "WORK",
-              }
+              ...c,
+              workState:
+                "WORK",
+            }
             : c,
       )
 
@@ -1342,7 +1431,7 @@ export async function performAction(
 
     if (
       citizen.lifeStage !==
-        "ADULT" ||
+      "ADULT" ||
       !citizen.employed ||
       !citizen.workplaceBuildingId
     ) {
@@ -1377,12 +1466,12 @@ export async function performAction(
       doc.citizens.map(
         (c) =>
           c.id ===
-          citizen.id
+            citizen.id
             ? {
-                ...c,
-                workState:
-                  "HOME",
-              }
+              ...c,
+              workState:
+                "HOME",
+            }
             : c,
       )
 
@@ -1436,11 +1525,11 @@ export async function performAction(
 
     if (
       def.category !==
-        "RESIDENTIAL" &&
+      "RESIDENTIAL" &&
       def.category !==
-        "COMMERCIAL" &&
+      "COMMERCIAL" &&
       def.category !==
-        "INDUSTRIAL"
+      "INDUSTRIAL"
     ) {
       return reject(
         "Esta construção não possui ocupação.",
@@ -1505,7 +1594,7 @@ export async function performAction(
         docToState(doc),
       message:
         def.category ===
-        "RESIDENTIAL"
+          "RESIDENTIAL"
           ? "Os moradores deixaram a residência."
           : "Os trabalhadores deixaram a construção.",
     }

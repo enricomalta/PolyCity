@@ -692,7 +692,7 @@ function Model({
 }
 
 // A placed building.
-export const Building = memo(
+export const BuildingMesh = memo(
   function Building({
     type,
     position,
