@@ -36,6 +36,7 @@ export function ToolBar({
   onSelect, 
   onBuild,
   onTerrainEdit,
+  onZoning,
   onEdit,
   onDemolish,
   onGovernance,
