@@ -21,7 +21,7 @@ import {
  * re-enables pointer events for itself.
  */
 export function GameHUD() {
-  const { user, logout } = useAuth()
+  const { user, logout, renameProfile, linkGoogleAccount } = useAuth()
   const {
     city,
     state,
@@ -185,6 +185,8 @@ export function GameHUD() {
           cityName={city?.name ?? "PolyCity"}
           user={user}
           onLogout={logout}
+          onRename={renameProfile}
+          onLinkGoogle={linkGoogleAccount}
         />
       </div>
 
