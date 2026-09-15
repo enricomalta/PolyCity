@@ -123,13 +123,13 @@ export function ToolBar({
 
   <div
     className={cn(
-      "absolute left-full top-0 z-20 -ml-1 h-11 w-[232px] pl-2",
+      "absolute left-full top-0 z-20 -ml-1 h-11 w-[268px] pl-2",
       submenuOpen ? "pointer-events-auto" : "pointer-events-none",
     )}
   >
     <div
       className={cn(
-        "flex h-11 w-[220px] items-center gap-1.5 rounded-r-2xl border border-border bg-card/90 p-1.5 shadow-lg backdrop-blur origin-left transition-all duration-200 ease-out",
+        "flex h-11 w-[268px] items-center gap-1.5 rounded-r-2xl border border-border bg-card/90 p-1.5 shadow-lg backdrop-blur origin-left transition-all duration-200 ease-out",
         submenuOpen ? "pointer-events-auto translate-x-0 scale-x-100 opacity-100" : "pointer-events-none -translate-x-3 scale-x-90 opacity-0",
       )}
     >
@@ -145,7 +145,7 @@ export function ToolBar({
         className={cn(
           "flex size-11 shrink-0 items-center justify-center rounded-xl transition-all duration-200",
           tool === "TERRAIN_EDIT"
-            ? "pointer-events-none invisible"
+            ? "hidden"
             : "text-muted-foreground hover:bg-secondary hover:text-card-foreground",
         )}
       >
@@ -161,7 +161,7 @@ export function ToolBar({
         className={cn(
           "flex size-11 shrink-0 items-center justify-center rounded-xl transition-all duration-150",
           tool === "ZONING"
-            ? "pointer-events-none invisible"
+            ? "hidden"
             : "text-muted-foreground hover:bg-secondary hover:text-card-foreground",
         )}
       >
@@ -177,7 +177,7 @@ export function ToolBar({
         className={cn(
           "flex size-11 shrink-0 items-center justify-center rounded-xl transition-all duration-150",
           tool === "EDIT"
-            ? "pointer-events-none invisible"
+            ? "hidden"
             : "text-muted-foreground hover:bg-secondary hover:text-card-foreground",
         )}
       >
@@ -193,7 +193,7 @@ export function ToolBar({
         className={cn(
           "flex size-11 shrink-0 items-center justify-center rounded-xl transition-all duration-150",
           tool === "DEMOLISH"
-            ? "pointer-events-none invisible"
+            ? "hidden"
             : "text-muted-foreground hover:bg-secondary hover:text-card-foreground",
         )}
       >
