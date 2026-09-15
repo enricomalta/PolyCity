@@ -26,6 +26,7 @@ import {
   DEFAULT_POLICY,
   DEFAULT_PRICES,
   PUBLIC_SERVICES,
+  calculateCitizenOpinion,
 } from "./economy"
 
 import {
@@ -679,6 +680,12 @@ export async function getOrCreateCity(
 
   doc.lastTickAt =
     ticked.lastTickAt
+
+  const serviceIndices = deriveState(doc.policy, doc.citizens.length).services
+  doc.citizens = doc.citizens.map((citizen) => ({
+    ...citizen,
+    opinion: calculateCitizenOpinion(citizen, doc.policy, serviceIndices),
+  }))
 
   const shouldPersist =
     economyChanged ||
