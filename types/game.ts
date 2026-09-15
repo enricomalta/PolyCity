@@ -54,6 +54,11 @@ export type GameAction =
       terrain: TerrainType
     }
   | {
+      type: "SET_TERRAIN_BATCH"
+      tiles: Array<{ x: number; z: number }>
+      terrain: TerrainType
+    }
+  | {
       type: "ROTATE"
       x: number
       z: number

@@ -1011,15 +1011,18 @@ export async function performAction(
     }
   }
 
-  if (action.type === "SET_TERRAIN") {
+  if (action.type === "SET_TERRAIN" || action.type === "SET_TERRAIN_BATCH") {
     const allowed = ["GRASS", "WATER", "ROCK", "FOREST", "SAND"] as const
     if (!allowed.includes(action.terrain)) return reject("Tipo de terreno inválido.")
+    const selectedTiles = action.type === "SET_TERRAIN" ? [{ x: action.x, z: action.z }] : action.tiles
+    if (!selectedTiles.length || selectedTiles.length > 900) return reject("Seleção de terreno inválida.")
     const terrain = terrainWithOverrides(doc.seed, doc.terrainOverrides)
-    const tile = terrain[action.x]?.[action.z]
-    if (!tile) return reject("Tile inválido.")
-    if (doc.buildings.some((building) => building.x === action.x && building.z === action.z)) return reject("Remova a construção antes de alterar o terreno.")
-    doc.terrainOverrides = { ...(doc.terrainOverrides ?? {}), [`${action.x}:${action.z}`]: action.terrain }
-    return commitAction("Terreno alterado.")
+    for (const tile of selectedTiles) {
+      if (!terrain[tile.x]?.[tile.z]) return reject("Um dos tiles selecionados é inválido.")
+      if (doc.buildings.some((building) => building.x === tile.x && building.z === tile.z)) return reject("Remova as construções antes de alterar o terreno.")
+    }
+    doc.terrainOverrides = { ...(doc.terrainOverrides ?? {}), ...Object.fromEntries(selectedTiles.map((tile) => [`${tile.x}:${tile.z}`, action.terrain])) }
+    return commitAction(selectedTiles.length === 1 ? "Terreno alterado." : `${selectedTiles.length} tiles alterados.`)
   }
 
   if (

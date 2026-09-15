@@ -38,7 +38,7 @@ export function GameHUD() {
     closeBuilding,
     openBuilding,
     demarcateRegion,
-    setTerrain,
+    setTerrainBatch,
     lastMessage,
     clearMessage,
   } = useGame()
@@ -353,7 +353,7 @@ export function GameHUD() {
 
             </div>
             <p className="mt-3 text-xs text-muted-foreground">{terrainSelection.length} tiles selecionados. Rocha pode ser aplicada sobre areia.</p>
-            <button type="button" disabled={!terrainSelection.length} onClick={() => { void Promise.all(terrainSelection.map((tile) => setTerrain(tile.x, tile.z, terrainType))); setTerrainSelection([]); window.dispatchEvent(new Event("polycity:clear-terrain-selection")) }} className="mt-3 w-full rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50">Aplicar terreno</button>
+            <button type="button" disabled={!terrainSelection.length} onClick={() => { void setTerrainBatch(terrainSelection, terrainType); setTerrainSelection([]); window.dispatchEvent(new Event("polycity:clear-terrain-selection")) }} className="mt-3 w-full rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50">Aplicar terreno</button>
           </div>
         )}
 

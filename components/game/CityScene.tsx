@@ -241,7 +241,7 @@ export function CityScene() {
     1 - smoothstep(19 * 60, 21 * 60, minuteOfDay),
   )
   const nightIntensity = 1 - daylight
-  const visualNight = nightIntensity > 0.45
+  const visualNight = nightIntensity > 0.01
 
   const skyColor = new Color("#18243d").lerp(
     new Color("#9fc9e8"),

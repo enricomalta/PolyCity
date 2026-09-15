@@ -129,6 +129,7 @@ interface GameContextValue {
   ) => Promise<void>
 
   setTerrain: (x: number, z: number, terrain: TerrainType) => Promise<void>
+  setTerrainBatch: (tiles: Array<{ x: number; z: number }>, terrain: TerrainType) => Promise<void>
 
   // Disparada pelo TrafficSystem quando um carro chega a uma casa vaga. O
   // servidor revalida tudo (ver lib/game/traffic.ts) antes de aceitar.
@@ -400,18 +401,22 @@ export function GameProvider({
   // Demolish
   // ---------------------------------------------------------------------------
 
-  const setTerrain = useCallback(async (x: number, z: number, terrain: TerrainType) => {
+  const setTerrainBatch = useCallback(async (tiles: Array<{ x: number; z: number }>, terrain: TerrainType) => {
     setPending(true)
     try {
-      const res = await gameService.performAction(cityId, { type: "SET_TERRAIN", x, z, terrain })
+      const res = await gameService.performAction(cityId, { type: "SET_TERRAIN_BATCH", tiles, terrain })
       setState(res.state)
       setLastMessage(res.message ?? null)
     } catch {
-      setLastMessage("Não foi possível alterar o terreno.")
+      setLastMessage("Não foi possível alterar o terreno selecionado.")
     } finally {
       setPending(false)
     }
   }, [cityId])
+
+  const setTerrain = useCallback(async (x: number, z: number, terrain: TerrainType) => {
+    return setTerrainBatch([{ x, z }], terrain)
+  }, [setTerrainBatch])
 
   const demolish =
     useCallback<GameContextValue["demolish"]>(
@@ -891,6 +896,7 @@ export function GameProvider({
 
         demolish,
         setTerrain,
+        setTerrainBatch,
 
         moveBuilding,
 
@@ -938,6 +944,7 @@ export function GameProvider({
 
         demolish,
         setTerrain,
+        setTerrainBatch,
 
         moveBuilding,
 
