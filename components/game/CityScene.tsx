@@ -592,6 +592,7 @@ export function CityScene() {
                 b.rotation
               }
               isNight={visualNight}
+              nightIntensity={nightIntensity}
               occupied={b.occupied}
             />
           )

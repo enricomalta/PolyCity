@@ -39,10 +39,12 @@ function Foundation({
 function Model({
   type,
   isNight = false,
+  nightIntensity = isNight ? 1 : 0,
   occupied = false,
 }: {
   type: BuildingType
   isNight?: boolean
+  nightIntensity?: number
   occupied?: boolean
 }) {
   const def = getBuilding(type)
@@ -701,9 +703,10 @@ export const BuildingMesh = memo(
     type,
     position,
     rotation = 0,
-    isNight = false,
-    occupied = false,
-  }: {
+  isNight = false,
+  nightIntensity = isNight ? 1 : 0,
+  occupied = false,
+}: {
     type: BuildingType
     position: [
       number,
@@ -725,9 +728,9 @@ export const BuildingMesh = memo(
           0,
         ]}
       >
-        <Model type={type} isNight={isNight} occupied={occupied} />
-        {isNight && occupied && (type === "HOUSE" || type === "SMALL_APARTMENT") && (
-          <pointLight position={[0, 0.7, 0.25]} color="#ffc46b" intensity={0.7} distance={2.2} decay={2} />
+        <Model type={type} isNight={isNight} nightIntensity={nightIntensity} occupied={occupied} />
+        {occupied && (type === "HOUSE" || type === "SMALL_APARTMENT") && nightIntensity > 0.01 && (
+          <pointLight position={[0, 0.7, 0.25]} color="#ffc46b" intensity={0.7 * nightIntensity} distance={2.2} decay={2} />
         )}
       </group>
     )
