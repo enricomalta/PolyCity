@@ -11,6 +11,13 @@ export const apiGameService: GameService = {
     return apiRequest<{ city: City; state: CityState }>(`/api/cities/${cityId}`)
   },
 
+  createCity(cityId, options) {
+    return apiRequest<{ city: City; state: CityState }>(`/api/cities/${cityId}`, {
+      method: "POST",
+      body: options,
+    })
+  },
+
   performAction(cityId, action: GameAction) {
     return apiRequest<GameResponse>(`/api/cities/${cityId}/actions`, {
       method: "POST",

@@ -524,11 +524,23 @@ function assignCitizensToWorkplaces(
   )
 }
 
-// Load the caller's city, creating the account + city on first login.
-// Economy ticks are still based on lastTickAt.
-// DAY/NIGHT is derived exclusively from clock.ts.
+export class CityNotCreatedError extends Error {
+  constructor() {
+    super("CITY_NOT_CREATED")
+    this.name = "CityNotCreatedError"
+  }
+}
+
+export interface CityCreationOptions {
+  name: string
+  ideology: CityPolicy["ideology"]
+}
+
+// Loads the caller's city. Creation is explicit so the mayor chooses the city
+// name and governing ideology before the world is persisted.
 export async function getOrCreateCity(
   user: DecodedIdToken,
+  creation?: CityCreationOptions,
 ): Promise<{
   city: City
   state: CityState
@@ -547,6 +559,8 @@ export async function getOrCreateCity(
     Date.now()
 
   if (!snap.exists) {
+    if (!creation) throw new CityNotCreatedError()
+
     const seed =
       seedFromUid(
         user.uid,
@@ -568,8 +582,7 @@ export async function getOrCreateCity(
     const doc: CityDoc = {
       id: user.uid,
       ownerId: user.uid,
-      name:
-        `Cidade de ${displayName}`,
+      name: creation.name.trim(),
       seed,
       createdAt: nowIso,
       updatedAt: nowIso,
@@ -580,8 +593,18 @@ export async function getOrCreateCity(
       gameTime:
         createGameTime(),
       timeStage: 0,
-      policy:
-        DEFAULT_POLICY,
+      policy: {
+        ...DEFAULT_POLICY,
+        ideology: creation.ideology,
+        services: { ...DEFAULT_POLICY.services },
+        classTaxRates: { ...DEFAULT_POLICY.classTaxRates },
+        selectiveTaxes: { ...DEFAULT_POLICY.selectiveTaxes },
+        prices: {
+          salary: { ...DEFAULT_POLICY.prices.salary },
+          rent: { ...DEFAULT_POLICY.prices.rent },
+          consumption: { ...DEFAULT_POLICY.prices.consumption },
+        },
+      },
       buildings:
         starterBuildings(seed),
       citizens: [],

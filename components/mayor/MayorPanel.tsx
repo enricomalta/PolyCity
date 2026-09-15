@@ -9,6 +9,7 @@ import {
   Landmark,
   LifeBuoy,
   Percent,
+  Pencil,
   Save,
   ShieldAlert,
   TrendingDown,
@@ -54,6 +55,7 @@ function indexTone(v: number): string {
 export function MayorPanel({ onClose }: MayorPanelProps) {
   const { city, state, status, updatePolicy, renameCity, pending } = useGame()
   const [cityName, setCityName] = useState(city?.name ?? "")
+  const [editingName, setEditingName] = useState(false)
 
   // Local draft of the policy so the mayor can preview the impact before
   // committing. The authoritative values still come from the server on save.
@@ -118,11 +120,14 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
         </header>
 
         <section className="mt-6 rounded-2xl border border-border bg-card p-4">
-          <label htmlFor="city-name" className="text-sm font-semibold text-card-foreground">Nome da cidade</label>
-          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-            <input id="city-name" value={cityName} onChange={(event) => setCityName(event.target.value)} maxLength={40} className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none ring-primary focus:ring-2" />
-            <button type="button" disabled={pending || !cityName.trim()} onClick={() => void renameCity(cityName)} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">Salvar nome</button>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Nome da cidade</p>
+              {!editingName && <p className="mt-1 text-lg font-semibold text-card-foreground">{city?.name ?? cityName}</p>}
+            </div>
+            {!editingName && <button type="button" onClick={() => setEditingName(true)} aria-label="Editar nome da cidade" className="inline-flex size-9 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><Pencil className="size-4" /></button>}
           </div>
+          {editingName && <div className="mt-3 flex flex-col gap-2 sm:flex-row"><input id="city-name" autoFocus value={cityName} onChange={(event) => setCityName(event.target.value)} maxLength={40} className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none ring-primary focus:ring-2" /><button type="button" disabled={pending || !cityName.trim()} onClick={async () => { const ok = await renameCity(cityName); if (ok) setEditingName(false) }} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">Salvar nome</button></div>}
         </section>
 
         {/* Summary cards */}
