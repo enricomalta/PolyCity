@@ -23,6 +23,7 @@ import { getBuilding } from "./buildings"
 import {
   applyBudgetTicks,
   deriveState,
+  deriveServiceIndices,
   DEFAULT_POLICY,
   DEFAULT_PRICES,
   PUBLIC_SERVICES,
@@ -708,7 +709,10 @@ export async function getOrCreateCity(
   doc.lastTickAt =
     ticked.lastTickAt
 
-  const serviceIndices = deriveState(doc.policy, doc.citizens.length).services
+  const serviceIndices = deriveServiceIndices(
+    doc.policy,
+    doc.citizens.length,
+  )
   doc.citizens = doc.citizens.map((citizen) => ({
     ...citizen,
     opinion: calculateCitizenOpinion(citizen, doc.policy, serviceIndices),
