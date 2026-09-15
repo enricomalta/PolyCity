@@ -1,15 +1,16 @@
 "use client"
 
 import { useMemo, useRef } from "react"
+
 import type { ThreeEvent } from "@react-three/fiber"
+
 import type { Tile } from "@/types/game"
+
 import { GRID_SIZE, TILE_SIZE, tileToWorld } from "@/lib/game/constants"
+
 import { Tree } from "./Tree"
 
-import type {
-  SelectionIndicatorHandle,
-} from "./SelectionIndicator"
-
+import type { SelectionIndicatorHandle } from "./SelectionIndicator"
 
 interface GroundTilesProps {
   tiles: Tile[][]
@@ -18,63 +19,124 @@ interface GroundTilesProps {
 }
 
 /**
- * The base terrain: a grass plane, a soil rim for depth, a grid overlay, and
- * a single large invisible picking plane. We derive the tile coordinate from
- * the pointer's world position instead of rendering thousands of meshes, which
- * keeps the scene light even on a 30x30 grid.
+ * The base terrain: a grass plane, a soil rim for depth, a grid overlay,
+ * and a single large invisible picking plane.
+ *
+ * Pointer coordinates are converted directly from world position into
+ * tile coordinates, avoiding individual meshes for tile interaction.
  */
-export function GroundTiles({ tiles, onSelect, hoverControllerRef, }: GroundTilesProps) {
-  const worldSize = GRID_SIZE * TILE_SIZE
-  const half = worldSize / 2
+export function GroundTiles({
+  tiles,
+  onSelect,
+  hoverControllerRef,
+}: GroundTilesProps) {
+  const WORLD_SIZE = GRID_SIZE * TILE_SIZE
+  const HALF_WORLD_SIZE = WORLD_SIZE / 2
 
-  // Water, sand, rocks and forest are painted on top of the grass base from
-  // the procedural terrain data. Forest trees are skipped on occupied tiles so
-  // they visually "clear" when the player builds there.
+  // Water, sand, rocks and forest are painted on top of the grass base.
+  // Forest trees are skipped on occupied tiles so they visually clear
+  // when the player builds there.
   const decor = useMemo(() => {
     const water: [number, number][] = []
     const sand: [number, number][] = []
     const rock: [number, number][] = []
     const forest: [number, number][] = []
+
     for (const row of tiles) {
       for (const tile of row) {
-        if (tile.terrain === "WATER") water.push([tile.x, tile.z])
-        else if (tile.terrain === "SAND") sand.push([tile.x, tile.z])
-        else if (tile.terrain === "ROCK") rock.push([tile.x, tile.z])
-        else if (tile.terrain === "FOREST" && !tile.occupiedBy) forest.push([tile.x, tile.z])
+        if (tile.terrain === "WATER") {
+          water.push([tile.x, tile.z])
+        } else if (tile.terrain === "SAND") {
+          sand.push([tile.x, tile.z])
+        } else if (tile.terrain === "ROCK") {
+          rock.push([tile.x, tile.z])
+        } else if (
+          tile.terrain === "FOREST" &&
+          !tile.occupiedBy
+        ) {
+          forest.push([tile.x, tile.z])
+        }
       }
     }
-    return { water, sand, rock, forest }
+
+    return {
+      water,
+      sand,
+      rock,
+      forest,
+    }
   }, [tiles])
 
-  function coordFromPoint(e: ThreeEvent<PointerEvent>): [number, number] | null {
-    const x = Math.floor((e.point.x + half) / TILE_SIZE)
-    const z = Math.floor((e.point.z + half) / TILE_SIZE)
-    if (x < 0 || z < 0 || x >= GRID_SIZE || z >= GRID_SIZE) return null
+  /**
+   * Converts a Three.js world-space pointer position into
+   * a grid coordinate.
+   */
+  function coordFromPoint(
+    e: ThreeEvent<PointerEvent>,
+  ): [number, number] | null {
+    const x = Math.floor(
+      (e.point.x + HALF_WORLD_SIZE) / TILE_SIZE,
+    )
+
+    const z = Math.floor(
+      (e.point.z + HALF_WORLD_SIZE) / TILE_SIZE,
+    )
+
+    if (
+      x < 0 ||
+      z < 0 ||
+      x >= GRID_SIZE ||
+      z >= GRID_SIZE
+    ) {
+      return null
+    }
+
     return [x, z]
   }
 
-  // Screen position where the current pointer press started. Used to tell a
-  // deliberate "tap" (build/select/demolish) apart from a camera drag: if the
-  // pointer barely moved between down and up, it's a tap; otherwise the user
-  // was orbiting/panning the camera and we must NOT act on the tile.
-  const pressRef = useRef<{ x: number; y: number } | null>(null)
+  // Screen position where the current pointer press started.
+  // Used to distinguish a deliberate tap from camera dragging.
+  const pressRef = useRef<{
+    x: number
+    y: number
+  } | null>(null)
+
+  // Keeps the last hovered tile so we don't repeatedly update
+  // the SelectionIndicator while the pointer remains inside
+  // the same tile.
   const hoverTileRef = useRef<[number, number] | null>(null)
-  const TAP_THRESHOLD_SQ = 36 // 6px of travel
+
+  // 6px of screen-space movement.
+  const TAP_THRESHOLD_SQ = 36
 
   return (
     <group>
       {/* Grass base */}
-      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
-        <planeGeometry args={[worldSize, worldSize]} />
+      <mesh
+        receiveShadow
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, -0.01, 0]}
+      >
+        <planeGeometry args={[WORLD_SIZE, WORLD_SIZE]} />
         <meshStandardMaterial color="#5a8f4e" />
       </mesh>
 
       {/* Grid overlay */}
-      <gridHelper args={[worldSize, GRID_SIZE, "#3f6b39", "#4a7a42"]} position={[0, 0.002, 0]} />
+      <gridHelper
+        args={[
+          WORLD_SIZE,
+          GRID_SIZE,
+          "#3f6b39",
+          "#4a7a42",
+        ]}
+        position={[0, 0.002, 0]}
+      />
 
-      {/* Soil rim around the plot for depth */}
+      {/* Soil rim */}
       <mesh position={[0, -0.35, 0]}>
-        <boxGeometry args={[worldSize, 0.7, worldSize]} />
+        <boxGeometry
+          args={[WORLD_SIZE, 0.7, WORLD_SIZE]}
+        />
         <meshStandardMaterial color="#6b4a33" />
       </mesh>
 
@@ -83,7 +145,11 @@ export function GroundTiles({ tiles, onSelect, hoverControllerRef, }: GroundTile
         <mesh
           key={`w-${x}-${z}`}
           rotation={[-Math.PI / 2, 0, 0]}
-          position={[tileToWorld(x), 0.012, tileToWorld(z)]}
+          position={[
+            tileToWorld(x),
+            0.012,
+            tileToWorld(z),
+          ]}
         >
           <planeGeometry args={[TILE_SIZE, TILE_SIZE]} />
           <meshStandardMaterial color="#3f8fb0" />
@@ -95,16 +161,28 @@ export function GroundTiles({ tiles, onSelect, hoverControllerRef, }: GroundTile
         <mesh
           key={`s-${x}-${z}`}
           rotation={[-Math.PI / 2, 0, 0]}
-          position={[tileToWorld(x), 0.008, tileToWorld(z)]}
+          position={[
+            tileToWorld(x),
+            0.008,
+            tileToWorld(z),
+          ]}
         >
           <planeGeometry args={[TILE_SIZE, TILE_SIZE]} />
           <meshStandardMaterial color="#d9c48c" />
         </mesh>
       ))}
 
-      {/* Forest tiles: a low-poly tree marks the woodland */}
+      {/* Forest */}
       {decor.forest.map(([x, z]) => (
-        <Tree key={`f-${x}-${z}`} position={[tileToWorld(x), 0, tileToWorld(z)]} scale={0.9} />
+        <Tree
+          key={`f-${x}-${z}`}
+          position={[
+            tileToWorld(x),
+            0,
+            tileToWorld(z),
+          ]}
+          scale={0.9}
+        />
       ))}
 
       {/* Rock tiles */}
@@ -113,10 +191,17 @@ export function GroundTiles({ tiles, onSelect, hoverControllerRef, }: GroundTile
           key={`r-${x}-${z}`}
           castShadow
           receiveShadow
-          position={[tileToWorld(x), 0.12, tileToWorld(z)]}
+          position={[
+            tileToWorld(x),
+            0.12,
+            tileToWorld(z),
+          ]}
         >
           <dodecahedronGeometry args={[0.32, 0]} />
-          <meshStandardMaterial color="#8a8f96" flatShading />
+          <meshStandardMaterial
+            color="#8a8f96"
+            flatShading
+          />
         </mesh>
       ))}
 
@@ -125,57 +210,86 @@ export function GroundTiles({ tiles, onSelect, hoverControllerRef, }: GroundTile
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0.03, 0]}
         onPointerMove={(e) => {
-            e.stopPropagation()
+          e.stopPropagation()
 
-            const coord = coordFromPoint(e)
+          const coord = coordFromPoint(e)
 
-            if (!coord) {
-                if (hoverTileRef.current !== null) {
-                    hoverTileRef.current = null
-                }
-
-                return
-            }
-
-            const [x, z] = coord
-            const current = hoverTileRef.current
-
-            if (current?.[0] === x && current?.[1] === z) {
-                return
-            }
-            
-            hoverTileRef.current = [x, z]
-
-            hoverControllerRef.current?.setHover(
-              x,
-              z,
-            )
-        }}
-        onPointerOut={() => {
+          if (!coord) {
             if (hoverTileRef.current !== null) {
               hoverTileRef.current = null
-
               hoverControllerRef.current?.clearHover()
             }
+
+            return
+          }
+
+          const [x, z] = coord
+          const current = hoverTileRef.current
+
+          // Avoid calling setHover repeatedly while remaining
+          // inside the same tile.
+          if (
+            current?.[0] === x &&
+            current?.[1] === z
+          ) {
+            return
+          }
+
+          hoverTileRef.current = [x, z]
+
+          hoverControllerRef.current?.setHover(x, z)
+        }}
+        onPointerOut={() => {
+          if (hoverTileRef.current !== null) {
+            hoverTileRef.current = null
+            hoverControllerRef.current?.clearHover()
+          }
         }}
         onPointerDown={(e) => {
-          pressRef.current = { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY }
+          pressRef.current = {
+            x: e.nativeEvent.clientX,
+            y: e.nativeEvent.clientY,
+          }
         }}
         onPointerUp={(e) => {
           const start = pressRef.current
+
           pressRef.current = null
+
           if (!start) return
-          const dx = e.nativeEvent.clientX - start.x
-          const dy = e.nativeEvent.clientY - start.y
-          // The press turned into a camera drag: ignore it.
-          if (dx * dx + dy * dy > TAP_THRESHOLD_SQ) return
+
+          const dx =
+            e.nativeEvent.clientX - start.x
+
+          const dy =
+            e.nativeEvent.clientY - start.y
+
+          // Camera drag: don't select/build/demolish.
+          if (
+            dx * dx + dy * dy >
+            TAP_THRESHOLD_SQ
+          ) {
+            return
+          }
+
           e.stopPropagation()
+
           const coord = coordFromPoint(e)
-          if (coord) onSelect(coord[0], coord[1])
+
+          if (coord) {
+            onSelect(coord[0], coord[1])
+          }
         }}
       >
-        <planeGeometry args={[worldSize, worldSize]} />
-        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        <planeGeometry
+          args={[WORLD_SIZE, WORLD_SIZE]}
+        />
+
+        <meshBasicMaterial
+          transparent
+          opacity={0}
+          depthWrite={false}
+        />
       </mesh>
     </group>
   )

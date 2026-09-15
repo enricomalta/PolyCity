@@ -9,7 +9,9 @@ import {
   useState,
 } from "react"
 
-import { Canvas } from "@react-three/fiber"
+import { Canvas,
+  useThree,
+ } from "@react-three/fiber"
 
 import {
   OrbitControls,
@@ -20,6 +22,8 @@ import {
   PCFShadowMap,
   MOUSE,
 } from "three"
+
+
 
 import {
   CAMERA,
@@ -64,6 +68,9 @@ export function CityScene() {
   // toda a árvore do Canvas: GroundTiles, buildings, etc.) reconciliaria a
   // cada hover/seleção — foi essa a causa das Long Tasks. Quem precisa do
   // valor atual (SelectionIndicator) lê o SelectionContext diretamente.
+  console.count(
+    "[CityScene] render",
+  )
   const {
     tiles,
     state,
@@ -320,6 +327,7 @@ export function CityScene() {
 
   return (
     <Canvas
+      
       shadows={{
         type: PCFShadowMap,
       }}
@@ -335,7 +343,7 @@ export function CityScene() {
           "high-performance",
       }}
     >
-
+      <ThreePerformanceProbe />
       <PerformanceMonitor />
       <color
         attach="background"
@@ -494,4 +502,92 @@ export function CityScene() {
       />
     </Canvas>
   )
+}
+
+function ThreePerformanceProbe() {
+  const { gl } = useThree()
+
+  useEffect(() => {
+    let lastTime = performance.now()
+    let maxFrame = 0
+    let frameCount = 0
+
+    let animationFrame = 0
+
+    const check = (now: number) => {
+      const delta = now - lastTime
+
+      lastTime = now
+
+      maxFrame = Math.max(
+        maxFrame,
+        delta,
+      )
+
+      frameCount++
+
+      /*
+       * Se um frame passar de 35ms,
+       * registramos o estado do renderer.
+       */
+      if (delta > 35) {
+        const objects: Array<{
+          type: string
+          name: string
+          visible: boolean
+          children: number
+        }> = []
+
+        gl.scene?.traverse?.(() => {})
+        
+        console.warn(
+          "[PERF SPIKE]",
+          {
+            frameMs:
+              Number(delta.toFixed(2)),
+
+            drawCalls:
+              gl.info.render.calls,
+
+            triangles:
+              gl.info.render.triangles,
+
+            geometries:
+              gl.info.memory.geometries,
+
+            textures:
+              gl.info.memory.textures,
+
+            elapsedSinceLastSpike:
+              Number(
+                (
+                  now -
+                  (window.__polyCityLastSpike ??
+                    now)
+                ).toFixed(0),
+              ),
+
+            objects,
+          },
+        )
+
+        window.__polyCityLastSpike =
+          now
+      }
+
+      animationFrame =
+        requestAnimationFrame(check)
+    }
+
+    animationFrame =
+      requestAnimationFrame(check)
+
+    return () => {
+      cancelAnimationFrame(
+        animationFrame,
+      )
+    }
+  }, [gl])
+
+  return null
 }

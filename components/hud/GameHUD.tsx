@@ -48,16 +48,20 @@ export function GameHUD() {
   const [clockNow, setClockNow] =
     useState(() => Date.now())
 
-  useEffect(() => {
-    const intervalId =
-      window.setInterval(() => {
-        setClockNow(Date.now())
-      }, 1000)
+  // useEffect(() => {
+  //   const intervalId =
+  //     window.setInterval(() => {
+  //       console.count(
+  //         "[GameHUD] clock tick",
+  //       )
 
-    return () => {
-      window.clearInterval(intervalId)
-    }
-  }, [])
+  //       setClockNow(Date.now())
+  //     }, 1000)
+
+  //   return () => {
+  //     window.clearInterval(intervalId)
+  //   }
+  // }, [])
 
   const gameClock = useMemo(() => {
     if (
