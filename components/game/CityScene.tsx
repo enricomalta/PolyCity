@@ -116,6 +116,17 @@ export function CityScene() {
 
   const [zoningStart, setZoningStart] = useState<[number, number] | null>(null)
   const [zoningEnd, setZoningEnd] = useState<[number, number] | null>(null)
+
+  const publishZoningRange = (from: [number, number], to: [number, number]) => {
+    const minX = Math.min(from[0], to[0])
+    const maxX = Math.max(from[0], to[0])
+    const minZ = Math.min(from[1], to[1])
+    const maxZ = Math.max(from[1], to[1])
+    const tiles = Array.from({ length: maxX - minX + 1 }, (_, x) =>
+      Array.from({ length: maxZ - minZ + 1 }, (_, z) => ({ x: minX + x, z: minZ + z })),
+    ).flat()
+    window.dispatchEvent(new CustomEvent("polycity:zoning-range", { detail: { from, to, tiles } }))
+  }
   const [heatMetric, setHeatMetric] = useState<"happiness" | "employment" | "services" | "roads">("happiness")
 
   useEffect(() => {
@@ -353,6 +364,7 @@ export function CityScene() {
           setZoningEnd([x, z])
         } else {
           setZoningEnd([x, z])
+          publishZoningRange(zoningStart, [x, z])
         }
         selectTile({ x, z })
         return
@@ -469,14 +481,15 @@ export function CityScene() {
       />
 
       <Suspense fallback={null}>
-        {state?.regions?.flatMap((region) => region.tiles.map((tile) => <mesh key={`region-${region.id}-${tile.x}-${tile.z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(tile.x), 0.04, tileToWorld(tile.z)]}><planeGeometry args={[TILE_SIZE * 0.92, TILE_SIZE * 0.92]} /><meshBasicMaterial color={regionColor(region)} transparent opacity={tool === "HEATMAP" ? 0.12 : 0.68} /></mesh>))}
+        {tool === "ZONING" && state?.regions?.flatMap((region) => region.tiles.map((tile) => <mesh key={`region-${region.id}-${tile.x}-${tile.z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(tile.x), 0.04, tileToWorld(tile.z)]}><planeGeometry args={[TILE_SIZE * 0.92, TILE_SIZE * 0.92]} /><meshBasicMaterial color={regionColor(region)} transparent opacity={0.68} /></mesh>))}
         {tool === "ZONING" && zoningStart && zoningEnd && Array.from({ length: Math.abs(zoningEnd[0] - zoningStart[0]) + 1 }, (_, ix) => ix).flatMap((ix) => Array.from({ length: Math.abs(zoningEnd[1] - zoningStart[1]) + 1 }, (_, iz) => iz)).map((_, index) => {
           const minX = Math.min(zoningStart[0], zoningEnd[0])
           const minZ = Math.min(zoningStart[1], zoningEnd[1])
           const width = Math.abs(zoningEnd[1] - zoningStart[1]) + 1
           const x = minX + Math.floor(index / width)
           const z = minZ + index % width
-          return <mesh key={`zone-preview-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.035, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.92, TILE_SIZE * 0.92]} /><meshBasicMaterial color={zoneTypeColor(tool)} transparent opacity={0.72} /></mesh>
+          const previewRegion = { zone: "RESIDENTIAL", citizenClass: "MIDDLE" }
+          return <mesh key={`zone-preview-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.035, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.92, TILE_SIZE * 0.92]} /><meshBasicMaterial color={regionColor(previewRegion)} transparent opacity={0.72} /></mesh>
         })}
         {tool === "HEATMAP" && Array.from({ length: 30 * 30 }, (_, index) => { const x = index % 30; const z = Math.floor(index / 30); const region = state?.regions?.find((item) => item.tiles.some((tile) => tile.x === x && tile.z === z)); const value = heatValue(heatMetric, state, region); return <mesh key={`heat-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.034, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={heatColor(value)} transparent opacity={0.62} /></mesh> })}
         <GroundTiles
@@ -487,6 +500,7 @@ export function CityScene() {
             if (tool === "ZONING") {
               setZoningStart(from)
               setZoningEnd(to)
+              publishZoningRange(from, to)
               selectTile({ x: to[0], z: to[1] })
             }
           }}
