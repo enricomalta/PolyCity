@@ -79,6 +79,21 @@ interface CityDoc {
   citizens: Citizen[]
 }
 
+function normalizeBuildings(input: unknown): Building[] {
+  if (Array.isArray(input)) {
+    return input as Building[]
+  }
+
+  if (input && typeof input === "object") {
+    return Object.values(input).filter(
+      (building): building is Building =>
+        Boolean(building) && typeof building === "object",
+    )
+  }
+
+  return []
+}
+
 function makeId(): string {
   return `b_${Math.random()
     .toString(36)
@@ -585,6 +600,12 @@ export async function getOrCreateCity(
   const doc =
     snap.data() as CityDoc
 
+  const rawBuildings = doc.buildings
+  doc.buildings = normalizeBuildings(rawBuildings)
+  if (!Array.isArray(rawBuildings)) {
+    await cityRef.update({ buildings: doc.buildings })
+  }
+
   if (
     !Array.isArray(
       doc.citizens,
@@ -745,6 +766,12 @@ export async function performAction(
 
   const doc =
     fresh.data() as CityDoc
+
+  const rawBuildings = doc.buildings
+  doc.buildings = normalizeBuildings(rawBuildings)
+  if (!Array.isArray(rawBuildings)) {
+    await cityRef.update({ buildings: doc.buildings })
+  }
 
   if (
     !Array.isArray(
