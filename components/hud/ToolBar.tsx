@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import {
   Hammer,
   Landmark,
@@ -42,7 +43,21 @@ export function ToolBar({
   onGovernance,
   onHeatmap,
 }: ToolBarProps) {
-  
+  const [submenuOpen, setSubmenuOpen] = useState(false)
+  const [closeTimer, setCloseTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => { if (closeTimer) clearTimeout(closeTimer) }, [closeTimer])
+
+  const openSubmenu = () => {
+    if (closeTimer) clearTimeout(closeTimer)
+    setSubmenuOpen(true)
+  }
+
+  const scheduleClose = () => {
+    if (closeTimer) clearTimeout(closeTimer)
+    setCloseTimer(setTimeout(() => setSubmenuOpen(false), 420))
+  }
+
   const isConstructionMode =
     tool === "BUILD_MENU" ||
     tool === "BUILD" ||
@@ -77,12 +92,12 @@ export function ToolBar({
         </button>
 
         {/* CONSTRUÇÃO */}
-<div className="group relative">
+<div className="relative" onMouseEnter={openSubmenu} onMouseLeave={scheduleClose}>
   <button
     type="button"
     onClick={onBuild}
     aria-label="Construção"
-    aria-pressed={isConstructionMode}
+    aria-pressed={tool === "BUILD_MENU" || tool === "BUILD" || tool === "ROAD"}
     title="Construção"
     className={cn(
       "relative z-30 flex size-11 items-center justify-center rounded-xl transition-all duration-200",
@@ -93,50 +108,24 @@ export function ToolBar({
         : "text-muted-foreground hover:bg-secondary hover:text-card-foreground",
     )}
   >
-    <Hammer className="size-5" />
+    {tool === "TERRAIN_EDIT" ? <Shovel className="size-5" /> : tool === "ZONING" ? <Grid3X3 className="size-5" /> : tool === "EDIT" ? <Pencil className="size-5" /> : tool === "DEMOLISH" ? <Trash2 className="size-5" /> : <Hammer className="size-5" />}
   </button>
 
   <div
-    className="
-      absolute
-      left-full
-      top-0
-      z-20
-      h-11
-      w-[172px]
-      -ml-1
-      pl-2
-      pointer-events-none
-    "
+    className={cn(
+      "absolute left-full top-0 z-20 -ml-1 h-11 w-[232px] pl-2",
+      submenuOpen ? "pointer-events-auto" : "pointer-events-none",
+    )}
   >
     <div
-      className="
-        flex
-        h-11
-        w-[168px]
-        items-center
-        gap-1.5
-        rounded-r-2xl
-        rounded-l-none
-        border
-        border-border
-        bg-card/90
-        p-1.5
-        shadow-lg
-        backdrop-blur
-        origin-left
-        -translate-x-3
-        scale-x-90
-        opacity-0
-        transition-all
-        duration-200
-        ease-out
-        group-hover:pointer-events-auto
-        group-hover:translate-x-0
-        group-hover:scale-x-100
-        group-hover:opacity-100
-      "
+      className={cn(
+        "flex h-11 w-[220px] items-center gap-1.5 rounded-r-2xl border border-border bg-card/90 p-1.5 shadow-lg backdrop-blur origin-left transition-all duration-200 ease-out",
+        submenuOpen ? "pointer-events-auto translate-x-0 scale-x-100 opacity-100" : "pointer-events-none -translate-x-3 scale-x-90 opacity-0",
+      )}
     >
+      {/* CONSTRUÇÃO */}
+      <button type="button" onClick={onBuild} aria-label="Modo construção" title="Modo construção" className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl transition-all duration-150", tool === "BUILD_MENU" || tool === "BUILD" || tool === "ROAD" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-card-foreground")}><Hammer className="size-5" /></button>
+
       {/* TERRENO */}
       <button
         type="button"
