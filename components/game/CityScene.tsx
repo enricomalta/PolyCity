@@ -118,9 +118,14 @@ export function CityScene() {
   const [zoningEnd, setZoningEnd] = useState<[number, number] | null>(null)
   const [zoningSelectionComplete, setZoningSelectionComplete] = useState(false)
   const [previewZone, setPreviewZone] = useState({ zone: "RESIDENTIAL", citizenClass: "MIDDLE" })
+  const [previewTiles, setPreviewTiles] = useState<Array<{ x: number; z: number }>>([])
 
   useEffect(() => {
-    const handleZone = (event: Event) => setPreviewZone((event as CustomEvent<typeof previewZone>).detail)
+    const handleZone = (event: Event) => {
+      const detail = (event as CustomEvent<{ zone: string; citizenClass: string; tiles?: Array<{ x: number; z: number }> }>).detail
+      setPreviewZone(detail)
+      if (detail.tiles) setPreviewTiles(detail.tiles)
+    }
     window.addEventListener("polycity:zone-preview", handleZone)
     return () => window.removeEventListener("polycity:zone-preview", handleZone)
   }, [])
@@ -130,6 +135,7 @@ export function CityScene() {
       setZoningStart(null)
       setZoningEnd(null)
       setZoningSelectionComplete(false)
+      setPreviewTiles([])
     }
     window.addEventListener("polycity:clear-selection", handleClear)
     window.addEventListener("polycity:zoning-saved", handleClear)
@@ -507,7 +513,8 @@ export function CityScene() {
 
       <Suspense fallback={null}>
         {tool === "ZONING" && state?.regions?.flatMap((region) => region.tiles.map((tile) => <mesh key={`region-${region.id}-${tile.x}-${tile.z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(tile.x), 0.04, tileToWorld(tile.z)]}><planeGeometry args={[TILE_SIZE * 0.92, TILE_SIZE * 0.92]} /><meshBasicMaterial color={regionColor(region)} transparent opacity={0.68} /></mesh>))}
-        {tool === "ZONING" && zoningStart && zoningEnd && Array.from({ length: Math.abs(zoningEnd[0] - zoningStart[0]) + 1 }, (_, ix) => ix).flatMap((ix) => Array.from({ length: Math.abs(zoningEnd[1] - zoningStart[1]) + 1 }, (_, iz) => iz)).map((_, index) => {
+        {tool === "ZONING" && previewTiles.length > 0 && previewTiles.map((tile) => <mesh key={`selected-preview-${tile.x}-${tile.z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(tile.x), 0.045, tileToWorld(tile.z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={regionColor(previewZone)} transparent opacity={0.84} /></mesh>)}
+        {tool === "ZONING" && previewTiles.length === 0 && zoningStart && zoningEnd && Array.from({ length: Math.abs(zoningEnd[0] - zoningStart[0]) + 1 }, (_, ix) => ix).flatMap((ix) => Array.from({ length: Math.abs(zoningEnd[1] - zoningStart[1]) + 1 }, (_, iz) => iz)).map((_, index) => {
           const minX = Math.min(zoningStart[0], zoningEnd[0])
           const minZ = Math.min(zoningStart[1], zoningEnd[1])
           const width = Math.abs(zoningEnd[1] - zoningStart[1]) + 1
