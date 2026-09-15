@@ -298,7 +298,7 @@ export function GameHUD() {
             <p className="text-sm font-semibold text-card-foreground">Mapa de calor urbano</p>
             <p className="mt-1 text-xs text-muted-foreground">Selecione um indicador para colorir os tiles da cidade.</p>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{([['happiness','Felicidade'],['employment','Empregos'],['services','Serviços'],['roads','Estradas']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => { setHeatMetric(value); window.dispatchEvent(new CustomEvent("polycity:heatmap", { detail: value })) }} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${heatMetric === value ? "border-primary bg-primary/15 text-primary" : "border-border bg-secondary text-muted-foreground"}`}>{label}</button>)}</div>
-            <div className="mt-3 grid gap-2 sm:grid-cols-3"><div className="rounded-lg bg-primary/10 px-3 py-2 text-xs text-primary">Áreas com maior felicidade: proximidade de parques e serviços</div><div className="rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent">Áreas com maior emprego: comércio e indústria ativos</div><div className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">Alertas: regiões sem conexão viária ou serviços</div></div>
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground"><span><i className="mr-1 inline-block size-2 rounded-full bg-red-500" />Baixo</span><span><i className="mr-1 inline-block size-2 rounded-full bg-yellow-500" />Médio</span><span><i className="mr-1 inline-block size-2 rounded-full bg-green-500" />Alto</span><span className="ml-auto">Sem dados: cinza</span></div>
           </div>
         )}
 

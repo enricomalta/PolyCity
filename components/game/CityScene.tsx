@@ -62,12 +62,17 @@ function zoneTypeColor(mode: string) {
   return mode === "ZONING" ? "#4ade80" : "#64748b"
 }
 
-function heatValue(metric: string, state: any, region?: { citizenClass?: string; zone: string }) {
+function heatValue(metric: string, state: any, region?: { tiles: Array<{ x: number; z: number }> }) {
   if (!region) return -1
-  if (metric === "happiness") return region.citizenClass === "HIGH" ? 82 : region.citizenClass === "LOW" ? 38 : 64
-  if (metric === "employment") return region.zone === "INDUSTRIAL" || region.zone === "COMMERCIAL" ? 78 : 42
+  const regionalCitizens = state?.citizens?.filter((citizen: any) => {
+    const home = state?.buildings?.find((building: any) => building.id === citizen.homeBuildingId)
+    return home && region.tiles.some((tile) => tile.x === home.x && tile.z === home.z)
+  }) ?? []
+  if (regionalCitizens.length === 0) return -1
+  if (metric === "happiness") return Math.round(regionalCitizens.reduce((sum: number, citizen: any) => sum + Number(citizen.opinion?.score ?? state.happiness ?? 0), 0) / regionalCitizens.length)
+  if (metric === "employment") return Math.round((regionalCitizens.filter((citizen: any) => citizen.employed).length / regionalCitizens.length) * 100)
   if (metric === "services") return Math.round(Object.values(state?.services ?? {}).reduce((sum: number, value) => sum + Number(value), 0) / Math.max(1, Object.values(state?.services ?? {}).length))
-  return Number(state?.services?.roads ?? 0)
+  return -1
 }
 
 function heatColor(value: number) {
@@ -523,7 +528,7 @@ export function CityScene() {
           const previewRegion = previewZone
           return <mesh key={`zone-preview-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.035, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.92, TILE_SIZE * 0.92]} /><meshBasicMaterial color={regionColor(previewRegion)} transparent opacity={0.72} /></mesh>
         })}
-        {tool === "HEATMAP" && Array.from({ length: 30 * 30 }, (_, index) => { const x = index % 30; const z = Math.floor(index / 30); const region = state?.regions?.find((item) => item.tiles.some((tile) => tile.x === x && tile.z === z)); const value = heatValue(heatMetric, state, region); return <mesh key={`heat-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.034, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={heatColor(value)} transparent opacity={0.62} /></mesh> })}
+        {tool === "HEATMAP" && Array.from({ length: 30 * 30 }, (_, index) => { const x = index % 30; const z = Math.floor(index / 30); const region = state?.regions?.find((item) => item.tiles.some((tile) => tile.x === x && tile.z === z)); const road = state?.buildings?.find((building: any) => building.type === "ROAD" && building.x === x && building.z === z); const value = heatMetric === "roads" ? (road ? (road.roadCondition === "CLOSED" || road.closed ? 25 : road.roadCondition === "IRREGULAR" ? 58 : 86) : -1) : heatValue(heatMetric, state, region); return <mesh key={`heat-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.034, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={heatColor(value)} transparent opacity={0.62} /></mesh> })}
         <GroundTiles
           tiles={tiles}
           onSelect={handleSelect}

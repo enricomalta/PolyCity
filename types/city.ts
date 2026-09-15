@@ -157,8 +157,8 @@ export interface Building {
   // instante em que é construída. Ver lib/game/traffic.ts e a ação OCCUPY.
   occupied?: boolean
 
-  // A closed building remains physically present but is inactive.
-  // This will later be used by economy/infrastructure systems.
+  // Estradas usam três estados: regular, irregular (operante) e fechada.
+  roadCondition?: "REGULAR" | "IRREGULAR" | "CLOSED"
   closed?: boolean
   workerBuildingId?: string
 }
