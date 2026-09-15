@@ -360,7 +360,7 @@ export function GameHUD() {
       {mayorOpen && (
         <div className="pointer-events-auto fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/55 p-3 backdrop-blur-sm sm:p-8">
           <div className="relative w-full overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
-            <MayorPanel onClose={() => setMayorOpen(false)} />
+            <MayorPanel onClose={() => { setMayorOpen(false); setTool("SELECT"); selectBuildingType(null) }} />
           </div>
         </div>
       )}

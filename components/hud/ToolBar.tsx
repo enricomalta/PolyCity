@@ -76,7 +76,8 @@ export function ToolBar({
           ? { label: "Demolir", icon: <Trash2 className="size-5" />, onClick: onDemolish }
           : { label: "Construção", icon: <Hammer className="size-5" />, onClick: onBuild }
 
-  const activeAlternateMode = !isBuildMode && ["TERRAIN_EDIT", "ZONING", "EDIT", "DEMOLISH"].includes(tool)
+  const constructionAlternateMode = ["TERRAIN_EDIT", "ZONING", "EDIT", "DEMOLISH"].includes(tool)
+  const activeAlternateMode = !isBuildMode && constructionAlternateMode
 
   return (
     <div className="pointer-events-auto flex flex-col gap-1.5">
@@ -133,7 +134,7 @@ export function ToolBar({
       )}
     >
       {/* CONSTRUÇÃO volta ao submenu quando outro modo está ativo */}
-      {!isBuildMode && <button type="button" onClick={onBuild} aria-label="Construção" title="Construção" className="flex size-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-all duration-150 hover:bg-secondary hover:text-card-foreground"><Hammer className="size-5" /></button>}
+      {constructionAlternateMode && <button type="button" onClick={onBuild} aria-label="Construção" title="Construção" className="flex size-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-all duration-150 hover:bg-secondary hover:text-card-foreground"><Hammer className="size-5" /></button>}
 
       {/* TERRENO */}
       {tool !== "TERRAIN_EDIT" && <button
