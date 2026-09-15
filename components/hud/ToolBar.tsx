@@ -120,9 +120,6 @@ export function ToolBar({
         submenuOpen ? "pointer-events-auto translate-x-0 scale-x-100 opacity-100" : "pointer-events-none -translate-x-3 scale-x-90 opacity-0",
       )}
     >
-      {/* CONSTRUÇÃO aparece no submenu apenas quando outro modo está ativo */}
-      {!isBuildMode && <button type="button" onClick={onBuild} aria-label="Modo construção" title="Modo construção" className="flex size-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-all duration-150 hover:bg-secondary hover:text-card-foreground"><Hammer className="size-5" /></button>}
-
       {/* TERRENO */}
       {tool !== "TERRAIN_EDIT" && <button
         type="button"
