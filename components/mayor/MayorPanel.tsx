@@ -38,6 +38,7 @@ const SERVICE_META: Record<
   prevention: { icon: <LifeBuoy className="size-5" />, description: "Defesa civil e prevenção de desastres." },
   waste: { icon: <LifeBuoy className="size-5" />, description: "Coleta, limpeza e tratamento de resíduos." },
   transit: { icon: <TrendingUp className="size-5" />, description: "Transporte público e mobilidade urbana." },
+  roads: { icon: <Landmark className="size-5" />, description: "Manutenção das estradas e rotas abertas." },
 }
 
 function formatMoney(n: number): string {
@@ -190,6 +191,15 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
                 <option value="CONSERVATISM">Conservadorismo</option>
                 <option value="ECOLOGISM">Ecologismo</option>
                 <option value="LIBERTARIANISM">Libertarianismo</option>
+                <option value="SOCIALISM">Socialismo</option>
+                <option value="NEOLIBERALISM">Neoliberalismo</option>
+                <option value="WELFARE_STATE">Estado de bem-estar social</option>
+                <option value="FISCAL_AUSTERITY">Austeridade fiscal</option>
+                <option value="DEVELOPMENTALISM">Desenvolvimentismo</option>
+                <option value="ECO_SOCIALISM">Ecossocialismo</option>
+                <option value="STATE_CAPITALISM">Capitalismo de Estado</option>
+                <option value="PROGRESSIVISM">Progressismo</option>
+                <option value="TECHNOCRACY">Tecnocracia</option>
               </select>
             </label>
             <div className="mt-4 grid gap-4 md:grid-cols-3">

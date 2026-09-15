@@ -19,11 +19,11 @@ export const DEFAULT_POLICY: CityPolicy = {
   ideology: "SOCIAL_DEMOCRACY",
   classTaxRates: { LOW: 3, MIDDLE: 8, HIGH: 14 },
   selectiveTaxes: { consumption: 4, energy: 3, water: 2, fuel: 5 },
-  services: { education: 1, health: 1, security: 1, prevention: 1, waste: 1, transit: 1 },
+  services: { education: 1, health: 1, security: 1, prevention: 1, waste: 1, transit: 1, roads: 1 },
   prices: DEFAULT_PRICES,
 }
 
-export const PUBLIC_SERVICES: PublicService[] = ["education", "health", "security", "prevention", "waste", "transit"]
+export const PUBLIC_SERVICES: PublicService[] = ["education", "health", "security", "prevention", "waste", "transit", "roads"]
 
 export const SERVICE_LABELS: Record<PublicService, string> = {
   education: "Educação",
@@ -32,6 +32,7 @@ export const SERVICE_LABELS: Record<PublicService, string> = {
   prevention: "Prevenção",
   waste: "Coleta de lixo",
   transit: "Transporte",
+  roads: "Estradas",
 }
 
 // How many citizens one funding "level" can serve for each service.
@@ -42,6 +43,7 @@ const SERVICE_CAPACITY_PER_LEVEL: Record<PublicService, number> = {
   prevention: 70,
   waste: 60,
   transit: 50,
+  roads: 70,
 }
 
 // Monthly cost of one funding level (scaled by population inside the model).
@@ -90,12 +92,9 @@ export function calculateCitizenOpinion(citizen: Citizen, policy: CityPolicy, se
 }
 
 export function deriveServiceIndices(policy: CityPolicy, population: number): ServiceIndices {
-  return {
-    education: serviceIndex("education", policy.services.education, population),
-    health: serviceIndex("health", policy.services.health, population),
-    security: serviceIndex("security", policy.services.security, population),
-    prevention: serviceIndex("prevention", policy.services.prevention, population),
-  }
+  return Object.fromEntries(
+    PUBLIC_SERVICES.map((service) => [service, serviceIndex(service, policy.services[service], population)]),
+  ) as ServiceIndices
 }
 
 export function deriveBudget(policy: CityPolicy, population: number, jobs: number): Budget {

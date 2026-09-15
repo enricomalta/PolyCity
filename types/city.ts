@@ -19,9 +19,23 @@ export interface City {
 
 // The four public services the mayor funds. Each has a funding level that the
 // mayor controls from the "Gabinete do Prefeito" page.
-export type PublicService = "education" | "health" | "security" | "prevention" | "waste" | "transit"
+export type PublicService = "education" | "health" | "security" | "prevention" | "waste" | "transit" | "roads"
 
-export type PoliticalIdeology = "SOCIAL_DEMOCRACY" | "LIBERALISM" | "CONSERVATISM" | "ECOLOGISM" | "LIBERTARIANISM"
+export type PoliticalIdeology =
+  | "SOCIAL_DEMOCRACY"
+  | "LIBERALISM"
+  | "CONSERVATISM"
+  | "ECOLOGISM"
+  | "LIBERTARIANISM"
+  | "SOCIALISM"
+  | "NEOLIBERALISM"
+  | "WELFARE_STATE"
+  | "FISCAL_AUSTERITY"
+  | "DEVELOPMENTALISM"
+  | "ECO_SOCIALISM"
+  | "STATE_CAPITALISM"
+  | "PROGRESSIVISM"
+  | "TECHNOCRACY"
 
 // Funding level per service: 0 = sem verba ... 3 = verba máxima.
 export type FundingLevel = 0 | 1 | 2 | 3
