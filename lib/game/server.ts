@@ -761,7 +761,13 @@ export async function getOrCreateCity(
   )
   doc.citizens = doc.citizens.map((citizen) => {
     const salary = doc.policy.prices.salary[citizen.citizenClass]
-    const monthlyExpenses = doc.policy.prices.rent[citizen.citizenClass] + doc.policy.prices.consumption.market + doc.policy.prices.consumption.water + doc.policy.prices.consumption.energy
+    const home = doc.buildings.find((building) => building.id === citizen.homeBuildingId)
+    const region = home ? (doc.regions ?? []).find((item) => item.tiles.some((tile) => tile.x === home.x && tile.z === home.z)) : undefined
+    const rentFactor = region?.zone === "COMMERCIAL" ? 1.18 : region?.zone === "INDUSTRIAL" ? 0.82 : region?.citizenClass === "HIGH" ? 1.35 : region?.citizenClass === "LOW" ? 0.8 : 1
+    const rent = Math.round(doc.policy.prices.rent[citizen.citizenClass] * rentFactor)
+    const regionalTax = region?.taxRate ?? doc.policy.classTaxRates[citizen.citizenClass]
+    const incomeTax = Math.round(salary * (regionalTax / 100))
+    const monthlyExpenses = rent + doc.policy.prices.consumption.market + doc.policy.prices.consumption.water + doc.policy.prices.consumption.energy + incomeTax
     const updatedCitizen = { ...citizen, salary, monthlyExpenses }
     return { ...updatedCitizen, opinion: calculateCitizenOpinion(updatedCitizen, doc.policy, serviceIndices) }
   })
