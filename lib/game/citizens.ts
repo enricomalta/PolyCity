@@ -3,6 +3,7 @@ import type {
   CitizenEducation,
   CitizenLifeStage,
 } from "@/types/city"
+import { DEFAULT_PRICES } from "./economy"
 
 export function getCitizenLifeStage(
   age: number,
@@ -52,6 +53,10 @@ export function createCitizen(
 ): Citizen {
   const lifeStage = getCitizenLifeStage(age)
 
+  const citizenClass = age < 18 ? "LOW" : age % 5 === 0 ? "HIGH" : "MIDDLE"
+  const salary = DEFAULT_PRICES.salary[citizenClass]
+  const monthlyExpenses = DEFAULT_PRICES.rent[citizenClass] + DEFAULT_PRICES.consumption.market
+
   return {
     id,
     name,
@@ -61,6 +66,10 @@ export function createCitizen(
     homeBuildingId,
     employed: false,
     workState: "HOME",
+    citizenClass,
+    salary,
+    monthlyExpenses,
+    opinion: { score: 60, government: 60, economy: 60, services: 60, taxes: 60, housing: 60 },
   }
 }
 

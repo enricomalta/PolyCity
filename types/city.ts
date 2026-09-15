@@ -27,11 +27,48 @@ export type FundingLevel = 0 | 1 | 2 | 3
 // The mayor's governing policy. The backend applies its effects to the
 // authoritative economy (tax revenue, expenses, happiness and per-service
 // indices).
+export type CitizenClass = "LOW" | "MIDDLE" | "HIGH"
+
+export type SelectiveTax = "consumption" | "energy" | "water" | "fuel"
+
+export interface EconomyPrices {
+  salary: Record<CitizenClass, number>
+  rent: Record<CitizenClass, number>
+  consumption: { market: number; water: number; energy: number; fuel: number; transit: number }
+}
+
 export interface CityPolicy {
-  // Tax rate as a percentage of citizen income, 0-20.
+  // Tax rates are percentages. Municipal income tax is capped at 50%.
   taxRate: number
-  // Funding level for each public service.
+  classTaxRates: Record<CitizenClass, number>
+  selectiveTaxes: Record<SelectiveTax, number>
   services: Record<PublicService, FundingLevel>
+  prices: EconomyPrices
+}
+
+export interface CitizenOpinion {
+  score: number
+  government: number
+  economy: number
+  services: number
+  taxes: number
+  housing: number
+}
+
+export interface Citizen {
+  id: string
+  name: string
+  age: number
+  lifeStage: CitizenLifeStage
+  education: CitizenEducation
+  homeBuildingId: string
+  workplaceBuildingId?: string
+  employed: boolean
+  workState: string
+  citizenClass: CitizenClass
+  salary: number
+  monthlyExpenses: number
+  opinion: CitizenOpinion
 }
 
 // Per-service quality index (0-100) derived from funding vs. demand. Shown on
@@ -112,14 +149,3 @@ export type CitizenWorkState =
   | "WORK"
   | "TO_HOME"
 
-export interface Citizen {
-  id: string
-  name: string
-  age: number
-  lifeStage: CitizenLifeStage
-  education: CitizenEducation
-  homeBuildingId: string
-  workplaceBuildingId?: string
-  employed: boolean
-  workState: string
-}

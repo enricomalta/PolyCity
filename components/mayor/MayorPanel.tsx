@@ -15,7 +15,7 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react"
-import type { CityPolicy, FundingLevel, PublicService } from "@/types/city"
+import type { CityPolicy, FundingLevel, PublicService, CitizenClass, SelectiveTax } from "@/types/city"
 import { useGame } from "@/hooks/useGame"
 
 interface MayorPanelProps {
@@ -163,7 +163,7 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
             <input
               type="range"
               min={0}
-              max={20}
+              max={50}
               step={1}
               value={policy.taxRate}
               onChange={(e) => setTax(Number(e.target.value))}
@@ -174,6 +174,17 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
               <span>0%</span>
               <span>10%</span>
               <span>20%</span>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
+            <div className="flex items-center gap-2 text-card-foreground"><Banknote className="size-5 text-primary" /><h2 className="font-display text-lg font-semibold">Sistema político e custo de vida</h2></div>
+            <p className="mt-1 text-sm text-muted-foreground">Alíquotas e preços alteram diretamente a opinião individual dos moradores.</p>
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              {(["LOW", "MIDDLE", "HIGH"] as CitizenClass[]).map((group) => <label key={group} className="text-sm text-muted-foreground">{group === "LOW" ? "Baixa" : group === "MIDDLE" ? "Média" : "Alta"} · imposto %<input type="number" min={0} max={50} value={policy.classTaxRates[group]} onChange={(e) => setDraft({ ...policy, classTaxRates: { ...policy.classTaxRates, [group]: Number(e.target.value) } })} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground" /></label>)}
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-4">
+              {(["consumption", "energy", "water", "fuel"] as SelectiveTax[]).map((tax) => <label key={tax} className="text-sm text-muted-foreground">{tax === "consumption" ? "Consumo" : tax === "energy" ? "Energia" : tax === "water" ? "Água" : "Combustível"} %<input type="number" min={0} max={50} value={policy.selectiveTaxes[tax]} onChange={(e) => setDraft({ ...policy, selectiveTaxes: { ...policy.selectiveTaxes, [tax]: Number(e.target.value) } })} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground" /></label>)}
             </div>
           </div>
 

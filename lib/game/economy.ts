@@ -1,4 +1,4 @@
-import type { Budget, Building, CityPolicy, CityState, PublicService, ResourceState, ServiceIndices } from "@/types/city"
+import type { Budget, Building, CityPolicy, CityState, Citizen, CitizenClass, PublicService, ResourceState, ServiceIndices } from "@/types/city"
 import {
   createGameClock,
 } from "@/lib/game/clock"
@@ -8,9 +8,18 @@ import { getBuilding } from "./buildings"
 // imports these helpers so the authoritative economy and the optimistic
 // client previews never drift apart. The server's result always wins.
 
+export const DEFAULT_PRICES = {
+  salary: { LOW: 12, MIDDLE: 28, HIGH: 65 },
+  rent: { LOW: 5, MIDDLE: 12, HIGH: 28 },
+  consumption: { market: 8, water: 2, energy: 3, fuel: 4, transit: 3 },
+} as const
+
 export const DEFAULT_POLICY: CityPolicy = {
   taxRate: 8,
+  classTaxRates: { LOW: 3, MIDDLE: 8, HIGH: 14 },
+  selectiveTaxes: { consumption: 4, energy: 3, water: 2, fuel: 5 },
   services: { education: 1, health: 1, security: 1, prevention: 1 },
+  prices: DEFAULT_PRICES,
 }
 
 export const PUBLIC_SERVICES: PublicService[] = ["education", "health", "security", "prevention"]
@@ -59,9 +68,10 @@ function clamp(n: number, min = 0, max = 100): number {
 // demand (population). No population means an empty city, so any funding keeps
 // the index healthy.
 function serviceIndex(service: PublicService, level: number, population: number): number {
-  const supply = level * SERVICE_CAPACITY_PER_LEVEL[service]
-  if (population <= 0) return level > 0 ? 100 : 55
-  return clamp(Math.round((supply / population) * 100))
+  const fundingCoverage = [0, 30, 50, 100][level] ?? 0
+  if (population <= 0) return fundingCoverage
+  const capacityCoverage = (level * SERVICE_CAPACITY_PER_LEVEL[service] / population) * 100
+  return clamp(Math.round(Math.min(fundingCoverage, capacityCoverage)))
 }
 
 export function deriveServiceIndices(policy: CityPolicy, population: number): ServiceIndices {

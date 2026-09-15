@@ -24,6 +24,7 @@ import {
   applyBudgetTicks,
   deriveState,
   DEFAULT_POLICY,
+  DEFAULT_PRICES,
   PUBLIC_SERVICES,
 } from "./economy"
 
@@ -210,7 +211,7 @@ function sanitizePolicy(
     Math.max(
       0,
       Math.min(
-        20,
+        50,
         Math.round(
           Number(
             p.taxRate ??
@@ -245,10 +246,17 @@ function sanitizePolicy(
       ) as FundingLevel
   }
 
-  return {
-    taxRate,
-    services,
+  const classTaxRates = { ...DEFAULT_POLICY.classTaxRates }
+  const selectiveTaxes = { ...DEFAULT_POLICY.selectiveTaxes }
+  const prices = {
+    salary: { ...DEFAULT_PRICES.salary },
+    rent: { ...DEFAULT_PRICES.rent },
+    consumption: { ...DEFAULT_PRICES.consumption },
   }
+  const rawPolicy = p as CityPolicy & { classTaxRates?: Record<string, number>; selectiveTaxes?: Record<string, number>; prices?: typeof DEFAULT_PRICES }
+  for (const key of ["LOW", "MIDDLE", "HIGH"] as const) classTaxRates[key] = Math.max(0, Math.min(50, Math.round(Number(rawPolicy.classTaxRates?.[key] ?? classTaxRates[key]))))
+  for (const key of ["consumption", "energy", "water", "fuel"] as const) selectiveTaxes[key] = Math.max(0, Math.min(50, Math.round(Number(rawPolicy.selectiveTaxes?.[key] ?? selectiveTaxes[key]))))
+  return { taxRate, classTaxRates, selectiveTaxes, services, prices }
 }
 
 function docToState(
