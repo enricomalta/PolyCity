@@ -32,7 +32,7 @@ export const DEFAULT_POLICY: CityPolicy = {
   prices: DEFAULT_PRICES,
 }
 
-export const PUBLIC_SERVICES: PublicService[] = ["education", "health", "security", "prevention", "waste", "transit", "roads"]
+export const PUBLIC_SERVICES: PublicService[] = ["education", "health", "security", "prevention", "waste", "transit", "roads", "sewage"]
 
 export const SERVICE_LABELS: Record<PublicService, string> = {
   education: "Educação",
