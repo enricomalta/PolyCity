@@ -363,8 +363,9 @@ export function CityScene() {
           setZoningStart([x, z])
           setZoningEnd([x, z])
         } else {
-          setZoningEnd([x, z])
           publishZoningRange(zoningStart, [x, z])
+          setZoningStart(null)
+          setZoningEnd(null)
         }
         selectTile({ x, z })
         return
@@ -495,15 +496,7 @@ export function CityScene() {
         <GroundTiles
           tiles={tiles}
           onSelect={handleSelect}
-          allowDragSelect={tool === "ZONING"}
-          onDragSelect={(from, to) => {
-            if (tool === "ZONING") {
-              setZoningStart(from)
-              setZoningEnd(to)
-              publishZoningRange(from, to)
-              selectTile({ x: to[0], z: to[1] })
-            }
-          }}
+          allowDragSelect={false}
           hoverControllerRef={
             hoverControllerRef
           }

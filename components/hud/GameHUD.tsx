@@ -228,6 +228,13 @@ export function GameHUD() {
             onDismiss={clearMessage}
           />
 
+          {tool === "ZONING" && (state.regions ?? []).length > 0 && (
+            <div className="pointer-events-auto max-h-[min(42vh,360px)] w-[min(88vw,340px)] overflow-y-auto rounded-2xl border border-border bg-card/95 p-3 shadow-lg shadow-black/30 backdrop-blur">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Regiões demarcadas</p>
+              <div className="mt-2 flex flex-col gap-2">{(state.regions ?? []).map((region) => <button key={region.id} type="button" onClick={() => { setEditingRegionId(region.id); setZoneName(region.name); setZoneType(region.zone as typeof zoneType); setZoneClass(region.citizenClass ?? "MIDDLE"); setZoningTiles(region.tiles) }} className={`rounded-xl border px-3 py-2 text-left text-xs ${editingRegionId === region.id ? "border-primary bg-primary/10" : "border-border bg-secondary/60"}`}><span className="font-semibold text-foreground">{region.name}</span><span className="ml-2 text-muted-foreground">{region.tiles.length} tiles · {region.zone}</span></button>)}</div>
+            </div>
+          )}
+
           {selectedTile && tool !== "ZONING" && tool !== "HEATMAP" && (
             <TileInspector
               tile={inspected.tile}
@@ -282,10 +289,9 @@ export function GameHUD() {
         {tool === "ZONING" && (
           <div className="pointer-events-auto fixed bottom-4 left-1/2 z-30 max-h-[min(68vh,520px)] w-[min(92vw,560px)] -translate-x-1/2 overflow-y-auto rounded-2xl border border-border bg-card/95 p-4 shadow-lg shadow-black/30 backdrop-blur">
             <p className="text-sm font-semibold text-card-foreground">Demarcar região</p>
-            <p className="mt-1 text-xs text-muted-foreground">Clique nos tiles do mapa para selecionar uma área. Escolha o uso e a classe predominante antes de nomear o bairro.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Clique uma vez no primeiro tile e novamente no tile final para fechar o retângulo. Salve para criar a região; depois, repita os dois cliques para criar outra.</p>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{([['RESIDENTIAL','Residencial'],['COMMERCIAL','Comercial'],['INDUSTRIAL','Industrial'],['MIXED','Mista']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setZoneType(value)} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${zoneType === value ? "border-primary bg-primary/15 text-primary" : "border-border bg-secondary text-muted-foreground"}`}>{label}</button>)}</div>
             <div className="mt-3 grid grid-cols-3 gap-2">{([['LOW','Baixa'],['MIDDLE','Média'],['HIGH','Alta']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setZoneClass(value)} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${zoneClass === value ? "border-accent bg-accent/15 text-accent" : "border-border bg-secondary text-muted-foreground"}`}>{label}</button>)}</div>
-            <div className="mt-3 flex flex-col gap-2">{(state.regions ?? []).map((region) => <button key={region.id} type="button" onClick={() => { setEditingRegionId(region.id); setZoneName(region.name); setZoneType(region.zone as typeof zoneType); setZoneClass(region.citizenClass ?? "MIDDLE"); setZoningTiles(region.tiles) }} className={`rounded-xl border px-3 py-2 text-left text-xs ${editingRegionId === region.id ? "border-primary bg-primary/10" : "border-border bg-secondary/60"}`}><span className="font-semibold text-foreground">{region.name}</span><span className="ml-2 text-muted-foreground">{region.tiles.length} tiles · {region.zone}</span></button>)}</div>
             <input value={zoneName} onChange={(event) => setZoneName(event.target.value)} placeholder="Nome do bairro ou zona" className="mt-3 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground" />
             <p className="mt-3 rounded-lg bg-secondary/70 px-3 py-2 text-xs text-muted-foreground">Arraste no mapa para selecionar o retângulo. Zona: <span className="font-semibold text-foreground">{zoneType}</span> · classe: <span className="font-semibold text-foreground">{zoneClass}</span> · <span className="font-semibold text-foreground">{zoningTiles.length} tiles</span></p>
             <button type="button" disabled={!zoningTiles.length || !zoneName.trim()} onClick={() => { void demarcateRegion({ id: editingRegionId ?? `region_${Date.now()}`, name: zoneName.trim(), zone: zoneType, citizenClass: zoneClass, tiles: zoningTiles, createdAt: new Date().toISOString() }); setEditingRegionId(null); setZoningTiles([]); setZoneName("") }} className="mt-3 w-full rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50">{editingRegionId ? "Salvar alterações" : "Criar nova região"}</button>
