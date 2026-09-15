@@ -1196,6 +1196,16 @@ export async function performAction(
     }
   }
 
+  if (action.type === "RENAME_CITY") {
+    const name = action.name.trim().slice(0, 40)
+    if (!name) {
+      return { success: false, state: docToState(doc), message: "O nome da cidade não pode ficar vazio." }
+    }
+    doc.updatedAt = new Date(now).toISOString()
+    await cityRef.update({ name, updatedAt: doc.updatedAt })
+    return { success: true, state: docToState(doc), message: "Nome da cidade atualizado." }
+  }
+
   if (
     action.type ===
     "OCCUPY"

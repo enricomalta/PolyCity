@@ -161,6 +161,8 @@ interface GameContextValue {
     policy: CityPolicy,
   ) => Promise<boolean>
 
+  renameCity: (name: string) => Promise<boolean>
+
   clearMessage: () => void
 
   reload: () => Promise<void>
@@ -746,6 +748,30 @@ export function GameProvider({
       [cityId],
     )
 
+  const renameCity = useCallback<GameContextValue["renameCity"]>(
+    async (name) => {
+      const normalized = name.trim()
+      if (!normalized || normalized.length > 40) {
+        setLastMessage("Digite um nome entre 1 e 40 caracteres.")
+        return false
+      }
+      setPending(true)
+      try {
+        const res = await gameService.renameCity(cityId, normalized)
+        if (res.success) setCity((current) => current ? { ...current, name: normalized } : current)
+        setState(res.state)
+        setLastMessage(res.message ?? null)
+        return res.success
+      } catch {
+        setLastMessage("Não foi possível renomear a cidade.")
+        return false
+      } finally {
+        setPending(false)
+      }
+    },
+    [cityId],
+  )
+
   // ---------------------------------------------------------------------------
   // Building selection
   // ---------------------------------------------------------------------------
@@ -842,9 +868,11 @@ export function GameProvider({
 
         rotateSelectedBuilding,
 
-        updatePolicy,
+  updatePolicy,
 
-        clearMessage: () =>
+  renameCity,
+
+  clearMessage: () =>
           setLastMessage(null),
 
         reload: load,

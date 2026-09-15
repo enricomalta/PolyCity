@@ -88,6 +88,7 @@ export function CityScene() {
 
   const buildings =
     state?.buildings ?? []
+  const isNight = state?.timeStage === 1
 
   const citizens =
     state?.citizens ?? []
@@ -339,20 +340,20 @@ export function CityScene() {
       <PerformanceMonitor />
       <color
         attach="background"
-        args={["#9fc9e8"]}
+        args={[isNight ? "#18243d" : "#9fc9e8"]}
       />
 
       <fog
         attach="fog"
         args={[
-          "#9fc9e8",
+          isNight ? "#18243d" : "#9fc9e8",
           55,
           120,
         ]}
       />
 
       <ambientLight
-        intensity={0.75}
+        intensity={isNight ? 0.28 : 0.75}
       />
 
       <hemisphereLight
@@ -369,7 +370,7 @@ export function CityScene() {
           28,
           12,
         ]}
-        intensity={1.5}
+        intensity={isNight ? 0.35 : 1.5}
         castShadow
         shadow-mapSize={[
           2048,
@@ -424,6 +425,8 @@ export function CityScene() {
               rotation={
                 b.rotation
               }
+              isNight={isNight}
+              occupied={b.occupied}
             />
           )
         })}

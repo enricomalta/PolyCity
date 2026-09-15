@@ -8,4 +8,5 @@ export interface GameService {
   performAction(cityId: string, action: GameAction): Promise<GameResponse>
   // Convenience wrapper around a SET_POLICY action for the mayor page.
   updatePolicy(cityId: string, policy: CityPolicy): Promise<GameResponse>
+  renameCity(cityId: string, name: string): Promise<GameResponse>
 }

@@ -1,9 +1,8 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import Link from "next/link"
 import {
-  ArrowLeft,
+  X,
   Banknote,
   GraduationCap,
   HeartPulse,
@@ -18,6 +17,10 @@ import {
 } from "lucide-react"
 import type { CityPolicy, FundingLevel, PublicService } from "@/types/city"
 import { useGame } from "@/hooks/useGame"
+
+interface MayorPanelProps {
+  onClose?: () => void
+}
 import { getBuilding } from "@/lib/game/buildings"
 import { deriveBudget, deriveServiceIndices, SERVICE_LABELS } from "@/lib/game/economy"
 import { cn } from "@/lib/utils"
@@ -45,8 +48,9 @@ function indexTone(v: number): string {
   return "bg-destructive"
 }
 
-export function MayorPanel() {
-  const { city, state, status, updatePolicy, pending } = useGame()
+export function MayorPanel({ onClose }: MayorPanelProps) {
+  const { city, state, status, updatePolicy, renameCity, pending } = useGame()
+  const [cityName, setCityName] = useState(city?.name ?? "")
 
   // Local draft of the policy so the mayor can preview the impact before
   // committing. The authoritative values still come from the server on save.
@@ -103,13 +107,20 @@ export function MayorPanel() {
               <p className="text-sm text-muted-foreground">{city?.name ?? "Sua cidade"}</p>
             </div>
           </div>
-          <Link
-            href="/game"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
-          >
-            <ArrowLeft className="size-4" /> Voltar ao jogo
-          </Link>
+          {onClose && (
+            <button type="button" onClick={onClose} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary">
+              <X className="size-4" /> Fechar
+            </button>
+          )}
         </header>
+
+        <section className="mt-6 rounded-2xl border border-border bg-card p-4">
+          <label htmlFor="city-name" className="text-sm font-semibold text-card-foreground">Nome da cidade</label>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+            <input id="city-name" value={cityName} onChange={(event) => setCityName(event.target.value)} maxLength={40} className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none ring-primary focus:ring-2" />
+            <button type="button" disabled={pending || !cityName.trim()} onClick={() => void renameCity(cityName)} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">Salvar nome</button>
+          </div>
+        </section>
 
         {/* Summary cards */}
         <section className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">

@@ -24,4 +24,11 @@ export const apiGameService: GameService = {
       body: { type: "SET_POLICY", policy },
     })
   },
+
+  renameCity(cityId, name: string) {
+    return apiRequest<GameResponse>(`/api/cities/${cityId}/actions`, {
+      method: "POST",
+      body: { type: "RENAME_CITY", name },
+    })
+  },
 }

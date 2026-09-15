@@ -38,8 +38,12 @@ function Foundation({
 // Low-poly building models composed from primitive geometry.
 function Model({
   type,
+  isNight = false,
+  occupied = false,
 }: {
   type: BuildingType
+  isNight?: boolean
+  occupied?: boolean
 }) {
   const def = getBuilding(type)
 
@@ -697,6 +701,8 @@ export const BuildingMesh = memo(
     type,
     position,
     rotation = 0,
+    isNight = false,
+    occupied = false,
   }: {
     type: BuildingType
     position: [
@@ -717,7 +723,10 @@ export const BuildingMesh = memo(
           0,
         ]}
       >
-        <Model type={type} />
+        <Model type={type} isNight={isNight} occupied={occupied} />
+        {isNight && occupied && (type === "HOUSE" || type === "SMALL_APARTMENT") && (
+          <pointLight position={[0, 0.7, 0.25]} color="#ffc46b" intensity={0.7} distance={2.2} decay={2} />
+        )}
       </group>
     )
   },

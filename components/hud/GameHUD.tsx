@@ -9,6 +9,7 @@ import { ToolBar } from "./ToolBar"
 import { TileInspector } from "./TileInspector"
 import { GameToast } from "./GameToast"
 import { TopBar } from "./TopBar"
+import { MayorPanel } from "@/components/mayor/MayorPanel"
 import {
   createGameClock,
   formatGameTime,
@@ -47,6 +48,7 @@ export function GameHUD() {
 
   const [clockNow, setClockNow] =
     useState(() => Date.now())
+  const [mayorOpen, setMayorOpen] = useState(false)
 
   useEffect(() => {
     const intervalId =
@@ -172,6 +174,7 @@ export function GameHUD() {
             onGovernance={() => {
               setTool("GOVERNANCE")
               selectBuildingType(null)
+              setMayorOpen(true)
             }}
             onHeatmap={() => {
               setTool("HEATMAP")
@@ -291,6 +294,14 @@ export function GameHUD() {
         )}
 
       </div>
+
+      {mayorOpen && (
+        <div className="pointer-events-auto fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/55 p-3 backdrop-blur-sm sm:p-8">
+          <div className="relative w-full max-w-5xl overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
+            <MayorPanel onClose={() => setMayorOpen(false)} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
