@@ -58,13 +58,10 @@ export function ToolBar({
     setCloseTimer(setTimeout(() => setSubmenuOpen(false), 420))
   }
 
-  const isConstructionMode =
+  const isBuildMode =
     tool === "BUILD_MENU" ||
     tool === "BUILD" ||
-    tool === "ROAD" ||
-    tool === "TERRAIN_EDIT" ||
-    tool === "ZONING" ||
-    tool === "EDIT"
+    tool === "ROAD"
   
   const hasSelectedBuilding =
     selectedBuilding !== null
@@ -101,14 +98,14 @@ export function ToolBar({
     title="Construção"
     className={cn(
       "relative z-30 flex size-11 items-center justify-center rounded-xl transition-all duration-200",
-      isConstructionMode
+      isBuildMode
         ? hasSelectedBuilding
           ? "bg-orange-400 text-white shadow-md"
           : "bg-primary text-primary-foreground shadow-md"
         : "text-muted-foreground hover:bg-secondary hover:text-card-foreground",
     )}
   >
-    {tool === "TERRAIN_EDIT" ? <Shovel className="size-5" /> : tool === "ZONING" ? <Grid3X3 className="size-5" /> : tool === "EDIT" ? <Pencil className="size-5" /> : tool === "DEMOLISH" ? <Trash2 className="size-5" /> : <Hammer className="size-5" />}
+    {isBuildMode ? <Hammer className="size-5" /> : tool === "DEMOLISH" ? <Trash2 className="size-5" /> : <Hammer className="size-5" />}
   </button>
 
   <div
@@ -124,7 +121,7 @@ export function ToolBar({
       )}
     >
       {/* CONSTRUÇÃO aparece no submenu apenas quando outro modo está ativo */}
-      {!isConstructionMode && <button type="button" onClick={onBuild} aria-label="Modo construção" title="Modo construção" className="flex size-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-all duration-150 hover:bg-secondary hover:text-card-foreground"><Hammer className="size-5" /></button>}
+      {!isBuildMode && <button type="button" onClick={onBuild} aria-label="Modo construção" title="Modo construção" className="flex size-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-all duration-150 hover:bg-secondary hover:text-card-foreground"><Hammer className="size-5" /></button>}
 
       {/* TERRENO */}
       {tool !== "TERRAIN_EDIT" && <button
