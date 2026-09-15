@@ -1262,9 +1262,21 @@ export async function performAction(
     }
   }
 
+  if (action.type === "DEMARCATE_REGION") {
+    const region = action.region
+    if (!region || !region.id || !region.name.trim() || !Array.isArray(region.tiles) || region.tiles.length === 0) {
+      return reject("A região precisa de nome e pelo menos um tile.")
+    }
+    const safeRegion = { ...region, name: region.name.trim().slice(0, 40), tiles: region.tiles.slice(0, 400), createdAt: region.createdAt || new Date(now).toISOString() }
+    doc.regions = [...(doc.regions ?? []).filter((item) => item.id !== safeRegion.id), safeRegion]
+    doc.updatedAt = new Date(now).toISOString()
+    await cityRef.update({ regions: doc.regions, updatedAt: doc.updatedAt })
+    return { success: true, state: docToState(doc), message: `Região ${safeRegion.name} salva.` }
+  }
+
   if (
-    action.type ===
-    "SET_POLICY"
+  action.type ===
+  "SET_POLICY"
   ) {
     doc.policy =
       sanitizePolicy(

@@ -66,6 +66,10 @@ export type GameAction =
       policy: CityPolicy
     }
   | {
+      type: "DEMARCATE_REGION"
+      region: import("./city").CityRegion
+    }
+  | {
       type: "RENAME_CITY"
       name: string
     }
