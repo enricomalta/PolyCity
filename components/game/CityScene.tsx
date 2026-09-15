@@ -29,9 +29,8 @@ import {
 } from "@/lib/game/constants"
 
 import { canPlace } from "@/lib/game/grid"
-import { createGameClock } from "@/lib/game/clock"
-
 import { useGame } from "@/hooks/useGame"
+import { useGameClock } from "@/hooks/useGameClock"
 
 import { BuildingMesh } from "./Building"
 import { Road } from "./Road"
@@ -204,17 +203,9 @@ export function CityScene() {
     return () => window.removeEventListener("polycity:heatmap", handleHeatmap)
   }, [])
 
-  const buildings =
-  state?.buildings ?? []
-  const [, setVisualClockTick] = useState(0)
-
-  useEffect(() => {
-    if (!state?.clockStartedAt) return
-    const interval = window.setInterval(() => setVisualClockTick((tick) => tick + 1), 1000)
-    return () => window.clearInterval(interval)
-  }, [state?.clockStartedAt])
-
-  const visualClock = state?.clockStartedAt ? createGameClock(state.clockStartedAt, Date.now()) : state?.clock
+  const buildings = state?.buildings ?? []
+  const liveClock = useGameClock(state?.clockStartedAt ?? null)
+  const visualClock = liveClock ?? state?.clock
   const visualStage = visualClock?.stage ?? (String(state?.timeStage) === "1" || state?.timeStage === "NIGHT" ? "NIGHT" : "DAY")
   const isNight =
   visualStage === "NIGHT"
