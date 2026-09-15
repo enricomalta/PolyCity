@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import {
   X,
   Banknote,
+  Droplets,
   GraduationCap,
   HeartPulse,
   Landmark,
@@ -40,6 +41,7 @@ const SERVICE_META: Record<
   waste: { icon: <LifeBuoy className="size-5" />, description: "Coleta, limpeza e tratamento de resíduos." },
   transit: { icon: <TrendingUp className="size-5" />, description: "Transporte público e mobilidade urbana." },
   roads: { icon: <Landmark className="size-5" />, description: "Manutenção das estradas e rotas abertas." },
+  sewage: { icon: <Droplets className="size-5" />, description: "Tratamento de esgoto e saneamento da cidade." },
 }
 
 function formatMoney(n: number): string {

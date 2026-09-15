@@ -28,7 +28,7 @@ export const DEFAULT_POLICY: CityPolicy = {
   ideology: "SOCIAL_DEMOCRACY",
   classTaxRates: { LOW: 3, MIDDLE: 8, HIGH: 14 },
   selectiveTaxes: { consumption: 4, energy: 3, water: 2, fuel: 5 },
-  services: { education: 1, health: 1, security: 1, prevention: 1, waste: 1, transit: 1, roads: 1 },
+  services: { education: 1, health: 1, security: 1, prevention: 1, waste: 1, transit: 1, roads: 1, sewage: 1 },
   prices: DEFAULT_PRICES,
 }
 
@@ -42,6 +42,7 @@ export const SERVICE_LABELS: Record<PublicService, string> = {
   waste: "Coleta de lixo",
   transit: "Transporte",
   roads: "Estradas",
+  sewage: "Tratamento de esgoto",
 }
 
 // How many citizens one funding "level" can serve for each service.
@@ -53,6 +54,7 @@ const SERVICE_CAPACITY_PER_LEVEL: Record<PublicService, number> = {
   waste: 60,
   transit: 50,
   roads: 70,
+  sewage: 55,
 }
 
 // Monthly cost of one funding level (scaled by population inside the model).

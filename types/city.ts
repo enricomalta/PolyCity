@@ -19,7 +19,7 @@ export interface City {
 
 // The four public services the mayor funds. Each has a funding level that the
 // mayor controls from the "Gabinete do Prefeito" page.
-export type PublicService = "education" | "health" | "security" | "prevention" | "waste" | "transit" | "roads"
+export type PublicService = "education" | "health" | "security" | "prevention" | "waste" | "transit" | "roads" | "sewage"
 
 export type EconomicModel = "SANDBOX" | "SOCIAL_MARKET" | "FREE_MARKET" | "PLANNED_ECONOMY" | "WELFARE_STATE"
 
