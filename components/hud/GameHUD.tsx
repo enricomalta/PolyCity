@@ -52,6 +52,8 @@ export function GameHUD() {
   const [mayorOpen, setMayorOpen] = useState(false)
   const [zoneType, setZoneType] = useState<"RESIDENTIAL" | "COMMERCIAL" | "INDUSTRIAL" | "MIXED">("RESIDENTIAL")
   const [zoneClass, setZoneClass] = useState<"LOW" | "MIDDLE" | "HIGH">("MIDDLE")
+  const [zoneName, setZoneName] = useState("")
+  const [heatMetric, setHeatMetric] = useState<"happiness" | "employment" | "services" | "roads">("happiness")
 
   useEffect(() => {
     const intervalId =
@@ -261,15 +263,10 @@ export function GameHUD() {
         )}
 
         {tool === "HEATMAP" && (
-          <div className="pointer-events-auto w-full max-w-xl rounded-2xl border border-border bg-card/95 p-4 shadow-lg shadow-black/30 backdrop-blur">
+          <div className="pointer-events-auto fixed bottom-4 left-1/2 z-20 w-[min(92vw,520px)] -translate-x-1/2 rounded-2xl border border-border bg-card/95 p-4 shadow-lg shadow-black/30 backdrop-blur">
             <p className="text-sm font-semibold text-card-foreground">Mapa de calor urbano</p>
-            <p className="mt-1 text-xs text-muted-foreground">Detecção automática por proximidade, serviços, empregos, mobilidade e qualidade das estradas.</p>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{[
-              ["Felicidade", `${state.happiness}%`, state.happiness >= 70 ? "text-primary" : "text-accent"],
-              ["Empregos", `${state.citizens.filter((citizen) => citizen.employed).length}/${state.citizens.length}`, "text-primary"],
-              ["Serviços", `${Math.round(Object.values(state.services).reduce((sum, value) => sum + value, 0) / Math.max(1, Object.values(state.services).length))}%`, "text-accent"],
-              ["Estradas", `${state.services.roads}%`, state.services.roads >= 60 ? "text-primary" : "text-destructive"],
-            ].map(([label, value, color]) => <div key={label} className="rounded-xl border border-border bg-background p-3"><p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p><p className={`mt-1 text-xl font-bold ${color}`}>{value}</p></div>)}</div>
+            <p className="mt-1 text-xs text-muted-foreground">Selecione um indicador para colorir os tiles da cidade.</p>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{([['happiness','Felicidade'],['employment','Empregos'],['services','Serviços'],['roads','Estradas']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => { setHeatMetric(value); window.dispatchEvent(new CustomEvent("polycity:heatmap", { detail: value })) }} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${heatMetric === value ? "border-primary bg-primary/15 text-primary" : "border-border bg-secondary text-muted-foreground"}`}>{label}</button>)}</div>
             <div className="mt-3 grid gap-2 sm:grid-cols-3"><div className="rounded-lg bg-primary/10 px-3 py-2 text-xs text-primary">Áreas com maior felicidade: proximidade de parques e serviços</div><div className="rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent">Áreas com maior emprego: comércio e indústria ativos</div><div className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">Alertas: regiões sem conexão viária ou serviços</div></div>
           </div>
         )}
@@ -280,8 +277,9 @@ export function GameHUD() {
             <p className="mt-1 text-xs text-muted-foreground">Clique nos tiles do mapa para selecionar uma área. Escolha o uso e a classe predominante antes de nomear o bairro.</p>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{([['RESIDENTIAL','Residencial'],['COMMERCIAL','Comercial'],['INDUSTRIAL','Industrial'],['MIXED','Mista']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setZoneType(value)} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${zoneType === value ? "border-primary bg-primary/15 text-primary" : "border-border bg-secondary text-muted-foreground"}`}>{label}</button>)}</div>
             <div className="mt-3 grid grid-cols-3 gap-2">{([['LOW','Baixa'],['MIDDLE','Média'],['HIGH','Alta']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setZoneClass(value)} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${zoneClass === value ? "border-accent bg-accent/15 text-accent" : "border-border bg-secondary text-muted-foreground"}`}>{label}</button>)}</div>
-            <p className="mt-3 rounded-lg bg-secondary/70 px-3 py-2 text-xs text-muted-foreground">Zona selecionada: <span className="font-semibold text-foreground">{zoneType}</span> · classe: <span className="font-semibold text-foreground">{zoneClass}</span></p>
-            <button type="button" disabled={!selectedTile} onClick={() => selectedTile && void demarcateRegion({ id: `region_${selectedTile.x}_${selectedTile.z}`, name: `${zoneType === "RESIDENTIAL" ? "Bairro" : "Zona"} ${selectedTile.x}-${selectedTile.z}`, zone: zoneType, citizenClass: zoneClass, tiles: [selectedTile], createdAt: new Date().toISOString() })} className="mt-3 w-full rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50">Salvar região no mapa</button>
+            <input value={zoneName} onChange={(event) => setZoneName(event.target.value)} placeholder="Nome do bairro ou zona" className="mt-3 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground" />
+            <p className="mt-3 rounded-lg bg-secondary/70 px-3 py-2 text-xs text-muted-foreground">Arraste no mapa para selecionar o retângulo. Zona: <span className="font-semibold text-foreground">{zoneType}</span> · classe: <span className="font-semibold text-foreground">{zoneClass}</span></p>
+            <button type="button" disabled={!selectedTile || !zoneName.trim()} onClick={() => selectedTile && void demarcateRegion({ id: `region_${Date.now()}`, name: zoneName.trim(), zone: zoneType, citizenClass: zoneClass, tiles: [selectedTile], createdAt: new Date().toISOString() })} className="mt-3 w-full rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50">Salvar nova região</button>
           </div>
         )}
 

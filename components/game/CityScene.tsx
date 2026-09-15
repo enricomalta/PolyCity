@@ -50,13 +50,31 @@ import type {
   SelectionIndicatorHandle,
 } from "./SelectionIndicator"
 
-function zoneClassColor(mode: string) {
-  return mode === "ZONING" ? "#65a30d" : "#64748b"
+function regionColor(region: { zone: string; citizenClass?: string }) {
+  if (region.zone === "COMMERCIAL") return "#2563eb"
+  if (region.zone === "INDUSTRIAL") return "#eab308"
+  if (region.citizenClass === "LOW") return "#166534"
+  if (region.citizenClass === "HIGH") return "#bbf7d0"
+  return "#4ade80"
+}
+
+function zoneTypeColor(mode: string) {
+  return mode === "ZONING" ? "#4ade80" : "#64748b"
+}
+
+function heatValue(metric: string, state: any, region?: { citizenClass?: string; zone: string }) {
+  if (!region) return -1
+  if (metric === "happiness") return region.citizenClass === "HIGH" ? 82 : region.citizenClass === "LOW" ? 38 : 64
+  if (metric === "employment") return region.zone === "INDUSTRIAL" || region.zone === "COMMERCIAL" ? 78 : 42
+  if (metric === "services") return Math.round(Object.values(state?.services ?? {}).reduce((sum: number, value) => sum + Number(value), 0) / Math.max(1, Object.values(state?.services ?? {}).length))
+  return Number(state?.services?.roads ?? 0)
 }
 
 function heatColor(value: number) {
-  const hue = Math.max(0, Math.min(120, value * 1.2))
-  return `hsl(${hue} 72% 48%)`
+  if (value < 0) return "#e5e7eb"
+  if (value < 50) return "#ef4444"
+  if (value < 70) return "#eab308"
+  return "#22c55e"
 }
 
 /**
@@ -98,6 +116,13 @@ export function CityScene() {
 
   const [zoningStart, setZoningStart] = useState<[number, number] | null>(null)
   const [zoningEnd, setZoningEnd] = useState<[number, number] | null>(null)
+  const [heatMetric, setHeatMetric] = useState<"happiness" | "employment" | "services" | "roads">("happiness")
+
+  useEffect(() => {
+    const handleHeatmap = (event: Event) => setHeatMetric((event as CustomEvent<typeof heatMetric>).detail)
+    window.addEventListener("polycity:heatmap", handleHeatmap)
+    return () => window.removeEventListener("polycity:heatmap", handleHeatmap)
+  }, [])
 
   const buildings =
     state?.buildings ?? []
@@ -444,15 +469,16 @@ export function CityScene() {
       />
 
       <Suspense fallback={null}>
+        {state?.regions?.flatMap((region) => region.tiles.map((tile) => <mesh key={`region-${region.id}-${tile.x}-${tile.z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(tile.x), 0.04, tileToWorld(tile.z)]}><planeGeometry args={[TILE_SIZE * 0.92, TILE_SIZE * 0.92]} /><meshBasicMaterial color={regionColor(region)} transparent opacity={tool === "HEATMAP" ? 0.12 : 0.68} /></mesh>))}
         {tool === "ZONING" && zoningStart && zoningEnd && Array.from({ length: Math.abs(zoningEnd[0] - zoningStart[0]) + 1 }, (_, ix) => ix).flatMap((ix) => Array.from({ length: Math.abs(zoningEnd[1] - zoningStart[1]) + 1 }, (_, iz) => iz)).map((_, index) => {
           const minX = Math.min(zoningStart[0], zoningEnd[0])
           const minZ = Math.min(zoningStart[1], zoningEnd[1])
           const width = Math.abs(zoningEnd[1] - zoningStart[1]) + 1
           const x = minX + Math.floor(index / width)
           const z = minZ + index % width
-          return <mesh key={`zone-preview-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.035, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.92, TILE_SIZE * 0.92]} /><meshBasicMaterial color={zoneClassColor(tool)} transparent opacity={0.72} /></mesh>
+          return <mesh key={`zone-preview-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.035, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.92, TILE_SIZE * 0.92]} /><meshBasicMaterial color={zoneTypeColor(tool)} transparent opacity={0.72} /></mesh>
         })}
-        {tool === "HEATMAP" && Array.from({ length: 30 * 30 }, (_, index) => { const x = index % 30; const z = Math.floor(index / 30); const value = Math.max(0, Math.min(100, state?.happiness ?? 0)); return <mesh key={`heat-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.034, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={heatColor(value)} transparent opacity={0.62} /></mesh> })}
+        {tool === "HEATMAP" && Array.from({ length: 30 * 30 }, (_, index) => { const x = index % 30; const z = Math.floor(index / 30); const region = state?.regions?.find((item) => item.tiles.some((tile) => tile.x === x && tile.z === z)); const value = heatValue(heatMetric, state, region); return <mesh key={`heat-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.034, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={heatColor(value)} transparent opacity={0.62} /></mesh> })}
         <GroundTiles
           tiles={tiles}
           onSelect={handleSelect}
