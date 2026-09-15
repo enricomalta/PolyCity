@@ -75,8 +75,12 @@ function heatValue(metric: string, state: any, region?: { tiles: Array<{ x: numb
   return -1
 }
 
+function roadStatus(building: { maintenance?: { status: "REGULAR" | "IRREGULAR" | "CLOSED" }; roadCondition?: "REGULAR" | "IRREGULAR" | "CLOSED"; closed?: boolean }) {
+  return building.maintenance?.status ?? building.roadCondition ?? (building.closed ? "CLOSED" : "REGULAR")
+}
+
 function heatColor(value: number) {
-  if (value < 0) return "#e5e7eb"
+  if (value < 0) return "#9ca3af"
   if (value < 50) return "#ef4444"
   if (value < 70) return "#eab308"
   return "#22c55e"
@@ -528,7 +532,7 @@ export function CityScene() {
           const previewRegion = previewZone
           return <mesh key={`zone-preview-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.035, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.92, TILE_SIZE * 0.92]} /><meshBasicMaterial color={regionColor(previewRegion)} transparent opacity={0.72} /></mesh>
         })}
-        {tool === "HEATMAP" && Array.from({ length: 30 * 30 }, (_, index) => { const x = index % 30; const z = Math.floor(index / 30); const region = state?.regions?.find((item) => item.tiles.some((tile) => tile.x === x && tile.z === z)); const road = state?.buildings?.find((building: any) => building.type === "ROAD" && building.x === x && building.z === z); const value = heatMetric === "roads" ? (road ? (road.roadCondition === "CLOSED" || road.closed ? 25 : road.roadCondition === "IRREGULAR" ? 58 : 86) : -1) : heatValue(heatMetric, state, region); return <mesh key={`heat-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.034, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={heatColor(value)} transparent opacity={0.62} /></mesh> })}
+        {tool === "HEATMAP" && Array.from({ length: 30 * 30 }, (_, index) => { const x = index % 30; const z = Math.floor(index / 30); const region = state?.regions?.find((item) => item.tiles.some((tile) => tile.x === x && tile.z === z)); const road = state?.buildings?.find((building: any) => building.type === "ROAD" && building.x === x && building.z === z); const status = road ? roadStatus(road) : null; const value = heatMetric === "roads" ? (status === "CLOSED" ? 25 : status === "IRREGULAR" ? 58 : status === "REGULAR" ? 86 : -1) : heatValue(heatMetric, state, region); return <mesh key={`heat-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.16, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={heatColor(value)} transparent opacity={heatMetric === "roads" && road ? 0.9 : 0.62} depthWrite={false} /></mesh> })}
         <GroundTiles
           tiles={tiles}
           onSelect={handleSelect}
