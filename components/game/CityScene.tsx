@@ -50,6 +50,15 @@ import type {
   SelectionIndicatorHandle,
 } from "./SelectionIndicator"
 
+function zoneClassColor(mode: string) {
+  return mode === "ZONING" ? "#65a30d" : "#64748b"
+}
+
+function heatColor(value: number) {
+  const hue = Math.max(0, Math.min(120, value * 1.2))
+  return `hsl(${hue} 72% 48%)`
+}
+
 /**
  * The full 3D city. It reads authoritative state from the game store and
  * turns pointer interactions into INTENTIONS (build/demolish/select) that the
@@ -86,6 +95,9 @@ export function CityScene() {
     rotateBuilding,
     moveBuilding,
   } = useGame()
+
+  const [zoningStart, setZoningStart] = useState<[number, number] | null>(null)
+  const [zoningEnd, setZoningEnd] = useState<[number, number] | null>(null)
 
   const buildings =
     state?.buildings ?? []
@@ -310,6 +322,17 @@ export function CityScene() {
         return
       }
 
+      if (tool === "ZONING") {
+        if (!zoningStart) {
+          setZoningStart([x, z])
+          setZoningEnd([x, z])
+        } else {
+          setZoningEnd([x, z])
+        }
+        selectTile({ x, z })
+        return
+      }
+
       if (tool === "DEMOLISH") {
         if (tile?.occupiedBy) {
           void demolish(x, z)
@@ -341,6 +364,7 @@ export function CityScene() {
     [
       tiles,
       tool,
+      zoningStart,
       selectedBuilding,
       buildRotation,
       buildings,
@@ -420,9 +444,26 @@ export function CityScene() {
       />
 
       <Suspense fallback={null}>
+        {tool === "ZONING" && zoningStart && zoningEnd && Array.from({ length: Math.abs(zoningEnd[0] - zoningStart[0]) + 1 }, (_, ix) => ix).flatMap((ix) => Array.from({ length: Math.abs(zoningEnd[1] - zoningStart[1]) + 1 }, (_, iz) => iz)).map((_, index) => {
+          const minX = Math.min(zoningStart[0], zoningEnd[0])
+          const minZ = Math.min(zoningStart[1], zoningEnd[1])
+          const width = Math.abs(zoningEnd[1] - zoningStart[1]) + 1
+          const x = minX + Math.floor(index / width)
+          const z = minZ + index % width
+          return <mesh key={`zone-preview-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.035, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.92, TILE_SIZE * 0.92]} /><meshBasicMaterial color={zoneClassColor(tool)} transparent opacity={0.72} /></mesh>
+        })}
+        {tool === "HEATMAP" && Array.from({ length: 30 * 30 }, (_, index) => { const x = index % 30; const z = Math.floor(index / 30); const value = Math.max(0, Math.min(100, state?.happiness ?? 0)); return <mesh key={`heat-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.034, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={heatColor(value)} transparent opacity={0.62} /></mesh> })}
         <GroundTiles
           tiles={tiles}
           onSelect={handleSelect}
+          allowDragSelect={tool === "ZONING"}
+          onDragSelect={(from, to) => {
+            if (tool === "ZONING") {
+              setZoningStart(from)
+              setZoningEnd(to)
+              selectTile({ x: to[0], z: to[1] })
+            }
+          }}
           hoverControllerRef={
             hoverControllerRef
           }

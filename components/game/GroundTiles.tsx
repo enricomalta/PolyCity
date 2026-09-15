@@ -14,6 +14,8 @@ import type {
 interface GroundTilesProps {
   tiles: Tile[][]
   onSelect: (x: number, z: number) => void
+  onDragSelect?: (from: [number, number], to: [number, number]) => void
+  allowDragSelect?: boolean
   hoverControllerRef: React.RefObject<SelectionIndicatorHandle | null>
 }
 
@@ -23,7 +25,7 @@ interface GroundTilesProps {
  * the pointer's world position instead of rendering thousands of meshes, which
  * keeps the scene light even on a 30x30 grid.
  */
-export function GroundTiles({ tiles, onSelect, hoverControllerRef, }: GroundTilesProps) {
+export function GroundTiles({ tiles, onSelect, onDragSelect, allowDragSelect = false, hoverControllerRef, }: GroundTilesProps) {
   const worldSize = GRID_SIZE * TILE_SIZE
   const half = worldSize / 2
 
@@ -57,7 +59,7 @@ export function GroundTiles({ tiles, onSelect, hoverControllerRef, }: GroundTile
   // deliberate "tap" (build/select/demolish) apart from a camera drag: if the
   // pointer barely moved between down and up, it's a tap; otherwise the user
   // was orbiting/panning the camera and we must NOT act on the tile.
-  const pressRef = useRef<{ x: number; y: number } | null>(null)
+  const pressRef = useRef<{ screenX: number; screenY: number; tile: [number, number] | null } | null>(null)
   const hoverTileRef = useRef<[number, number] | null>(null)
   const TAP_THRESHOLD_SQ = 36 // 6px of travel
 
@@ -159,19 +161,27 @@ export function GroundTiles({ tiles, onSelect, hoverControllerRef, }: GroundTile
             }
         }}
         onPointerDown={(e) => {
-          pressRef.current = { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY }
+          pressRef.current = { screenX: e.nativeEvent.clientX, screenY: e.nativeEvent.clientY, tile: coordFromPoint(e) }
         }}
         onPointerUp={(e) => {
           const start = pressRef.current
           pressRef.current = null
           if (!start) return
-          const dx = e.nativeEvent.clientX - start.x
-          const dy = e.nativeEvent.clientY - start.y
+          const dx = e.nativeEvent.clientX - start.screenX
+          const dy = e.nativeEvent.clientY - start.screenY
           // The press turned into a camera drag: ignore it.
-          if (dx * dx + dy * dy > TAP_THRESHOLD_SQ) return
-          e.stopPropagation()
           const coord = coordFromPoint(e)
-          if (coord) onSelect(coord[0], coord[1])
+          if (!coord) return
+          if (dx * dx + dy * dy > TAP_THRESHOLD_SQ) {
+            if (allowDragSelect && onDragSelect) {
+              const from = start.tile
+              if (!from) return
+              onDragSelect(from, coord)
+            }
+            return
+          }
+          e.stopPropagation()
+          onSelect(coord[0], coord[1])
         }}
       >
         <planeGeometry args={[worldSize, worldSize]} />
