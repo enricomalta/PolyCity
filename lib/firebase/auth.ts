@@ -54,8 +54,11 @@ export async function updateUserDisplayName(displayName: string): Promise<User> 
   if (!app?.name) throw new Error("Firebase não está configurado.")
   const auth = getAuth(app)
   if (!auth.currentUser) throw new Error("Sessão não encontrada.")
+  const token = await auth.currentUser.getIdToken()
+  const response = await fetch("/api/profile", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ displayName }) })
+  if (!response.ok) throw new Error("Nome já alterado")
   await updateProfile(auth.currentUser, { displayName })
-  return toUser(auth.currentUser)
+  return { ...toUser(auth.currentUser), isRenamed: true }
 }
 
 export async function signInWithGoogle(): Promise<User> {

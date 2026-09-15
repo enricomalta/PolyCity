@@ -651,11 +651,7 @@ export function CityScene() {
           occupyHouse={occupyHouse}
           arriveWork={arriveWork}
           arriveHome={arriveHome}
-          timeStage={
-            state?.timeStage === "DAY"
-              ? "DAY"
-              : "NIGHT"
-          }
+          timeStage={visualStage}
         />
 
         <SelectionIndicator

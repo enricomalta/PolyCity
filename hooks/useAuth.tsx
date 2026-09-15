@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
 import type { AuthState, User } from "@/types/auth"
-import { isFirebaseConfigured, linkAnonymousWithGoogle, signInAnonymouslyAsGuest, signInWithGoogle, signOut, subscribeToAuth, updateUserDisplayName } from "@/lib/firebase/auth"
+import { getIdToken, isFirebaseConfigured, linkAnonymousWithGoogle, signInAnonymouslyAsGuest, signInWithGoogle, signOut, subscribeToAuth, updateUserDisplayName } from "@/lib/firebase/auth"
 
 interface AuthContextValue extends AuthState {
   // Firebase is configured with real credentials.
@@ -42,7 +42,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
     const unsub = subscribeToAuth((user) => {
-      setState({ status: user ? "authenticated" : "unauthenticated", user, error: null })
+      if (!user) return setState({ status: "unauthenticated", user: null, error: null })
+      void getIdToken().then(async (token) => {
+        if (!token) return setState({ status: "authenticated", user, error: null })
+        const response = await fetch("/api/profile", { headers: { Authorization: `Bearer ${token}` } })
+        const profile = response.ok ? await response.json() as { isRenamed?: boolean } : {}
+        setState({ status: "authenticated", user: { ...user, isRenamed: profile.isRenamed === true }, error: null })
+      })
     })
     return unsub
   }, [])

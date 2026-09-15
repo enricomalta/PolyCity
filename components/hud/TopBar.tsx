@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { X } from "lucide-react"
 import { LogOut, ChevronDown, UserRound, Link2 } from "lucide-react"
 import type { User } from "@/types/auth"
 import { Logo } from "@/components/brand/Logo"
@@ -20,14 +21,12 @@ export function TopBar({ cityName, user, onLogout, onRename, onLinkGoogle }: Top
   const [name, setName] = useState(user?.displayName ?? "")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const renameKey = `polycity:renamed:${user?.id ?? "guest"}`
-
   const rename = async () => {
-    if (localStorage.getItem(renameKey) || name.trim().length < 2) return
+    if (user?.isRenamed || name.trim().length < 2) return
     if (!window.confirm("Esta alteração só pode ser feita uma vez e não poderá ser solicitada novamente. Deseja continuar?")) return
     setBusy(true)
     setError(null)
-    try { await onRename(name.trim()); localStorage.setItem(renameKey, "1"); setProfileOpen(false) } catch { setError("Não foi possível atualizar o nome.") } finally { setBusy(false) }
+    try { await onRename(name.trim()); setProfileOpen(false) } catch { setError("Não foi possível atualizar o nome.") } finally { setBusy(false) }
   }
   const initial = (user?.displayName || user?.email || "?").charAt(0).toUpperCase()
 
@@ -69,11 +68,11 @@ export function TopBar({ cityName, user, onLogout, onRename, onLinkGoogle }: Top
 
         {profileOpen && (
           <div className="absolute right-0 top-full z-30 mt-2 w-80 rounded-2xl border border-border bg-popover p-4 shadow-xl shadow-black/40">
-            <h2 className="font-semibold text-popover-foreground">Perfil do prefeito</h2>
+            <div className="flex items-center justify-between"><h2 className="font-semibold text-popover-foreground">Perfil do prefeito</h2><button type="button" onClick={() => setProfileOpen(false)} aria-label="Fechar perfil" className="rounded-lg p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"><X className="size-4" /></button></div>
             <p className="mt-1 text-xs text-muted-foreground">Você só poderá alterar este nome uma vez.</p>
             <input value={name} onChange={(event) => setName(event.target.value)} maxLength={40} className="mt-4 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" aria-label="Nome do prefeito" />
             {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
-            <button type="button" disabled={busy || localStorage.getItem(renameKey) === "1"} onClick={() => void rename()} className="mt-3 w-full rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{busy ? "Salvando..." : "Alterar nome"}</button>
+            <button type="button" disabled={busy || user?.isRenamed === true} onClick={() => void rename()} className="mt-3 w-full rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{busy ? "Salvando..." : "Alterar nome"}</button>
           </div>
         )}
         {open && (
