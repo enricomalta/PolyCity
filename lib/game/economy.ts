@@ -74,6 +74,14 @@ function serviceIndex(service: PublicService, level: number, population: number)
   return clamp(Math.round(Math.min(fundingCoverage, capacityCoverage)))
 }
 
+export function calculateCitizenOpinion(citizen: Citizen, policy: CityPolicy, services: ServiceIndices, neighborhoodBonus = 0): Citizen["opinion"] {
+  const taxScore = clamp(100 - policy.classTaxRates[citizen.citizenClass] * 4)
+  const affordability = clamp(Math.round((citizen.salary - citizen.monthlyExpenses) / Math.max(1, citizen.salary) * 100))
+  const serviceScore = Math.round((services.education + services.health + services.security + services.prevention) / 4)
+  const government = clamp(Math.round(serviceScore * 0.45 + taxScore * 0.25 + affordability * 0.2 + neighborhoodBonus * 0.1))
+  return { score: government, government, economy: affordability, services: serviceScore, taxes: taxScore, housing: clamp(affordability + neighborhoodBonus) }
+}
+
 export function deriveServiceIndices(policy: CityPolicy, population: number): ServiceIndices {
   return {
     education: serviceIndex("education", policy.services.education, population),
