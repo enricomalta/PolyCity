@@ -137,23 +137,22 @@ export function ToolBar({
       {constructionAlternateMode && <button type="button" onClick={onBuild} aria-label="Construção" title="Construção" className="flex size-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-all duration-150 hover:bg-secondary hover:text-card-foreground"><Hammer className="size-5" /></button>}
 
       {/* TERRENO */}
-      {tool !== "TERRAIN_EDIT" && <button
+      <button
         type="button"
         onClick={onTerrainEdit}
         aria-label="Editar terreno"
         title="Editar terreno"
         className={cn(
-          "flex size-11 shrink-0 items-center justify-center rounded-xl transition-all duration-150",
+          "flex size-11 shrink-0 items-center justify-center rounded-xl transition-all duration-200",
           tool === "TERRAIN_EDIT"
-            ? "bg-primary text-primary-foreground"
+            ? "pointer-events-none invisible"
             : "text-muted-foreground hover:bg-secondary hover:text-card-foreground",
         )}
       >
         <Shovel className="size-5" />
-      </button>}
+      </button>
 
       {/* ZONEAMENTO */}
-      {tool !== "ZONING" && (
       <button
         type="button"
         onClick={onZoning}
@@ -162,15 +161,14 @@ export function ToolBar({
         className={cn(
           "flex size-11 shrink-0 items-center justify-center rounded-xl transition-all duration-150",
           tool === "ZONING"
-            ? "bg-primary text-primary-foreground"
+            ? "pointer-events-none invisible"
             : "text-muted-foreground hover:bg-secondary hover:text-card-foreground",
         )}
       >
         <Grid3X3 className="size-5" />
-      </button>)}
+      </button>
 
       {/* EDIÇÃO */}
-      {tool !== "EDIT" && (
       <button
         type="button"
         onClick={onEdit}
@@ -179,15 +177,14 @@ export function ToolBar({
         className={cn(
           "flex size-11 shrink-0 items-center justify-center rounded-xl transition-all duration-150",
           tool === "EDIT"
-            ? "bg-primary text-primary-foreground"
+            ? "pointer-events-none invisible"
             : "text-muted-foreground hover:bg-secondary hover:text-card-foreground",
         )}
       >
         <Pencil className="size-5" />
-      </button>)}
+      </button>
 
       {/* DEMOLIR */}
-      {tool !== "DEMOLISH" && (
       <button
         type="button"
         onClick={onDemolish}
@@ -196,12 +193,12 @@ export function ToolBar({
         className={cn(
           "flex size-11 shrink-0 items-center justify-center rounded-xl transition-all duration-150",
           tool === "DEMOLISH"
-            ? "bg-primary text-primary-foreground"
+            ? "pointer-events-none invisible"
             : "text-muted-foreground hover:bg-secondary hover:text-card-foreground",
         )}
       >
         <Trash2 className="size-5" />
-      </button>)}
+      </button>
     </div>
   </div>
 </div>
