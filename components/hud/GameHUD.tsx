@@ -77,6 +77,21 @@ export function GameHUD() {
   }, [])
 
   useEffect(() => {
+    const handleTerrainSelection = (event: Event) => {
+      const detail = (event as CustomEvent<{ tiles: Array<{ x: number; z: number }>; terrain: typeof terrainType }>).detail
+      setTerrainSelection(detail.tiles)
+      setTerrainType(detail.terrain)
+    }
+    const handleClearTerrain = () => setTerrainSelection([])
+    window.addEventListener("polycity:terrain-selection", handleTerrainSelection)
+    window.addEventListener("polycity:clear-terrain-selection", handleClearTerrain)
+    return () => {
+      window.removeEventListener("polycity:terrain-selection", handleTerrainSelection)
+      window.removeEventListener("polycity:clear-terrain-selection", handleClearTerrain)
+    }
+  }, [])
+
+  useEffect(() => {
     const handleRange = (event: Event) => setZoningTiles((event as CustomEvent<{ tiles: Array<{ x: number; z: number }> }>).detail.tiles)
     window.addEventListener("polycity:zoning-range", handleRange)
     return () => window.removeEventListener("polycity:zoning-range", handleRange)
