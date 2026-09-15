@@ -960,6 +960,20 @@ export async function performAction(
     message,
   })
 
+  const commitAction = async (message: string): Promise<GameResponse> => {
+    doc.updatedAt = new Date(now).toISOString()
+    await cityRef.update({
+      terrainOverrides: doc.terrainOverrides ?? {},
+      buildings: doc.buildings,
+      citizens: doc.citizens,
+      timeStage: doc.timeStage,
+      lastTickAt: doc.lastTickAt,
+      money: doc.money,
+      updatedAt: doc.updatedAt,
+    })
+    return { success: true, state: docToState(doc), message }
+  }
+
   if (
     stageChanged ||
     dayCompleted
@@ -1005,7 +1019,7 @@ export async function performAction(
     if (!tile) return reject("Tile inválido.")
     if (doc.buildings.some((building) => building.x === action.x && building.z === action.z)) return reject("Remova a construção antes de alterar o terreno.")
     doc.terrainOverrides = { ...(doc.terrainOverrides ?? {}), [`${action.x}:${action.z}`]: action.terrain }
-    return commit(doc, "Terreno alterado.")
+    return commitAction("Terreno alterado.")
   }
 
   if (
