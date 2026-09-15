@@ -31,7 +31,7 @@ export function createRoadSet(
   const roads = new Set<string>()
 
   for (const building of buildings) {
-    if (building.type !== "ROAD") {
+    if (building.type !== "ROAD" || building.closed || building.roadCondition === "CLOSED") {
       continue
     }
 

@@ -1,4 +1,4 @@
-import type { Budget, Building, CityPolicy, CityState, PublicService, ResourceState, ServiceIndices } from "@/types/city"
+import type { Budget, Building, CityPolicy, CityState, Citizen, CitizenClass, PublicService, ResourceState, ServiceIndices } from "@/types/city"
 import {
   createGameClock,
 } from "@/lib/game/clock"
@@ -8,18 +8,41 @@ import { getBuilding } from "./buildings"
 // imports these helpers so the authoritative economy and the optimistic
 // client previews never drift apart. The server's result always wins.
 
+export const DEFAULT_PRICES = {
+  jobs: [
+    { title: "Atendente de comércio", sector: "COMMERCE", salary: 14, class: "LOW" },
+    { title: "Operário industrial", sector: "INDUSTRY", salary: 22, class: "LOW" },
+    { title: "Professor", sector: "PUBLIC", salary: 32, class: "MIDDLE" },
+    { title: "Técnico de serviços", sector: "SERVICES", salary: 38, class: "MIDDLE" },
+    { title: "Engenheiro de tecnologia", sector: "TECHNOLOGY", salary: 72, class: "HIGH" },
+    { title: "Gestor logístico", sector: "LOGISTICS", salary: 58, class: "HIGH" },
+  ],
+  salary: { LOW: 12, MIDDLE: 28, HIGH: 65 },
+  rent: { LOW: 5, MIDDLE: 12, HIGH: 28 },
+  consumption: { market: 8, water: 2, energy: 3, fuel: 4, transit: 3 },
+} as const
+
 export const DEFAULT_POLICY: CityPolicy = {
   taxRate: 8,
-  services: { education: 1, health: 1, security: 1, prevention: 1 },
+  economicModel: "SOCIAL_MARKET",
+  ideology: "SOCIAL_DEMOCRACY",
+  classTaxRates: { LOW: 3, MIDDLE: 8, HIGH: 14 },
+  selectiveTaxes: { consumption: 4, energy: 3, water: 2, fuel: 5 },
+  services: { education: 1, health: 1, security: 1, prevention: 1, waste: 1, transit: 1, roads: 1, sewage: 1 },
+  prices: DEFAULT_PRICES,
 }
 
-export const PUBLIC_SERVICES: PublicService[] = ["education", "health", "security", "prevention"]
+export const PUBLIC_SERVICES: PublicService[] = ["education", "health", "security", "prevention", "waste", "transit", "roads", "sewage"]
 
 export const SERVICE_LABELS: Record<PublicService, string> = {
   education: "Educação",
   health: "Saúde",
   security: "Segurança",
   prevention: "Prevenção",
+  waste: "Coleta de lixo",
+  transit: "Transporte",
+  roads: "Estradas",
+  sewage: "Tratamento de esgoto",
 }
 
 // How many citizens one funding "level" can serve for each service.
@@ -28,6 +51,10 @@ const SERVICE_CAPACITY_PER_LEVEL: Record<PublicService, number> = {
   health: 40,
   security: 55,
   prevention: 70,
+  waste: 60,
+  transit: 50,
+  roads: 70,
+  sewage: 55,
 }
 
 // Monthly cost of one funding level (scaled by population inside the model).
@@ -59,18 +86,26 @@ function clamp(n: number, min = 0, max = 100): number {
 // demand (population). No population means an empty city, so any funding keeps
 // the index healthy.
 function serviceIndex(service: PublicService, level: number, population: number): number {
-  const supply = level * SERVICE_CAPACITY_PER_LEVEL[service]
-  if (population <= 0) return level > 0 ? 100 : 55
-  return clamp(Math.round((supply / population) * 100))
+  const fundingCoverage = [0, 30, 50, 100][level] ?? 0
+  if (population <= 0) return fundingCoverage
+  const capacityCoverage = (level * SERVICE_CAPACITY_PER_LEVEL[service] / population) * 100
+  return clamp(Math.round(Math.min(fundingCoverage, capacityCoverage)))
+}
+
+export function calculateCitizenOpinion(citizen: Citizen, policy: CityPolicy, services: ServiceIndices, neighborhoodBonus = 0): Citizen["opinion"] {
+  const classTax = policy.classTaxRates[citizen.citizenClass]
+  const selectiveTax = Object.values(policy.selectiveTaxes).reduce((sum, rate) => sum + rate, 0) / Object.values(policy.selectiveTaxes).length
+  const taxScore = clamp(100 - classTax * 3.5 - selectiveTax * 1.5)
+  const affordability = clamp(Math.round((citizen.salary - citizen.monthlyExpenses) / Math.max(1, citizen.salary) * 100))
+  const serviceScore = Math.round((services.education + services.health + services.security + services.prevention) / 4)
+  const government = clamp(Math.round(serviceScore * 0.45 + taxScore * 0.25 + affordability * 0.2 + neighborhoodBonus * 0.1))
+  return { score: government, government, economy: affordability, services: serviceScore, taxes: taxScore, housing: clamp(affordability + neighborhoodBonus) }
 }
 
 export function deriveServiceIndices(policy: CityPolicy, population: number): ServiceIndices {
-  return {
-    education: serviceIndex("education", policy.services.education, population),
-    health: serviceIndex("health", policy.services.health, population),
-    security: serviceIndex("security", policy.services.security, population),
-    prevention: serviceIndex("prevention", policy.services.prevention, population),
-  }
+  return Object.fromEntries(
+    PUBLIC_SERVICES.map((service) => [service, serviceIndex(service, policy.services[service], population)]),
+  ) as ServiceIndices
 }
 
 export function deriveBudget(policy: CityPolicy, population: number, jobs: number): Budget {
@@ -136,6 +171,7 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
     water: waterProduction - waterConsumption,
     buildings,
     policy,
+    regions: [],
     services,
     budget,
     timeStage: clock.stage,

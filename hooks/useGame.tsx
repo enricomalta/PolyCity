@@ -16,10 +16,12 @@ import type {
   City,
   CityPolicy,
   CityState,
+  CityRegion,
 } from "@/types/city"
 
 import type {
   BuildingType,
+  TerrainType,
   Tile,
   ToolMode,
 } from "@/types/game"
@@ -126,6 +128,9 @@ interface GameContextValue {
     z: number,
   ) => Promise<void>
 
+  setTerrain: (x: number, z: number, terrain: TerrainType) => Promise<void>
+  setTerrainBatch: (tiles: Array<{ x: number; z: number }>, terrain: TerrainType) => Promise<void>
+
   // Disparada pelo TrafficSystem quando um carro chega a uma casa vaga. O
   // servidor revalida tudo (ver lib/game/traffic.ts) antes de aceitar.
   occupyHouse: (
@@ -160,6 +165,10 @@ interface GameContextValue {
   updatePolicy: (
     policy: CityPolicy,
   ) => Promise<boolean>
+
+  demarcateRegion: (region: CityRegion) => Promise<boolean>
+
+  renameCity: (name: string) => Promise<boolean>
 
   clearMessage: () => void
 
@@ -234,13 +243,14 @@ export function GameProvider({
   // Terrain
   // ---------------------------------------------------------------------------
 
-  const baseTiles = useMemo<Tile[][]>(
-    () =>
-      generateTerrain(
-        city?.seed ?? 1,
-      ),
-    [city?.seed],
-  )
+  const baseTiles = useMemo<Tile[][]>(() => {
+    const generated = generateTerrain(city?.seed ?? 1)
+    for (const [key, terrain] of Object.entries(state?.terrainOverrides ?? {})) {
+      const [x, z] = key.split(":").map(Number)
+      if (generated[x]?.[z]) generated[x][z] = { ...generated[x][z], terrain }
+    }
+    return generated
+  }, [city?.seed, state?.terrainOverrides])
 
   const tiles = useMemo(
     () =>
@@ -390,6 +400,23 @@ export function GameProvider({
   // ---------------------------------------------------------------------------
   // Demolish
   // ---------------------------------------------------------------------------
+
+  const setTerrainBatch = useCallback(async (tiles: Array<{ x: number; z: number }>, terrain: TerrainType) => {
+    setPending(true)
+    try {
+      const res = await gameService.performAction(cityId, { type: "SET_TERRAIN_BATCH", tiles, terrain })
+      setState(res.state)
+      setLastMessage(res.message ?? null)
+    } catch {
+      setLastMessage("Não foi possível alterar o terreno selecionado.")
+    } finally {
+      setPending(false)
+    }
+  }, [cityId])
+
+  const setTerrain = useCallback(async (x: number, z: number, terrain: TerrainType) => {
+    return setTerrainBatch([{ x, z }], terrain)
+  }, [setTerrainBatch])
 
   const demolish =
     useCallback<GameContextValue["demolish"]>(
@@ -746,6 +773,48 @@ export function GameProvider({
       [cityId],
     )
 
+  const demarcateRegion = useCallback<GameContextValue["demarcateRegion"]>(
+    async (region) => {
+      setPending(true)
+      try {
+        const res = await gameService.performAction(cityId, { type: "DEMARCATE_REGION", region })
+        setState(res.state)
+        setLastMessage(res.message ?? null)
+        return res.success
+      } catch {
+        setLastMessage("Não foi possível salvar a região.")
+        return false
+      } finally {
+        setPending(false)
+      }
+    },
+    [cityId],
+  )
+
+  const renameCity = useCallback<GameContextValue["renameCity"]>(
+    async (name) => {
+      const normalized = name.trim()
+      if (!normalized || normalized.length > 40) {
+        setLastMessage("Digite um nome entre 1 e 40 caracteres.")
+        return false
+      }
+      setPending(true)
+      try {
+        const res = await gameService.renameCity(cityId, normalized)
+        if (res.success) setCity((current) => current ? { ...current, name: normalized } : current)
+        setState(res.state)
+        setLastMessage(res.message ?? null)
+        return res.success
+      } catch {
+        setLastMessage("Não foi possível renomear a cidade.")
+        return false
+      } finally {
+        setPending(false)
+      }
+    },
+    [cityId],
+  )
+
   // ---------------------------------------------------------------------------
   // Building selection
   // ---------------------------------------------------------------------------
@@ -826,6 +895,8 @@ export function GameProvider({
         build,
 
         demolish,
+        setTerrain,
+        setTerrainBatch,
 
         moveBuilding,
 
@@ -842,9 +913,12 @@ export function GameProvider({
 
         rotateSelectedBuilding,
 
-        updatePolicy,
+  updatePolicy,
+  demarcateRegion,
+  
+  renameCity,
 
-        clearMessage: () =>
+  clearMessage: () =>
           setLastMessage(null),
 
         reload: load,
@@ -869,6 +943,8 @@ export function GameProvider({
         build,
 
         demolish,
+        setTerrain,
+        setTerrainBatch,
 
         moveBuilding,
 
@@ -883,9 +959,10 @@ export function GameProvider({
 
         openBuilding,
 
-        updatePolicy,
-
-        load,
+  updatePolicy,
+  demarcateRegion,
+  
+  load,
 
         rotateBuilding,
 

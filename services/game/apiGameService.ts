@@ -11,6 +11,13 @@ export const apiGameService: GameService = {
     return apiRequest<{ city: City; state: CityState }>(`/api/cities/${cityId}`)
   },
 
+  createCity(cityId, options) {
+    return apiRequest<{ city: City; state: CityState }>(`/api/cities/${cityId}`, {
+      method: "POST",
+      body: options,
+    })
+  },
+
   performAction(cityId, action: GameAction) {
     return apiRequest<GameResponse>(`/api/cities/${cityId}/actions`, {
       method: "POST",
@@ -22,6 +29,13 @@ export const apiGameService: GameService = {
     return apiRequest<GameResponse>(`/api/cities/${cityId}/actions`, {
       method: "POST",
       body: { type: "SET_POLICY", policy },
+    })
+  },
+
+  renameCity(cityId, name: string) {
+    return apiRequest<GameResponse>(`/api/cities/${cityId}/actions`, {
+      method: "POST",
+      body: { type: "RENAME_CITY", name },
     })
   },
 }

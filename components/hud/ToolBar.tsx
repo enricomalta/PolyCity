@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import {
   Hammer,
   Landmark,
@@ -7,6 +8,7 @@ import {
   MousePointer2,
   Pencil,
   Shovel,
+  Grid3X3,
   Trash2,
 } from "lucide-react"
 import type { ToolMode } from "@/types/game"
@@ -18,6 +20,7 @@ interface ToolBarProps {
   onSelect: () => void
   onBuild: () => void
   onTerrainEdit: () => void
+  onZoning: () => void
   onEdit: () => void
   onDemolish: () => void
   onGovernance: () => void
@@ -34,23 +37,49 @@ export function ToolBar({
   onSelect, 
   onBuild,
   onTerrainEdit,
+  onZoning,
   onEdit,
   onDemolish,
   onGovernance,
   onHeatmap,
 }: ToolBarProps) {
-  
-  const isConstructionMode =
+  const [submenuOpen, setSubmenuOpen] = useState(false)
+  const [closeTimer, setCloseTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => { if (closeTimer) clearTimeout(closeTimer) }, [closeTimer])
+
+  const openSubmenu = () => {
+    if (closeTimer) clearTimeout(closeTimer)
+    setSubmenuOpen(true)
+  }
+
+  const scheduleClose = () => {
+    if (closeTimer) clearTimeout(closeTimer)
+    setCloseTimer(setTimeout(() => setSubmenuOpen(false), 420))
+  }
+
+  const isBuildMode =
     tool === "BUILD_MENU" ||
     tool === "BUILD" ||
-    tool === "ROAD" ||
-    tool === "TERRAIN_EDIT" ||
-    tool === "EDIT"
+    tool === "ROAD"
   
   const hasSelectedBuilding =
     selectedBuilding !== null
 
-   return (
+  const activeTool = tool === "TERRAIN_EDIT"
+    ? { label: "Editar terreno", icon: <Shovel className="size-5" />, onClick: onTerrainEdit }
+    : tool === "ZONING"
+      ? { label: "Demarcar região", icon: <Grid3X3 className="size-5" />, onClick: onZoning }
+      : tool === "EDIT"
+        ? { label: "Editar construção", icon: <Pencil className="size-5" />, onClick: onEdit }
+        : tool === "DEMOLISH"
+          ? { label: "Demolir", icon: <Trash2 className="size-5" />, onClick: onDemolish }
+          : { label: "Construção", icon: <Hammer className="size-5" />, onClick: onBuild }
+
+  const constructionAlternateMode = ["TERRAIN_EDIT", "ZONING", "EDIT", "DEMOLISH"].includes(tool)
+  const activeAlternateMode = !isBuildMode && constructionAlternateMode
+
+  return (
     <div className="pointer-events-auto flex flex-col gap-1.5">
       <div className="flex flex-col gap-1.5 rounded-2xl border border-border bg-card/90 p-1.5 shadow-lg shadow-black/30 backdrop-blur">
         {/* SELECIONAR */}
@@ -73,68 +102,42 @@ export function ToolBar({
         </button>
 
         {/* CONSTRUÇÃO */}
-<div className="group relative">
+<div className="relative" onMouseEnter={openSubmenu} onMouseLeave={scheduleClose}>
   <button
     type="button"
-    onClick={onBuild}
-    aria-label="Construção"
-    aria-pressed={isConstructionMode}
-    title="Construção"
+    onClick={activeTool.onClick}
+    aria-label={activeTool.label}
+    aria-pressed={isBuildMode || activeAlternateMode}
+    title={activeTool.label}
     className={cn(
       "relative z-30 flex size-11 items-center justify-center rounded-xl transition-all duration-200",
-      isConstructionMode
-        ? hasSelectedBuilding
+      isBuildMode || activeAlternateMode
+        ? hasSelectedBuilding && isBuildMode
           ? "bg-orange-400 text-white shadow-md"
           : "bg-primary text-primary-foreground shadow-md"
         : "text-muted-foreground hover:bg-secondary hover:text-card-foreground",
     )}
   >
-    <Hammer className="size-5" />
+    {activeTool.icon}
   </button>
 
   <div
-    className="
-      absolute
-      left-full
-      top-0
-      z-20
-      h-11
-      w-[172px]
-      -ml-1
-      pl-2
-      pointer-events-none
-    "
+    className={cn(
+      "absolute left-full top-0 z-20 -ml-1 h-11 w-[232px] pl-2",
+      submenuOpen ? "pointer-events-auto" : "pointer-events-none",
+    )}
   >
     <div
-      className="
-        flex
-        h-11
-        w-[168px]
-        items-center
-        gap-1.5
-        rounded-r-2xl
-        rounded-l-none
-        border
-        border-border
-        bg-card/90
-        p-1.5
-        shadow-lg
-        backdrop-blur
-        origin-left
-        -translate-x-3
-        scale-x-90
-        opacity-0
-        transition-all
-        duration-200
-        ease-out
-        group-hover:pointer-events-auto
-        group-hover:translate-x-0
-        group-hover:scale-x-100
-        group-hover:opacity-100
-      "
+      className={cn(
+        "flex h-11 w-[220px] items-center gap-1.5 rounded-r-2xl border border-border bg-card/90 p-1.5 shadow-lg backdrop-blur origin-left transition-all duration-200 ease-out",
+        submenuOpen ? "pointer-events-auto translate-x-0 scale-x-100 opacity-100" : "pointer-events-none -translate-x-3 scale-x-90 opacity-0",
+      )}
     >
+      {/* CONSTRUÇÃO volta ao submenu quando outro modo está ativo */}
+      {constructionAlternateMode && <button type="button" onClick={onBuild} aria-label="Construção" title="Construção" className="flex size-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-all duration-150 hover:bg-secondary hover:text-card-foreground"><Hammer className="size-5" /></button>}
+
       {/* TERRENO */}
-      <button
+      {tool !== "TERRAIN_EDIT" && <button
         type="button"
         onClick={onTerrainEdit}
         aria-label="Editar terreno"
@@ -147,9 +150,27 @@ export function ToolBar({
         )}
       >
         <Shovel className="size-5" />
-      </button>
+      </button>}
+
+      {/* ZONEAMENTO */}
+      {tool !== "ZONING" && (
+      <button
+        type="button"
+        onClick={onZoning}
+        aria-label="Demarcar região"
+        title="Demarcar região"
+        className={cn(
+          "flex size-11 shrink-0 items-center justify-center rounded-xl transition-all duration-150",
+          tool === "ZONING"
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:bg-secondary hover:text-card-foreground",
+        )}
+      >
+        <Grid3X3 className="size-5" />
+      </button>)}
 
       {/* EDIÇÃO */}
+      {tool !== "EDIT" && (
       <button
         type="button"
         onClick={onEdit}
@@ -163,9 +184,10 @@ export function ToolBar({
         )}
       >
         <Pencil className="size-5" />
-      </button>
+      </button>)}
 
       {/* DEMOLIR */}
+      {tool !== "DEMOLISH" && (
       <button
         type="button"
         onClick={onDemolish}
@@ -179,7 +201,7 @@ export function ToolBar({
         )}
       >
         <Trash2 className="size-5" />
-      </button>
+      </button>)}
     </div>
   </div>
 </div>

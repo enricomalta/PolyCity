@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { LogOut, ChevronDown, Landmark } from "lucide-react"
+import { LogOut, ChevronDown } from "lucide-react"
 import type { User } from "@/types/auth"
 import { Logo } from "@/components/brand/Logo"
 import { cn } from "@/lib/utils"
@@ -27,14 +26,6 @@ export function TopBar({ cityName, user, onLogout }: TopBarProps) {
           {cityName}
         </div>
       </div>
-
-      <Link
-        href="/game/mayor"
-        className="ml-auto flex items-center gap-2 rounded-xl bg-primary/15 px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/25"
-      >
-        <Landmark className="size-4" />
-        <span className="hidden sm:block">Gabinete</span>
-      </Link>
 
       <div className="relative">
         <button

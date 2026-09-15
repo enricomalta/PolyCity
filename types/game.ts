@@ -48,6 +48,17 @@ export type GameAction =
       z: number
     }
   | {
+      type: "SET_TERRAIN"
+      x: number
+      z: number
+      terrain: TerrainType
+    }
+  | {
+      type: "SET_TERRAIN_BATCH"
+      tiles: Array<{ x: number; z: number }>
+      terrain: TerrainType
+    }
+  | {
       type: "ROTATE"
       x: number
       z: number
@@ -64,6 +75,14 @@ export type GameAction =
   | {
       type: "SET_POLICY"
       policy: CityPolicy
+    }
+  | {
+      type: "DEMARCATE_REGION"
+      region: import("./city").CityRegion
+    }
+  | {
+      type: "RENAME_CITY"
+      name: string
     }
   | {
       // Disparada pelo sistema de tráfego (client) quando um carro chega a
@@ -118,6 +137,7 @@ export type ToolMode =
   | "BUILD"
   | "ROAD"
   | "TERRAIN_EDIT"
+  | "ZONING"
   | "EDIT"
   | "DEMOLISH"
   | "GOVERNANCE"

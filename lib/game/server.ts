@@ -9,6 +9,7 @@ import type {
   Building,
   Citizen,
   FundingLevel,
+  CityRegion,
 } from "@/types/city"
 
 import type {
@@ -23,8 +24,11 @@ import { getBuilding } from "./buildings"
 import {
   applyBudgetTicks,
   deriveState,
+  deriveServiceIndices,
   DEFAULT_POLICY,
+  DEFAULT_PRICES,
   PUBLIC_SERVICES,
+  calculateCitizenOpinion,
 } from "./economy"
 
 import {
@@ -73,8 +77,34 @@ interface CityDoc {
   gameTime: GameTime
   timeStage: number
   policy: CityPolicy
+  regions: CityRegion[]
   buildings: Building[]
+  terrainOverrides?: Record<string, import("@/types/game").TerrainType>
   citizens: Citizen[]
+}
+
+function terrainWithOverrides(seed: number, overrides?: Record<string, import("@/types/game").TerrainType>) {
+  const terrain = generateTerrain(seed)
+  for (const [key, value] of Object.entries(overrides ?? {})) {
+    const [x, z] = key.split(":").map(Number)
+    if (terrain[x]?.[z]) terrain[x][z] = { ...terrain[x][z], terrain: value }
+  }
+  return terrain
+}
+
+function normalizeBuildings(input: unknown): Building[] {
+  if (Array.isArray(input)) {
+    return input as Building[]
+  }
+
+  if (input && typeof input === "object") {
+    return Object.values(input).filter(
+      (building): building is Building =>
+        Boolean(building) && typeof building === "object",
+    )
+  }
+
+  return []
 }
 
 function makeId(): string {
@@ -206,11 +236,19 @@ function sanitizePolicy(
   const p =
     (input ?? {}) as Partial<CityPolicy>
 
+  const economicModel = ["SANDBOX", "SOCIAL_MARKET", "FREE_MARKET", "PLANNED_ECONOMY", "WELFARE_STATE"].includes(String((p as Partial<CityPolicy>).economicModel))
+    ? (String((p as Partial<CityPolicy>).economicModel) as CityPolicy["economicModel"])
+    : DEFAULT_POLICY.economicModel
+
+  const ideology = ["SOCIAL_DEMOCRACY", "LIBERALISM", "CONSERVATISM", "ECOLOGISM", "LIBERTARIANISM", "SOCIALISM", "NEOLIBERALISM", "WELFARE_STATE", "FISCAL_AUSTERITY", "DEVELOPMENTALISM", "ECO_SOCIALISM", "STATE_CAPITALISM", "PROGRESSIVISM", "TECHNOCRACY"].includes(String((p as Partial<CityPolicy>).ideology))
+    ? (String((p as Partial<CityPolicy>).ideology) as CityPolicy["ideology"])
+    : DEFAULT_POLICY.ideology
+
   const taxRate =
     Math.max(
       0,
       Math.min(
-        20,
+        50,
         Math.round(
           Number(
             p.taxRate ??
@@ -245,18 +283,39 @@ function sanitizePolicy(
       ) as FundingLevel
   }
 
-  return {
-    taxRate,
-    services,
+  const classTaxRates = { ...DEFAULT_POLICY.classTaxRates }
+  const selectiveTaxes = { ...DEFAULT_POLICY.selectiveTaxes }
+  const prices = {
+    jobs: DEFAULT_PRICES.jobs.map((job) => ({ ...job })),
+    salary: { ...DEFAULT_PRICES.salary },
+    rent: { ...DEFAULT_PRICES.rent },
+    consumption: { ...DEFAULT_PRICES.consumption },
   }
+  const rawPolicy = p as CityPolicy & { classTaxRates?: Record<string, number>; selectiveTaxes?: Record<string, number>; prices?: typeof DEFAULT_PRICES }
+  for (const key of ["LOW", "MIDDLE", "HIGH"] as const) classTaxRates[key] = Math.max(0, Math.min(50, Math.round(Number(rawPolicy.classTaxRates?.[key] ?? classTaxRates[key]))))
+  for (const key of ["consumption", "energy", "water", "fuel"] as const) selectiveTaxes[key] = Math.max(0, Math.min(50, Math.round(Number(rawPolicy.selectiveTaxes?.[key] ?? selectiveTaxes[key]))))
+  for (const key of ["LOW", "MIDDLE", "HIGH"] as const) {
+    prices.salary[key] = Math.max(1, Number(rawPolicy.prices?.salary?.[key] ?? prices.salary[key]))
+    prices.rent[key] = Math.max(0, Number(rawPolicy.prices?.rent?.[key] ?? prices.rent[key]))
+  }
+  for (const key of ["market", "water", "energy", "fuel", "transit"] as const) {
+    prices.consumption[key] = Math.max(0, Number(rawPolicy.prices?.consumption?.[key] ?? prices.consumption[key]))
+  }
+  return { taxRate, economicModel, ideology, classTaxRates, selectiveTaxes, services, prices }
 }
 
 function docToState(
   doc: CityDoc,
 ): CityState {
+  // Firestore can return legacy maps (or an absent field) for buildings.
+  // Normalize at the final serialization boundary so every API response is safe,
+  // including responses created before the migration in getCity/performAction.
+  const buildings = normalizeBuildings(doc.buildings)
+  doc.buildings = buildings
+
   const state =
     deriveState(
-      doc.buildings,
+      buildings,
       doc.money,
       doc.policy,
       doc.clockStartedAt,
@@ -265,6 +324,8 @@ function docToState(
 
   return {
     ...state,
+    terrainOverrides: doc.terrainOverrides ?? {},
+    regions: doc.regions ?? [],
     citizens:
       doc.citizens ?? [],
   }
@@ -482,11 +543,24 @@ function assignCitizensToWorkplaces(
   )
 }
 
-// Load the caller's city, creating the account + city on first login.
-// Economy ticks are still based on lastTickAt.
-// DAY/NIGHT is derived exclusively from clock.ts.
+export class CityNotCreatedError extends Error {
+  constructor() {
+    super("CITY_NOT_CREATED")
+    this.name = "CityNotCreatedError"
+  }
+}
+
+export interface CityCreationOptions {
+  name: string
+  economicModel: CityPolicy["economicModel"]
+  ideology: CityPolicy["ideology"]
+}
+
+// Loads the caller's city. Creation is explicit so the mayor chooses the city
+// name and governing ideology before the world is persisted.
 export async function getOrCreateCity(
   user: DecodedIdToken,
+  creation?: CityCreationOptions,
 ): Promise<{
   city: City
   state: CityState
@@ -505,6 +579,8 @@ export async function getOrCreateCity(
     Date.now()
 
   if (!snap.exists) {
+    if (!creation) throw new CityNotCreatedError()
+
     const seed =
       seedFromUid(
         user.uid,
@@ -526,8 +602,7 @@ export async function getOrCreateCity(
     const doc: CityDoc = {
       id: user.uid,
       ownerId: user.uid,
-      name:
-        `Cidade de ${displayName}`,
+      name: creation.name.trim(),
       seed,
       createdAt: nowIso,
       updatedAt: nowIso,
@@ -538,8 +613,21 @@ export async function getOrCreateCity(
       gameTime:
         createGameTime(),
       timeStage: 0,
-      policy:
-        DEFAULT_POLICY,
+      policy: {
+        ...DEFAULT_POLICY,
+        economicModel: creation.economicModel,
+        ideology: creation.ideology,
+        services: { ...DEFAULT_POLICY.services },
+        classTaxRates: { ...DEFAULT_POLICY.classTaxRates },
+        selectiveTaxes: { ...DEFAULT_POLICY.selectiveTaxes },
+        prices: {
+          jobs: DEFAULT_POLICY.prices.jobs.map((job) => ({ ...job })),
+          salary: { ...DEFAULT_POLICY.prices.salary },
+          rent: { ...DEFAULT_POLICY.prices.rent },
+          consumption: { ...DEFAULT_POLICY.prices.consumption },
+        },
+      },
+      regions: [],
       buildings:
         starterBuildings(seed),
       citizens: [],
@@ -575,6 +663,12 @@ export async function getOrCreateCity(
 
   const doc =
     snap.data() as CityDoc
+
+  const rawBuildings = doc.buildings
+  doc.buildings = normalizeBuildings(rawBuildings)
+  if (!Array.isArray(rawBuildings)) {
+    await cityRef.update({ buildings: doc.buildings })
+  }
 
   if (
     !Array.isArray(
@@ -666,15 +760,45 @@ export async function getOrCreateCity(
     ticked.lastTickAt !==
     doc.lastTickAt
 
+  const elapsedDays = Math.max(0, (now - (doc.lastTickAt ?? now)) / (1000 * 60 * 60 * 24))
+  let roadsChanged = false
+  doc.buildings = doc.buildings.map((building) => {
+    if (building.type !== "ROAD") return building
+    const current = building.maintenance ?? { status: building.closed ? "CLOSED" as const : "REGULAR" as const, wear: 0, degradationRate: 0.02, lastMaintainedAt: new Date(now).toISOString() }
+    if (current.status === "CLOSED") return { ...building, closed: true, maintenance: current }
+    const wear = Math.min(100, current.wear + elapsedDays * current.degradationRate * 100)
+    const status = wear >= 85 ? "CLOSED" : wear >= 55 ? "IRREGULAR" : "REGULAR"
+    if (wear !== current.wear || status !== current.status || !building.maintenance) roadsChanged = true
+    return { ...building, closed: status === "CLOSED", roadCondition: status, maintenance: { ...current, status, wear } }
+  })
+
   doc.money =
     ticked.money
 
   doc.lastTickAt =
     ticked.lastTickAt
 
+  const serviceIndices = deriveServiceIndices(
+    doc.policy,
+    doc.citizens.length,
+  )
+  doc.citizens = doc.citizens.map((citizen) => {
+    const salary = doc.policy.prices.salary[citizen.citizenClass]
+    const home = doc.buildings.find((building) => building.id === citizen.homeBuildingId)
+    const region = home ? (doc.regions ?? []).find((item) => item.tiles.some((tile) => tile.x === home.x && tile.z === home.z)) : undefined
+    const rentFactor = region?.zone === "COMMERCIAL" ? 1.18 : region?.zone === "INDUSTRIAL" ? 0.82 : region?.citizenClass === "HIGH" ? 1.35 : region?.citizenClass === "LOW" ? 0.8 : 1
+    const rent = Math.round(doc.policy.prices.rent[citizen.citizenClass] * rentFactor)
+    const regionalTax = region?.taxRate ?? doc.policy.classTaxRates[citizen.citizenClass]
+    const incomeTax = Math.round(salary * (regionalTax / 100))
+    const monthlyExpenses = rent + doc.policy.prices.consumption.market + doc.policy.prices.consumption.water + doc.policy.prices.consumption.energy + incomeTax
+    const updatedCitizen = { ...citizen, salary, monthlyExpenses }
+    return { ...updatedCitizen, opinion: calculateCitizenOpinion(updatedCitizen, doc.policy, serviceIndices) }
+  })
+
   const shouldPersist =
     economyChanged ||
-    stageChanged
+    stageChanged ||
+    roadsChanged
 
   if (
     shouldPersist
@@ -693,6 +817,7 @@ export async function getOrCreateCity(
         doc.timeStage,
       citizens:
         doc.citizens,
+      buildings: doc.buildings,
       updatedAt:
         doc.updatedAt,
     })
@@ -730,6 +855,12 @@ export async function performAction(
 
   const doc =
     fresh.data() as CityDoc
+
+  const rawBuildings = doc.buildings
+  doc.buildings = normalizeBuildings(rawBuildings)
+  if (!Array.isArray(rawBuildings)) {
+    await cityRef.update({ buildings: doc.buildings })
+  }
 
   if (
     !Array.isArray(
@@ -829,6 +960,20 @@ export async function performAction(
     message,
   })
 
+  const commitAction = async (message: string): Promise<GameResponse> => {
+    doc.updatedAt = new Date(now).toISOString()
+    await cityRef.update({
+      terrainOverrides: doc.terrainOverrides ?? {},
+      buildings: doc.buildings,
+      citizens: doc.citizens,
+      timeStage: doc.timeStage,
+      lastTickAt: doc.lastTickAt,
+      money: doc.money,
+      updatedAt: doc.updatedAt,
+    })
+    return { success: true, state: docToState(doc), message }
+  }
+
   if (
     stageChanged ||
     dayCompleted
@@ -866,6 +1011,20 @@ export async function performAction(
     }
   }
 
+  if (action.type === "SET_TERRAIN" || action.type === "SET_TERRAIN_BATCH") {
+    const allowed = ["GRASS", "WATER", "ROCK", "FOREST", "SAND"] as const
+    if (!allowed.includes(action.terrain)) return reject("Tipo de terreno inválido.")
+    const selectedTiles = action.type === "SET_TERRAIN" ? [{ x: action.x, z: action.z }] : action.tiles
+    if (!selectedTiles.length || selectedTiles.length > 900) return reject("Seleção de terreno inválida.")
+    const terrain = terrainWithOverrides(doc.seed, doc.terrainOverrides)
+    for (const tile of selectedTiles) {
+      if (!terrain[tile.x]?.[tile.z]) return reject("Um dos tiles selecionados é inválido.")
+      if (doc.buildings.some((building) => building.x === tile.x && building.z === tile.z)) return reject("Remova as construções antes de alterar o terreno.")
+    }
+    doc.terrainOverrides = { ...(doc.terrainOverrides ?? {}), ...Object.fromEntries(selectedTiles.map((tile) => [`${tile.x}:${tile.z}`, action.terrain])) }
+    return commitAction(selectedTiles.length === 1 ? "Terreno alterado." : `${selectedTiles.length} tiles alterados.`)
+  }
+
   if (
     action.type ===
     "BUILD"
@@ -877,9 +1036,7 @@ export async function performAction(
 
     const terrain =
       applyOccupancy(
-        generateTerrain(
-          doc.seed,
-        ),
+terrainWithOverrides(doc.seed, doc.terrainOverrides),
         doc.buildings,
       )
 
@@ -917,7 +1074,8 @@ export async function performAction(
           action.rotation,
         level: 1,
         occupied: false,
-        closed: false,
+        closed: action.buildingType === "ROAD" ? false : false,
+        ...(action.buildingType === "ROAD" ? { maintenance: { status: "REGULAR" as const, wear: 0, degradationRate: 0.02, lastMaintainedAt: new Date(now).toISOString() } } : {}),
       },
     ]
 
@@ -984,7 +1142,7 @@ export async function performAction(
 
     const terrain =
       applyOccupancy(
-        generateTerrain(doc.seed),
+        terrainWithOverrides(doc.seed, doc.terrainOverrides),
         doc.buildings,
       )
 
@@ -1162,9 +1320,21 @@ export async function performAction(
     }
   }
 
+  if (action.type === "DEMARCATE_REGION") {
+    const region = action.region
+    if (!region || !region.id || !region.name.trim() || !Array.isArray(region.tiles) || region.tiles.length === 0) {
+      return reject("A região precisa de nome e pelo menos um tile.")
+    }
+    const safeRegion = { ...region, name: region.name.trim().slice(0, 40), tiles: region.tiles.slice(0, 400), createdAt: region.createdAt || new Date(now).toISOString() }
+    doc.regions = [...(doc.regions ?? []).filter((item) => item.id !== safeRegion.id), safeRegion]
+    doc.updatedAt = new Date(now).toISOString()
+    await cityRef.update({ regions: doc.regions, updatedAt: doc.updatedAt })
+    return { success: true, state: docToState(doc), message: `Região ${safeRegion.name} salva.` }
+  }
+
   if (
-    action.type ===
-    "SET_POLICY"
+  action.type ===
+  "SET_POLICY"
   ) {
     doc.policy =
       sanitizePolicy(
@@ -1194,6 +1364,16 @@ export async function performAction(
       message:
         "Política municipal atualizada.",
     }
+  }
+
+  if (action.type === "RENAME_CITY") {
+    const name = action.name.trim().slice(0, 40)
+    if (!name) {
+      return { success: false, state: docToState(doc), message: "O nome da cidade não pode ficar vazio." }
+    }
+    doc.updatedAt = new Date(now).toISOString()
+    await cityRef.update({ name, updatedAt: doc.updatedAt })
+    return { success: true, state: docToState(doc), message: "Nome da cidade atualizado." }
   }
 
   if (

@@ -1,23 +1,28 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import Link from "next/link"
 import {
-  ArrowLeft,
+  X,
   Banknote,
+  Droplets,
   GraduationCap,
   HeartPulse,
   Landmark,
   LifeBuoy,
   Percent,
+  Pencil,
   Save,
   ShieldAlert,
   TrendingDown,
   TrendingUp,
   Users,
 } from "lucide-react"
-import type { CityPolicy, FundingLevel, PublicService } from "@/types/city"
+import type { CityPolicy, FundingLevel, PublicService, CitizenClass, SelectiveTax } from "@/types/city"
 import { useGame } from "@/hooks/useGame"
+
+interface MayorPanelProps {
+  onClose?: () => void
+}
 import { getBuilding } from "@/lib/game/buildings"
 import { deriveBudget, deriveServiceIndices, SERVICE_LABELS } from "@/lib/game/economy"
 import { cn } from "@/lib/utils"
@@ -33,6 +38,10 @@ const SERVICE_META: Record<
   health: { icon: <HeartPulse className="size-5" />, description: "Hospitais e atendimento à população." },
   security: { icon: <ShieldAlert className="size-5" />, description: "Policiamento e ordem pública." },
   prevention: { icon: <LifeBuoy className="size-5" />, description: "Defesa civil e prevenção de desastres." },
+  waste: { icon: <LifeBuoy className="size-5" />, description: "Coleta, limpeza e tratamento de resíduos." },
+  transit: { icon: <TrendingUp className="size-5" />, description: "Transporte público e mobilidade urbana." },
+  roads: { icon: <Landmark className="size-5" />, description: "Manutenção das estradas e rotas abertas." },
+  sewage: { icon: <Droplets className="size-5" />, description: "Tratamento de esgoto e saneamento da cidade." },
 }
 
 function formatMoney(n: number): string {
@@ -45,8 +54,10 @@ function indexTone(v: number): string {
   return "bg-destructive"
 }
 
-export function MayorPanel() {
-  const { city, state, status, updatePolicy, pending } = useGame()
+export function MayorPanel({ onClose }: MayorPanelProps) {
+  const { city, state, status, updatePolicy, renameCity, pending } = useGame()
+  const [cityName, setCityName] = useState(city?.name ?? "")
+  const [editingName, setEditingName] = useState(false)
 
   // Local draft of the policy so the mayor can preview the impact before
   // committing. The authoritative values still come from the server on save.
@@ -85,13 +96,13 @@ export function MayorPanel() {
     setDraft({ ...policy, services: { ...policy.services, [service]: level } })
 
   const save = async () => {
-    const ok = await updatePolicy(policy)
+    const ok = await updatePolicy(draft ?? policy)
     if (ok) setDraft(null)
   }
 
   return (
     <main className="min-h-svh bg-background text-foreground">
-      <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
+      <div className="mx-auto flex min-h-svh max-w-[1500px] flex-col px-4 py-6 sm:px-8 sm:py-8">
         {/* Header */}
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -103,13 +114,23 @@ export function MayorPanel() {
               <p className="text-sm text-muted-foreground">{city?.name ?? "Sua cidade"}</p>
             </div>
           </div>
-          <Link
-            href="/game"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
-          >
-            <ArrowLeft className="size-4" /> Voltar ao jogo
-          </Link>
+          {onClose && (
+            <button type="button" onClick={onClose} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary">
+              <X className="size-4" /> Fechar
+            </button>
+          )}
         </header>
+
+        <section className="mt-6 rounded-2xl border border-border bg-card p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Nome da cidade</p>
+              {!editingName && <p className="mt-1 text-lg font-semibold text-card-foreground">{city?.name ?? cityName}</p>}
+            </div>
+            {!editingName && <button type="button" onClick={() => setEditingName(true)} aria-label="Editar nome da cidade" className="inline-flex size-9 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><Pencil className="size-4" /></button>}
+          </div>
+          {editingName && <div className="mt-3 flex flex-col gap-2 sm:flex-row"><input id="city-name" autoFocus value={cityName} onChange={(event) => setCityName(event.target.value)} maxLength={40} className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none ring-primary focus:ring-2" /><button type="button" disabled={pending || !cityName.trim()} onClick={async () => { const ok = await renameCity(cityName); if (ok) setEditingName(false) }} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">Salvar nome</button></div>}
+        </section>
 
         {/* Summary cards */}
         <section className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -134,9 +155,9 @@ export function MayorPanel() {
           />
         </section>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.4fr]">
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
           {/* Taxes */}
-          <div className="rounded-3xl border border-border bg-card p-6">
+          <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
             <div className="flex items-center gap-2 text-card-foreground">
               <Percent className="size-5 text-primary" />
               <h2 className="font-display text-lg font-semibold">Imposto municipal</h2>
@@ -152,7 +173,7 @@ export function MayorPanel() {
             <input
               type="range"
               min={0}
-              max={20}
+              max={50}
               step={1}
               value={policy.taxRate}
               onChange={(e) => setTax(Number(e.target.value))}
@@ -162,12 +183,39 @@ export function MayorPanel() {
             <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
               <span>0%</span>
               <span>10%</span>
-              <span>20%</span>
+              <span>25%</span>
+              <span>50%</span>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
+            <div className="flex items-center gap-2 text-card-foreground"><Banknote className="size-5 text-primary" /><h2 className="font-display text-lg font-semibold">Sistema político e custo de vida</h2></div>
+            <p className="mt-1 text-sm text-muted-foreground">Alíquotas e preços alteram diretamente a opinião individual dos moradores.</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2"><div className="rounded-xl border border-border bg-background p-3"><p className="text-xs text-muted-foreground">Modelo econômico</p><p className="mt-1 font-semibold text-card-foreground">{policy.economicModel === "SANDBOX" ? "Sandbox" : policy.economicModel === "FREE_MARKET" ? "Livre mercado" : policy.economicModel === "PLANNED_ECONOMY" ? "Economia planejada" : policy.economicModel === "WELFARE_STATE" ? "Estado de bem-estar" : "Economia social de mercado"}</p></div><div className="rounded-xl border border-border bg-background p-3"><p className="text-xs text-muted-foreground">Ideologia</p><p className="mt-1 font-semibold text-card-foreground">{policy.ideology.replaceAll("_", " ")}</p></div></div>
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              {(["LOW", "MIDDLE", "HIGH"] as CitizenClass[]).map((group) => <label key={group} className="text-sm text-muted-foreground">{group === "LOW" ? "Baixa" : group === "MIDDLE" ? "Média" : "Alta"} · imposto %<input type="number" min={0} max={50} value={policy.classTaxRates[group]} onChange={(e) => setDraft({ ...policy, classTaxRates: { ...policy.classTaxRates, [group]: Number(e.target.value) } })} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground" /></label>)}
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {(["consumption", "energy", "water", "fuel"] as SelectiveTax[]).map((tax) => <label key={tax} className="text-sm text-muted-foreground">{tax === "consumption" ? "Consumo" : tax === "energy" ? "Energia" : tax === "water" ? "Água" : "Combustível"} · alíquota %<input type="number" min={0} max={50} value={policy.selectiveTaxes[tax]} onChange={(e) => setDraft({ ...policy, selectiveTaxes: { ...policy.selectiveTaxes, [tax]: Math.max(0, Math.min(50, Number(e.target.value) || 0)) } })} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground" /></label>)}
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">Os impostos seletivos encarecem diretamente o custo de vida e reduzem a opinião dos moradores afetados.</p>
+            <div className="mt-6 border-t border-border pt-5">
+              <h3 className="text-sm font-semibold text-card-foreground">Tabela de salários, moradia e consumo</h3>
+              <div className="mt-3 grid gap-4 md:grid-cols-3">
+                {(["LOW", "MIDDLE", "HIGH"] as CitizenClass[]).map((group) => <div key={group} className="rounded-xl bg-secondary/40 p-3"><div className="text-xs font-semibold text-card-foreground">{group === "LOW" ? "Baixa" : group === "MIDDLE" ? "Média" : "Alta"}</div><label className="mt-2 block text-xs text-muted-foreground">Salário<input type="number" min={1} value={policy.prices.salary[group]} onChange={(e) => setDraft({ ...policy, prices: { ...policy.prices, salary: { ...policy.prices.salary, [group]: Math.max(1, Number(e.target.value) || 1) } } })} className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-card-foreground" /></label><label className="mt-2 block text-xs text-muted-foreground">Aluguel<input type="number" min={0} value={policy.prices.rent[group]} onChange={(e) => setDraft({ ...policy, prices: { ...policy.prices, rent: { ...policy.prices.rent, [group]: Math.max(0, Number(e.target.value) || 0) } } })} className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-card-foreground" /></label></div>)}
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{(["market", "water", "energy", "fuel", "transit"] as const).map((item) => <label key={item} className="text-xs text-muted-foreground">{item === "market" ? "Mercado" : item === "water" ? "Água" : item === "energy" ? "Energia" : item === "fuel" ? "Gasolina" : "Transporte"}<input type="number" min={0} value={policy.prices.consumption[item]} onChange={(e) => setDraft({ ...policy, prices: { ...policy.prices, consumption: { ...policy.prices.consumption, [item]: Math.max(0, Number(e.target.value) || 0) } } })} className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-card-foreground" /></label>)}</div>
+              <div className="mt-5 rounded-xl border border-border bg-background p-4">
+                <div className="flex items-center justify-between gap-3"><div><h4 className="text-sm font-semibold text-card-foreground">Empregos e salários por setor</h4><p className="text-xs text-muted-foreground">A remuneração influencia a classe social e o poder de compra.</p></div><span className="text-xs text-muted-foreground">{(policy.prices.jobs ?? []).length} cargos</span></div>
+                <div className="mt-3 grid gap-2 md:grid-cols-2">
+                  {(policy.prices.jobs ?? []).map((job, index) => <div key={`${job.title}-${index}`} className="grid grid-cols-[1fr_100px] gap-2"><label className="sr-only" htmlFor={`job-${index}`}>Nome do emprego</label><input id={`job-${index}`} value={job.title} onChange={(e) => { const jobs = [...policy.prices.jobs]; jobs[index] = { ...job, title: e.target.value }; setDraft({ ...policy, prices: { ...policy.prices, jobs } }) }} className="min-w-0 rounded-lg border border-border bg-card px-2 py-1.5 text-sm text-card-foreground" /><label className="sr-only" htmlFor={`salary-${index}`}>Salário</label><input id={`salary-${index}`} type="number" min={1} value={job.salary} onChange={(e) => { const jobs = [...policy.prices.jobs]; jobs[index] = { ...job, salary: Math.max(1, Number(e.target.value) || 1) }; setDraft({ ...policy, prices: { ...policy.prices, jobs } }) }} className="rounded-lg border border-border bg-card px-2 py-1.5 text-sm text-card-foreground" /></div>)}
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Public services */}
-          <div className="rounded-3xl border border-border bg-card p-6">
+          <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
             <div className="flex items-center gap-2 text-card-foreground">
               <Landmark className="size-5 text-primary" />
               <h2 className="font-display text-lg font-semibold">Verbas dos serviços públicos</h2>
@@ -183,8 +231,8 @@ export function MayorPanel() {
                   icon={SERVICE_META[service].icon}
                   label={SERVICE_LABELS[service]}
                   description={SERVICE_META[service].description}
-                  level={policy.services[service]}
-                  index={services[service]}
+                  level={(policy.services[service] ?? 0) as FundingLevel}
+                  index={services[service] ?? (policy.services[service] ?? 0) * 30}
                   onChange={(lvl) => setService(service, lvl)}
                 />
               ))}
