@@ -16,6 +16,7 @@ import type {
   City,
   CityPolicy,
   CityState,
+  CityRegion,
 } from "@/types/city"
 
 import type {
@@ -160,6 +161,8 @@ interface GameContextValue {
   updatePolicy: (
     policy: CityPolicy,
   ) => Promise<boolean>
+
+  demarcateRegion: (region: CityRegion) => Promise<boolean>
 
   renameCity: (name: string) => Promise<boolean>
 
@@ -748,6 +751,24 @@ export function GameProvider({
       [cityId],
     )
 
+  const demarcateRegion = useCallback<GameContextValue["demarcateRegion"]>(
+    async (region) => {
+      setPending(true)
+      try {
+        const res = await gameService.performAction(cityId, { type: "DEMARCATE_REGION", region })
+        setState(res.state)
+        setLastMessage(res.message ?? null)
+        return res.success
+      } catch {
+        setLastMessage("Não foi possível salvar a região.")
+        return false
+      } finally {
+        setPending(false)
+      }
+    },
+    [cityId],
+  )
+
   const renameCity = useCallback<GameContextValue["renameCity"]>(
     async (name) => {
       const normalized = name.trim()
@@ -869,7 +890,8 @@ export function GameProvider({
         rotateSelectedBuilding,
 
   updatePolicy,
-
+  demarcateRegion,
+  
   renameCity,
 
   clearMessage: () =>
@@ -911,9 +933,10 @@ export function GameProvider({
 
         openBuilding,
 
-        updatePolicy,
-
-        load,
+  updatePolicy,
+  demarcateRegion,
+  
+  load,
 
         rotateBuilding,
 

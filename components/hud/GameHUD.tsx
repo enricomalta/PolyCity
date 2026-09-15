@@ -37,6 +37,7 @@ export function GameHUD() {
     vacateBuilding,
     closeBuilding,
     openBuilding,
+    demarcateRegion,
     lastMessage,
     clearMessage,
   } = useGame()
@@ -280,6 +281,7 @@ export function GameHUD() {
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{([['RESIDENTIAL','Residencial'],['COMMERCIAL','Comercial'],['INDUSTRIAL','Industrial'],['MIXED','Mista']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setZoneType(value)} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${zoneType === value ? "border-primary bg-primary/15 text-primary" : "border-border bg-secondary text-muted-foreground"}`}>{label}</button>)}</div>
             <div className="mt-3 grid grid-cols-3 gap-2">{([['LOW','Baixa'],['MIDDLE','Média'],['HIGH','Alta']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setZoneClass(value)} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${zoneClass === value ? "border-accent bg-accent/15 text-accent" : "border-border bg-secondary text-muted-foreground"}`}>{label}</button>)}</div>
             <p className="mt-3 rounded-lg bg-secondary/70 px-3 py-2 text-xs text-muted-foreground">Zona selecionada: <span className="font-semibold text-foreground">{zoneType}</span> · classe: <span className="font-semibold text-foreground">{zoneClass}</span></p>
+            <button type="button" disabled={!selectedTile} onClick={() => selectedTile && void demarcateRegion({ id: `region_${selectedTile.x}_${selectedTile.z}`, name: `${zoneType === "RESIDENTIAL" ? "Bairro" : "Zona"} ${selectedTile.x}-${selectedTile.z}`, zone: zoneType, citizenClass: zoneClass, tiles: [selectedTile], createdAt: new Date().toISOString() })} className="mt-3 w-full rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50">Salvar região no mapa</button>
           </div>
         )}
 
