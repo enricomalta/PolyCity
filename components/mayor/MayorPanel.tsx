@@ -96,7 +96,7 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
     setDraft({ ...policy, services: { ...policy.services, [service]: level } })
 
   const save = async () => {
-    const ok = await updatePolicy(policy)
+    const ok = await updatePolicy(draft ?? policy)
     if (ok) setDraft(null)
   }
 
@@ -231,8 +231,8 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
                   icon={SERVICE_META[service].icon}
                   label={SERVICE_LABELS[service]}
                   description={SERVICE_META[service].description}
-                  level={policy.services[service]}
-                  index={services[service]}
+                  level={(policy.services[service] ?? 0) as FundingLevel}
+                  index={services[service] ?? (policy.services[service] ?? 0) * 30}
                   onChange={(lvl) => setService(service, lvl)}
                 />
               ))}
