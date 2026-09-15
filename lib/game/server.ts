@@ -749,6 +749,18 @@ export async function getOrCreateCity(
     ticked.lastTickAt !==
     doc.lastTickAt
 
+  const elapsedDays = Math.max(0, (now - (doc.lastTickAt ?? now)) / (1000 * 60 * 60 * 24))
+  let roadsChanged = false
+  doc.buildings = doc.buildings.map((building) => {
+    if (building.type !== "ROAD") return building
+    const current = building.maintenance ?? { status: building.closed ? "CLOSED" as const : "REGULAR" as const, wear: 0, degradationRate: 0.02, lastMaintainedAt: new Date(now).toISOString() }
+    if (current.status === "CLOSED") return { ...building, closed: true, maintenance: current }
+    const wear = Math.min(100, current.wear + elapsedDays * current.degradationRate * 100)
+    const status = wear >= 85 ? "CLOSED" : wear >= 55 ? "IRREGULAR" : "REGULAR"
+    if (wear !== current.wear || status !== current.status || !building.maintenance) roadsChanged = true
+    return { ...building, closed: status === "CLOSED", roadCondition: status, maintenance: { ...current, status, wear } }
+  })
+
   doc.money =
     ticked.money
 
@@ -774,7 +786,8 @@ export async function getOrCreateCity(
 
   const shouldPersist =
     economyChanged ||
-    stageChanged
+    stageChanged ||
+    roadsChanged
 
   if (
     shouldPersist
@@ -793,6 +806,7 @@ export async function getOrCreateCity(
         doc.timeStage,
       citizens:
         doc.citizens,
+      buildings: doc.buildings,
       updatedAt:
         doc.updatedAt,
     })
@@ -1023,7 +1037,8 @@ export async function performAction(
           action.rotation,
         level: 1,
         occupied: false,
-        closed: false,
+        closed: action.buildingType === "ROAD" ? false : false,
+        ...(action.buildingType === "ROAD" ? { maintenance: { status: "REGULAR" as const, wear: 0, degradationRate: 0.02, lastMaintainedAt: new Date(now).toISOString() } } : {}),
       },
     ]
 

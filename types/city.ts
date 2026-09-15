@@ -158,6 +158,12 @@ export interface Building {
   occupied?: boolean
 
   // Estradas usam três estados: regular, irregular (operante) e fechada.
+  maintenance?: {
+    status: "REGULAR" | "IRREGULAR" | "CLOSED"
+    wear: number
+    degradationRate: number
+    lastMaintainedAt: string
+  }
   roadCondition?: "REGULAR" | "IRREGULAR" | "CLOSED"
   closed?: boolean
   workerBuildingId?: string
