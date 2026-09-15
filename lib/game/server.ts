@@ -278,9 +278,15 @@ function sanitizePolicy(
 function docToState(
   doc: CityDoc,
 ): CityState {
+  // Firestore can return legacy maps (or an absent field) for buildings.
+  // Normalize at the final serialization boundary so every API response is safe,
+  // including responses created before the migration in getCity/performAction.
+  const buildings = normalizeBuildings(doc.buildings)
+  doc.buildings = buildings
+
   const state =
     deriveState(
-      doc.buildings,
+      buildings,
       doc.money,
       doc.policy,
       doc.clockStartedAt,
