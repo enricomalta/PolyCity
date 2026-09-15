@@ -88,7 +88,9 @@ export function CityScene() {
 
   const buildings =
     state?.buildings ?? []
-  const isNight = state?.timeStage === 1
+  const isNight =
+    String(state?.timeStage) === "1" ||
+    state?.timeStage === "NIGHT"
 
   const citizens =
     state?.citizens ?? []
@@ -358,9 +360,9 @@ export function CityScene() {
 
       <hemisphereLight
         args={[
-          "#dcefff",
-          "#4a6b3a",
-          0.7,
+          isNight ? "#445b92" : "#dcefff",
+          isNight ? "#111827" : "#4a6b3a",
+          isNight ? 0.16 : 0.7,
         ]}
       />
 

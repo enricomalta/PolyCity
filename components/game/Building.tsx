@@ -711,6 +711,8 @@ export const BuildingMesh = memo(
       number,
     ]
     rotation?: number
+    isNight?: boolean
+    occupied?: boolean
   }) {
     return (
       <group
