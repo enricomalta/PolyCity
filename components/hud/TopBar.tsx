@@ -21,16 +21,20 @@ export function TopBar({ cityName, user, onLogout, onRename, onLinkGoogle }: Top
   const [name, setName] = useState(user?.displayName ?? "")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [renameConfirmOpen, setRenameConfirmOpen] = useState(false)
   const rename = async () => {
     if (user?.isRenamed || name.trim().length < 2) return
-    if (!window.confirm("Esta alteração só pode ser feita uma vez e não poderá ser solicitada novamente. Deseja continuar?")) return
+    setRenameConfirmOpen(true)
+  }
+  const confirmRename = async () => {
     setBusy(true)
     setError(null)
-    try { await onRename(name.trim()); setProfileOpen(false) } catch { setError("Não foi possível atualizar o nome.") } finally { setBusy(false) }
+    try { await onRename(name.trim()); setRenameConfirmOpen(false); setProfileOpen(false) } catch { setError("Não foi possível atualizar o nome.") } finally { setBusy(false) }
   }
   const initial = (user?.displayName || user?.email || "?").charAt(0).toUpperCase()
 
   return (
+    <>
     <div className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-border bg-card/90 py-1.5 pl-3 pr-1.5 shadow-lg shadow-black/30 backdrop-blur">
       <Logo className="hidden sm:flex" />
       <div className="hidden h-6 w-px bg-border sm:block" />
@@ -106,5 +110,7 @@ export function TopBar({ cityName, user, onLogout, onRename, onLinkGoogle }: Top
         )}
       </div>
     </div>
+    {renameConfirmOpen && <div className="pointer-events-auto fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"><div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl"><h2 className="text-lg font-semibold text-card-foreground">Confirmar alteração</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">O nome do prefeito só pode ser alterado uma vez. Depois da confirmação, essa alteração não poderá ser solicitada novamente.</p><div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setRenameConfirmOpen(false)} className="rounded-xl px-4 py-2 text-sm text-muted-foreground hover:bg-secondary">Cancelar</button><button type="button" disabled={busy} onClick={() => void confirmRename()} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{busy ? "Salvando..." : "Confirmar"}</button></div></div></div>}
+    </>
   )
 }

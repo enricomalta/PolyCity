@@ -8,6 +8,7 @@ export interface User {
   photoURL?: string | null
   isAnonymous?: boolean
   isRenamed?: boolean
+  anonymousExpiresAt?: string | null
 }
 
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated"

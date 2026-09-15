@@ -51,6 +51,7 @@ export function GameHUD() {
   const [clockNow, setClockNow] =
     useState(() => Date.now())
   const [mayorOpen, setMayorOpen] = useState(false)
+  const [anonymousWarningOpen, setAnonymousWarningOpen] = useState(false)
   const [zoneType, setZoneType] = useState<"RESIDENTIAL" | "COMMERCIAL" | "INDUSTRIAL" | "MIXED">("RESIDENTIAL")
   const [zoneClass, setZoneClass] = useState<"LOW" | "MIDDLE" | "HIGH">("MIDDLE")
   const [zoneName, setZoneName] = useState("")
@@ -58,6 +59,10 @@ export function GameHUD() {
   const [zoningTiles, setZoningTiles] = useState<Array<{ x: number; z: number }>>([])
   const [editingRegionId, setEditingRegionId] = useState<string | null>(null)
   const [terrainSelection, setTerrainSelection] = useState<Array<{ x: number; z: number }>>([])
+
+  useEffect(() => {
+    if (user?.isAnonymous) setAnonymousWarningOpen(true)
+  }, [user?.id, user?.isAnonymous])
   const [terrainType, setTerrainType] = useState<"SAND" | "GRASS" | "WATER" | "ROCK" | "FOREST">("GRASS")
 
   useEffect(() => {
@@ -360,6 +365,17 @@ export function GameHUD() {
         )}
 
       </div>
+
+      {anonymousWarningOpen && user?.isAnonymous && (
+        <div className="pointer-events-auto fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-widest text-primary">Atenção à sua conta</p><h2 className="mt-2 text-xl font-semibold text-card-foreground">Proteja seu progresso</h2></div><button type="button" onClick={() => setAnonymousWarningOpen(false)} aria-label="Fechar aviso" className="rounded-lg px-2 py-1 text-muted-foreground hover:bg-secondary">×</button></div>
+            <p className="mt-4 text-sm leading-6 text-muted-foreground">Você está jogando com uma conta anônima. Ela fica disponível por apenas 30 dias; faltam <strong className="text-card-foreground">{Math.max(0, Math.ceil((new Date(user.anonymousExpiresAt ?? Date.now() + 30 * 24 * 60 * 60 * 1000).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))} dias</strong> para perder o acesso, mesmo neste dispositivo.</p>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">Vincule sua conta Google no Perfil para manter sua cidade e todo o progresso.</p>
+            <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setAnonymousWarningOpen(false)} className="rounded-xl px-4 py-2 text-sm text-muted-foreground hover:bg-secondary">Continuar</button><button type="button" onClick={() => { setAnonymousWarningOpen(false); void linkGoogleAccount() }} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Vincular Google</button></div>
+          </div>
+        </div>
+      )}
 
       {mayorOpen && (
         <div className="pointer-events-auto fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/55 p-3 backdrop-blur-sm sm:p-8">

@@ -5,8 +5,12 @@ import { UnauthenticatedError, verifyBearer } from "@/lib/firebase/admin"
 export async function GET(request: Request) {
   try {
     const user = await verifyBearer(request.headers.get("authorization"))
-    const snapshot = await adminDb().collection("users").doc(user.uid).get()
-    return NextResponse.json({ isRenamed: snapshot.data()?.isRenamed === true })
+    const ref = adminDb().collection("users").doc(user.uid)
+    const snapshot = await ref.get()
+    const data = snapshot.data() ?? {}
+    const anonymousExpiresAt = data.anonymousExpiresAt ?? (user.firebase?.sign_in_provider === "anonymous" ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null)
+    if (!snapshot.exists || (user.firebase?.sign_in_provider === "anonymous" && !data.anonymousExpiresAt)) await ref.set({ anonymousExpiresAt }, { merge: true })
+    return NextResponse.json({ isRenamed: data.isRenamed === true, anonymousExpiresAt })
   } catch (error) {
     if (error instanceof UnauthenticatedError) return NextResponse.json({ message: error.message }, { status: 401 })
     return NextResponse.json({ message: "Não foi possível carregar o perfil." }, { status: 500 })

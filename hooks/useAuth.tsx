@@ -46,8 +46,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       void getIdToken().then(async (token) => {
         if (!token) return setState({ status: "authenticated", user, error: null })
         const response = await fetch("/api/profile", { headers: { Authorization: `Bearer ${token}` } })
-        const profile = response.ok ? await response.json() as { isRenamed?: boolean } : {}
-        setState({ status: "authenticated", user: { ...user, isRenamed: profile.isRenamed === true }, error: null })
+        const profile = response.ok ? await response.json() as { isRenamed?: boolean; anonymousExpiresAt?: string | null } : {}
+        setState({ status: "authenticated", user: { ...user, isRenamed: profile.isRenamed === true, anonymousExpiresAt: profile.anonymousExpiresAt ?? null }, error: null })
       })
     })
     return unsub
