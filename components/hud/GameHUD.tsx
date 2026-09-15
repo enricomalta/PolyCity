@@ -327,7 +327,7 @@ export function GameHUD() {
               </p>
 
               <p className="text-xs text-muted-foreground">
-                Selecione o tipo de terreno.
+                Clique no primeiro tile e no segundo para selecionar um quadrado. Depois escolha o tipo e aplique ao conjunto.
               </p>
             </div>
 

@@ -131,7 +131,19 @@ export function CityScene() {
   const [previewZone, setPreviewZone] = useState({ zone: "RESIDENTIAL", citizenClass: "MIDDLE" })
   const [previewTiles, setPreviewTiles] = useState<Array<{ x: number; z: number }>>([])
   const [terrainSelection, setTerrainSelection] = useState<Array<{ x: number; z: number }>>([])
+  const [terrainStart, setTerrainStart] = useState<[number, number] | null>(null)
+  const [terrainEnd, setTerrainEnd] = useState<[number, number] | null>(null)
   const [terrainPreview, setTerrainPreview] = useState<"SAND" | "GRASS" | "WATER" | "ROCK" | "FOREST">("GRASS")
+
+  const getTerrainRectangle = (from: [number, number], to: [number, number]) => {
+    const minX = Math.min(from[0], to[0])
+    const maxX = Math.max(from[0], to[0])
+    const minZ = Math.min(from[1], to[1])
+    const maxZ = Math.max(from[1], to[1])
+    return Array.from({ length: maxX - minX + 1 }, (_, x) =>
+      Array.from({ length: maxZ - minZ + 1 }, (_, z) => ({ x: minX + x, z: minZ + z })),
+    ).flat()
+  }
 
   useEffect(() => {
     const handleTerrainSelection = (event: Event) => {
@@ -139,7 +151,11 @@ export function CityScene() {
       setTerrainSelection(detail.tiles)
       setTerrainPreview(detail.terrain)
     }
-    const handleClearTerrain = () => setTerrainSelection([])
+    const handleClearTerrain = () => {
+      setTerrainSelection([])
+      setTerrainStart(null)
+      setTerrainEnd(null)
+    }
     window.addEventListener("polycity:terrain-selection", handleTerrainSelection)
     window.addEventListener("polycity:clear-terrain-selection", handleClearTerrain)
     return () => { window.removeEventListener("polycity:terrain-selection", handleTerrainSelection); window.removeEventListener("polycity:clear-terrain-selection", handleClearTerrain) }
@@ -354,10 +370,21 @@ export function CityScene() {
         tiles[x]?.[z]
 
       if (tool === "TERRAIN_EDIT") {
-        if (!tile || tile.occupiedBy) return
-        const nextTiles = terrainSelection.length === 0 ? [{ x, z }] : terrainSelection.some((item) => item.x === x && item.z === z) ? terrainSelection : [...terrainSelection, { x, z }]
-        setTerrainSelection(nextTiles)
-        window.dispatchEvent(new CustomEvent("polycity:terrain-selection", { detail: { tiles: nextTiles, terrain: terrainPreview } }))
+        if (!tile) return
+        if (!terrainStart || terrainEnd) {
+          const start: [number, number] = [x, z]
+          setTerrainStart(start)
+          setTerrainEnd(null)
+          const singleTile = [{ x, z }]
+          setTerrainSelection(singleTile)
+          window.dispatchEvent(new CustomEvent("polycity:terrain-selection", { detail: { tiles: singleTile, terrain: terrainPreview } }))
+        } else {
+          const end: [number, number] = [x, z]
+          const selectedTiles = getTerrainRectangle(terrainStart, end)
+          setTerrainEnd(end)
+          setTerrainSelection(selectedTiles)
+          window.dispatchEvent(new CustomEvent("polycity:terrain-selection", { detail: { tiles: selectedTiles, terrain: terrainPreview } }))
+        }
         selectTile({ x, z })
         return
       }
@@ -487,6 +514,10 @@ export function CityScene() {
       build,
       demolish,
       selectTile,
+      terrainSelection,
+      terrainStart,
+      terrainEnd,
+      terrainPreview,
     ],
   )
 
