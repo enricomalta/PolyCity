@@ -173,6 +173,7 @@ export function CityScene() {
 
   useEffect(() => {
     const handleClear = () => {
+      setPreviewZone(null)
       setZoningStart(null)
       setZoningEnd(null)
       setZoningSelectionComplete(false)
