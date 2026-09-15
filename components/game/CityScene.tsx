@@ -130,6 +130,20 @@ export function CityScene() {
   const [zoningSelectionComplete, setZoningSelectionComplete] = useState(false)
   const [previewZone, setPreviewZone] = useState({ zone: "RESIDENTIAL", citizenClass: "MIDDLE" })
   const [previewTiles, setPreviewTiles] = useState<Array<{ x: number; z: number }>>([])
+  const [terrainSelection, setTerrainSelection] = useState<Array<{ x: number; z: number }>>([])
+  const [terrainPreview, setTerrainPreview] = useState<"SAND" | "GRASS" | "WATER" | "ROCK" | "FOREST">("GRASS")
+
+  useEffect(() => {
+    const handleTerrainSelection = (event: Event) => {
+      const detail = (event as CustomEvent<{ tiles: Array<{ x: number; z: number }>; terrain: typeof terrainPreview }>).detail
+      setTerrainSelection(detail.tiles)
+      setTerrainPreview(detail.terrain)
+    }
+    const handleClearTerrain = () => setTerrainSelection([])
+    window.addEventListener("polycity:terrain-selection", handleTerrainSelection)
+    window.addEventListener("polycity:clear-terrain-selection", handleClearTerrain)
+    return () => { window.removeEventListener("polycity:terrain-selection", handleTerrainSelection); window.removeEventListener("polycity:clear-terrain-selection", handleClearTerrain) }
+  }, [])
 
   useEffect(() => {
     const handleZone = (event: Event) => {
@@ -341,9 +355,9 @@ export function CityScene() {
 
       if (tool === "TERRAIN_EDIT") {
         if (!tile || tile.occupiedBy) return
-        const terrainTypes = ["GRASS", "WATER", "ROCK", "FOREST", "SAND"] as const
-        const nextTerrain = terrainTypes[(terrainTypes.indexOf(tile.terrain) + 1) % terrainTypes.length]
-        void setTerrain(x, z, nextTerrain)
+        const nextTiles = terrainSelection.length === 0 ? [{ x, z }] : terrainSelection.some((item) => item.x === x && item.z === z) ? terrainSelection : [...terrainSelection, { x, z }]
+        setTerrainSelection(nextTiles)
+        window.dispatchEvent(new CustomEvent("polycity:terrain-selection", { detail: { tiles: nextTiles, terrain: terrainPreview } }))
         selectTile({ x, z })
         return
       }
@@ -541,6 +555,7 @@ export function CityScene() {
       />
 
       <Suspense fallback={null}>
+        {tool === "TERRAIN_EDIT" && terrainSelection.map((tile) => <mesh key={`terrain-preview-${tile.x}-${tile.z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(tile.x), 0.055, tileToWorld(tile.z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={terrainPreview === "WATER" ? "#38bdf8" : terrainPreview === "SAND" ? "#facc15" : terrainPreview === "ROCK" ? "#78716c" : terrainPreview === "FOREST" ? "#16a34a" : "#4ade80"} transparent opacity={0.78} /></mesh>)}
         {tool === "ZONING" && state?.regions?.flatMap((region) => region.tiles.map((tile) => <mesh key={`region-${region.id}-${tile.x}-${tile.z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(tile.x), 0.04, tileToWorld(tile.z)]}><planeGeometry args={[TILE_SIZE * 0.92, TILE_SIZE * 0.92]} /><meshBasicMaterial color={regionColor(region)} transparent opacity={0.68} /></mesh>))}
         {tool === "ZONING" && previewTiles.length > 0 && previewTiles.map((tile) => <mesh key={`selected-preview-${tile.x}-${tile.z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(tile.x), 0.045, tileToWorld(tile.z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={regionColor(previewZone)} transparent opacity={0.84} /></mesh>)}
         {tool === "ZONING" && previewTiles.length === 0 && zoningStart && zoningEnd && Array.from({ length: Math.abs(zoningEnd[0] - zoningStart[0]) + 1 }, (_, ix) => ix).flatMap((ix) => Array.from({ length: Math.abs(zoningEnd[1] - zoningStart[1]) + 1 }, (_, iz) => iz)).map((_, index) => {

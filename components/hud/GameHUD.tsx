@@ -38,6 +38,7 @@ export function GameHUD() {
     closeBuilding,
     openBuilding,
     demarcateRegion,
+    setTerrain,
     lastMessage,
     clearMessage,
   } = useGame()
@@ -56,6 +57,8 @@ export function GameHUD() {
   const [heatMetric, setHeatMetric] = useState<"happiness" | "employment" | "services" | "roads">("happiness")
   const [zoningTiles, setZoningTiles] = useState<Array<{ x: number; z: number }>>([])
   const [editingRegionId, setEditingRegionId] = useState<string | null>(null)
+  const [terrainSelection, setTerrainSelection] = useState<Array<{ x: number; z: number }>>([])
+  const [terrainType, setTerrainType] = useState<"SAND" | "GRASS" | "WATER" | "ROCK" | "FOREST">("GRASS")
 
   useEffect(() => {
     if (editingRegionId || zoningTiles.length > 0) {
@@ -330,26 +333,8 @@ export function GameHUD() {
 
             <div className="grid grid-cols-3 gap-2">
 
-              <button
-                type="button"
-                className="rounded-xl border border-border bg-secondary/60 p-3 text-sm font-medium text-card-foreground transition-colors hover:border-primary/50 hover:bg-secondary"
-              >
-                Areia
-              </button>
+              {([['SAND', 'Areia'], ['GRASS', 'Grama'], ['WATER', 'Água'], ['ROCK', 'Rochas'], ['FOREST', 'Árvores']] as const).map(([value, label]) => <button key={value} type="button" onClick={() => { setTerrainType(value); window.dispatchEvent(new CustomEvent("polycity:terrain-selection", { detail: { tiles: terrainSelection, terrain: value } })) }} className={`rounded-xl border p-3 text-sm font-medium transition-colors ${terrainType === value ? "border-primary bg-primary/15 text-primary" : "border-border bg-secondary/60 text-card-foreground hover:border-primary/50 hover:bg-secondary"}`}>{label}</button>)}
 
-              <button
-                type="button"
-                className="rounded-xl border border-border bg-secondary/60 p-3 text-sm font-medium text-card-foreground transition-colors hover:border-primary/50 hover:bg-secondary"
-              >
-                Grama
-              </button>
-
-              <button
-                type="button"
-                className="rounded-xl border border-border bg-secondary/60 p-3 text-sm font-medium text-card-foreground transition-colors hover:border-primary/50 hover:bg-secondary"
-              >
-                Água
-              </button>
 
             </div>
           </div>
@@ -361,9 +346,11 @@ export function GameHUD() {
         <div className="pointer-events-auto fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/55 p-3 backdrop-blur-sm sm:p-8">
           <div className="relative w-full overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
             <MayorPanel onClose={() => { setMayorOpen(false); setTool("SELECT"); selectBuildingType(null) }} />
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">{terrainSelection.length} tiles selecionados. Rocha pode ser aplicada sobre areia.</p>
+            <button type="button" disabled={!terrainSelection.length} onClick={() => { void Promise.all(terrainSelection.map((tile) => setTerrain(tile.x, tile.z, terrainType))); setTerrainSelection([]); window.dispatchEvent(new Event("polycity:clear-terrain-selection")) }} className="mt-3 w-full rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50">Aplicar terreno</button>
           </div>
-        </div>
-      )}
+        )}
     </div>
   )
 }
