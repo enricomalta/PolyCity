@@ -95,7 +95,7 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
 
   return (
     <main className="min-h-svh bg-background text-foreground">
-      <div className="mx-auto flex min-h-svh w-full max-w-[1500px] flex-col px-4 py-6 sm:px-8 sm:py-8">
+      <div className="mx-auto flex min-h-svh max-w-[1500px] flex-col px-4 py-6 sm:px-8 sm:py-8">
         {/* Header */}
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -147,7 +147,7 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.4fr]">
           {/* Taxes */}
-          <div className="rounded-3xl border border-border bg-card p-6">
+          <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
             <div className="flex items-center gap-2 text-card-foreground">
               <Percent className="size-5 text-primary" />
               <h2 className="font-display text-lg font-semibold">Imposto municipal</h2>
@@ -198,7 +198,7 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
           </div>
 
           {/* Public services */}
-          <div className="rounded-3xl border border-border bg-card p-6">
+          <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
             <div className="flex items-center gap-2 text-card-foreground">
               <Landmark className="size-5 text-primary" />
               <h2 className="font-display text-lg font-semibold">Verbas dos serviços públicos</h2>
