@@ -36,6 +36,8 @@ const SERVICE_META: Record<
   health: { icon: <HeartPulse className="size-5" />, description: "Hospitais e atendimento à população." },
   security: { icon: <ShieldAlert className="size-5" />, description: "Policiamento e ordem pública." },
   prevention: { icon: <LifeBuoy className="size-5" />, description: "Defesa civil e prevenção de desastres." },
+  waste: { icon: <LifeBuoy className="size-5" />, description: "Coleta, limpeza e tratamento de resíduos." },
+  transit: { icon: <TrendingUp className="size-5" />, description: "Transporte público e mobilidade urbana." },
 }
 
 function formatMoney(n: number): string {
@@ -145,7 +147,7 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
           />
         </section>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.4fr]">
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
           {/* Taxes */}
           <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
             <div className="flex items-center gap-2 text-card-foreground">
@@ -181,6 +183,15 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
           <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
             <div className="flex items-center gap-2 text-card-foreground"><Banknote className="size-5 text-primary" /><h2 className="font-display text-lg font-semibold">Sistema político e custo de vida</h2></div>
             <p className="mt-1 text-sm text-muted-foreground">Alíquotas e preços alteram diretamente a opinião individual dos moradores.</p>
+            <label className="mt-4 block max-w-sm text-sm text-muted-foreground">Modelo econômico e ideologia
+              <select value={policy.ideology} onChange={(e) => setDraft({ ...policy, ideology: e.target.value as CityPolicy["ideology"] })} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground">
+                <option value="SOCIAL_DEMOCRACY">Social-democracia</option>
+                <option value="LIBERALISM">Liberalismo</option>
+                <option value="CONSERVATISM">Conservadorismo</option>
+                <option value="ECOLOGISM">Ecologismo</option>
+                <option value="LIBERTARIANISM">Libertarianismo</option>
+              </select>
+            </label>
             <div className="mt-4 grid gap-4 md:grid-cols-3">
               {(["LOW", "MIDDLE", "HIGH"] as CitizenClass[]).map((group) => <label key={group} className="text-sm text-muted-foreground">{group === "LOW" ? "Baixa" : group === "MIDDLE" ? "Média" : "Alta"} · imposto %<input type="number" min={0} max={50} value={policy.classTaxRates[group]} onChange={(e) => setDraft({ ...policy, classTaxRates: { ...policy.classTaxRates, [group]: Number(e.target.value) } })} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground" /></label>)}
             </div>

@@ -224,6 +224,10 @@ function sanitizePolicy(
   const p =
     (input ?? {}) as Partial<CityPolicy>
 
+  const ideology = ["SOCIAL_DEMOCRACY", "LIBERALISM", "CONSERVATISM", "ECOLOGISM", "LIBERTARIANISM"].includes(String((p as Partial<CityPolicy>).ideology))
+    ? (String((p as Partial<CityPolicy>).ideology) as CityPolicy["ideology"])
+    : DEFAULT_POLICY.ideology
+
   const taxRate =
     Math.max(
       0,
@@ -280,7 +284,7 @@ function sanitizePolicy(
   for (const key of ["market", "water", "energy", "fuel", "transit"] as const) {
     prices.consumption[key] = Math.max(0, Number(rawPolicy.prices?.consumption?.[key] ?? prices.consumption[key]))
   }
-  return { taxRate, classTaxRates, selectiveTaxes, services, prices }
+  return { taxRate, ideology, classTaxRates, selectiveTaxes, services, prices }
 }
 
 function docToState(
