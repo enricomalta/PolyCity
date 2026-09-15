@@ -69,7 +69,7 @@ export function createCitizen(
     citizenClass,
     salary,
     monthlyExpenses,
-    opinion: { score: 60, government: 60, economy: 60, services: 60, taxes: 60, housing: 60 },
+    opinion: { score: 60, government: 60, economy: 60, services: 60, taxes: 60, housing: 60, education: 60, health: 60, security: 60, prevention: 60, waste: 60, transit: 60 },
   }
 }
 

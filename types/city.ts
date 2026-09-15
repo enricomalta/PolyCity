@@ -19,7 +19,9 @@ export interface City {
 
 // The four public services the mayor funds. Each has a funding level that the
 // mayor controls from the "Gabinete do Prefeito" page.
-export type PublicService = "education" | "health" | "security" | "prevention"
+export type PublicService = "education" | "health" | "security" | "prevention" | "waste" | "transit"
+
+export type PoliticalIdeology = "SOCIAL_DEMOCRACY" | "LIBERALISM" | "CONSERVATISM" | "ECOLOGISM" | "LIBERTARIANISM"
 
 // Funding level per service: 0 = sem verba ... 3 = verba máxima.
 export type FundingLevel = 0 | 1 | 2 | 3
@@ -40,6 +42,7 @@ export interface EconomyPrices {
 export interface CityPolicy {
   // Tax rates are percentages. Municipal income tax is capped at 50%.
   taxRate: number
+  ideology: PoliticalIdeology
   classTaxRates: Record<CitizenClass, number>
   selectiveTaxes: Record<SelectiveTax, number>
   services: Record<PublicService, FundingLevel>
@@ -53,6 +56,23 @@ export interface CitizenOpinion {
   services: number
   taxes: number
   housing: number
+  education: number
+  health: number
+  security: number
+  prevention: number
+  waste: number
+  transit: number
+}
+
+export interface CitizenPost {
+  id: string
+  citizenId: string
+  citizenName: string
+  tone: "praise" | "criticism"
+  topic: PublicService | "taxes" | "housing" | "economy"
+  message: string
+  score: number
+  createdAt: string
 }
 
 export interface Citizen {
