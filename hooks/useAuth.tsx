@@ -2,12 +2,15 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
 import type { AuthState, User } from "@/types/auth"
-import { isFirebaseConfigured, signInWithGoogle, signOut, subscribeToAuth } from "@/lib/firebase/auth"
+import { getIdToken, isFirebaseConfigured, linkAnonymousWithGoogle, signInAnonymouslyAsGuest, signInWithGoogle, signOut, subscribeToAuth, updateUserDisplayName } from "@/lib/firebase/auth"
 
 interface AuthContextValue extends AuthState {
   // Firebase is configured with real credentials.
   firebaseEnabled: boolean
   loginWithGoogle: () => Promise<void>
+  loginAsGuest: () => Promise<void>
+  linkGoogleAccount: () => Promise<void>
+  renameProfile: (displayName: string) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -39,7 +42,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
     const unsub = subscribeToAuth((user) => {
-      setState({ status: user ? "authenticated" : "unauthenticated", user, error: null })
+      if (!user) return setState({ status: "unauthenticated", user: null, error: null })
+      void getIdToken().then(async (token) => {
+        if (!token) return setState({ status: "authenticated", user, error: null })
+        const response = await fetch("/api/profile", { headers: { Authorization: `Bearer ${token}` } })
+        const profile = response.ok ? await response.json() as { isRenamed?: boolean; anonymousExpiresAt?: string | null } : {}
+        setState({ status: "authenticated", user: { ...user, isRenamed: profile.isRenamed === true, anonymousExpiresAt: profile.anonymousExpiresAt ?? null }, error: null })
+      })
     })
     return unsub
   }, [])
@@ -66,6 +75,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const loginAsGuest = useCallback(async () => {
+    if (!isFirebaseConfigured) return loginWithGoogle()
+    const user = await signInAnonymouslyAsGuest()
+    setState({ status: "authenticated", user, error: null })
+  }, [loginWithGoogle])
+
+  const linkGoogleAccount = useCallback(async () => {
+    const user = await linkAnonymousWithGoogle()
+    setState({ status: "authenticated", user, error: null })
+  }, [])
+
+  const renameProfile = useCallback(async (displayName: string) => {
+    const user = await updateUserDisplayName(displayName)
+    setState({ status: "authenticated", user, error: null })
+  }, [])
+
   const logout = useCallback(async () => {
     if (!isFirebaseConfigured) {
       localStorage.removeItem(GUEST_KEY)
@@ -76,8 +101,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ ...state, firebaseEnabled: isFirebaseConfigured, loginWithGoogle, logout }),
-    [state, loginWithGoogle, logout],
+    () => ({ ...state, firebaseEnabled: isFirebaseConfigured, loginWithGoogle, loginAsGuest, linkGoogleAccount, renameProfile, logout }),
+    [state, loginWithGoogle, loginAsGuest, linkGoogleAccount, renameProfile, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -11,12 +11,18 @@ import { Spinner } from "@/components/ui/loader"
 
 export default function LandingPage() {
   const router = useRouter()
-  const { status, user, loginWithGoogle, firebaseEnabled } = useAuth()
+  const { status, user, loginWithGoogle, loginAsGuest, firebaseEnabled } = useAuth()
   const [busy, setBusy] = useState(false)
 
-  const handlePlay = () => {
-    if (status === "authenticated") router.push("/game")
-    else router.push("/login")
+  const handlePlay = async () => {
+    if (status === "authenticated") return router.push("/game")
+    setBusy(true)
+    try {
+      await loginAsGuest()
+      router.push("/game")
+    } finally {
+      setBusy(false)
+    }
   }
 
   const handleGoogle = async () => {
@@ -82,7 +88,8 @@ export default function LandingPage() {
                 <>
                   <button
                     type="button"
-                    onClick={handlePlay}
+                    onClick={() => void handlePlay()}
+                    disabled={busy}
                     className="group inline-flex items-center justify-center gap-2 rounded-full bg-primary px-8 py-4 text-lg font-bold text-primary-foreground shadow-xl shadow-primary/20 transition hover:brightness-105 active:scale-[0.99]"
                   >
                     <Play className="size-5 fill-current" />

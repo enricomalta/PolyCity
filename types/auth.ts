@@ -6,6 +6,9 @@ export interface User {
   email: string | null
   displayName: string | null
   photoURL?: string | null
+  isAnonymous?: boolean
+  isRenamed?: boolean
+  anonymousExpiresAt?: string | null
 }
 
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated"

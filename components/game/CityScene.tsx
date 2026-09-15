@@ -103,6 +103,7 @@ export function CityScene() {
   // valor atual (SelectionIndicator) lê o SelectionContext diretamente.
   const {
     tiles,
+    city,
     state,
 
     tool,
@@ -204,7 +205,8 @@ export function CityScene() {
   }, [])
 
   const buildings = state?.buildings ?? []
-  const liveClock = useGameClock(state?.clockStartedAt ?? null)
+
+  const liveClock = useGameClock(city?.clockStartedAt ?? null)
   const visualClock = liveClock ?? state?.clock
   const visualStage = visualClock?.stage ?? (String(state?.timeStage) === "1" || state?.timeStage === "NIGHT" ? "NIGHT" : "DAY")
   const isNight =
@@ -651,11 +653,7 @@ export function CityScene() {
           occupyHouse={occupyHouse}
           arriveWork={arriveWork}
           arriveHome={arriveHome}
-          timeStage={
-            state?.timeStage === "DAY"
-              ? "DAY"
-              : "NIGHT"
-          }
+          timeStage={visualStage}
         />
 
         <SelectionIndicator
