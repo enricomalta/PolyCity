@@ -165,8 +165,8 @@ export function GroundTiles({ tiles, onSelect, onCancelSelect, onDragSelect, all
           pressRef.current = { screenX: e.nativeEvent.clientX, screenY: e.nativeEvent.clientY, tile: coordFromPoint(e) }
         }}
         onContextMenu={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
+          e.nativeEvent?.preventDefault?.()
+          e.nativeEvent?.stopPropagation?.()
           onCancelSelect?.()
         }}
         onPointerUp={(e) => {

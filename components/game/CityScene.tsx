@@ -117,15 +117,26 @@ export function CityScene() {
   const [zoningStart, setZoningStart] = useState<[number, number] | null>(null)
   const [zoningEnd, setZoningEnd] = useState<[number, number] | null>(null)
   const [zoningSelectionComplete, setZoningSelectionComplete] = useState(false)
+  const [previewZone, setPreviewZone] = useState({ zone: "RESIDENTIAL", citizenClass: "MIDDLE" })
 
   useEffect(() => {
-    const handleSaved = () => {
+    const handleZone = (event: Event) => setPreviewZone((event as CustomEvent<typeof previewZone>).detail)
+    window.addEventListener("polycity:zone-preview", handleZone)
+    return () => window.removeEventListener("polycity:zone-preview", handleZone)
+  }, [])
+
+  useEffect(() => {
+    const handleClear = () => {
       setZoningStart(null)
       setZoningEnd(null)
       setZoningSelectionComplete(false)
     }
-    window.addEventListener("polycity:zoning-saved", handleSaved)
-    return () => window.removeEventListener("polycity:zoning-saved", handleSaved)
+    window.addEventListener("polycity:clear-selection", handleClear)
+    window.addEventListener("polycity:zoning-saved", handleClear)
+    return () => {
+      window.removeEventListener("polycity:clear-selection", handleClear)
+      window.removeEventListener("polycity:zoning-saved", handleClear)
+    }
   }, [])
 
   const publishZoningRange = (from: [number, number], to: [number, number]) => {
@@ -502,7 +513,7 @@ export function CityScene() {
           const width = Math.abs(zoningEnd[1] - zoningStart[1]) + 1
           const x = minX + Math.floor(index / width)
           const z = minZ + index % width
-          const previewRegion = { zone: "RESIDENTIAL", citizenClass: "MIDDLE" }
+          const previewRegion = previewZone
           return <mesh key={`zone-preview-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.035, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.92, TILE_SIZE * 0.92]} /><meshBasicMaterial color={regionColor(previewRegion)} transparent opacity={0.72} /></mesh>
         })}
         {tool === "HEATMAP" && Array.from({ length: 30 * 30 }, (_, index) => { const x = index % 30; const z = Math.floor(index / 30); const region = state?.regions?.find((item) => item.tiles.some((tile) => tile.x === x && tile.z === z)); const value = heatValue(heatMetric, state, region); return <mesh key={`heat-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.034, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={heatColor(value)} transparent opacity={0.62} /></mesh> })}
