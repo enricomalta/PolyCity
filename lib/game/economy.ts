@@ -9,6 +9,14 @@ import { getBuilding } from "./buildings"
 // client previews never drift apart. The server's result always wins.
 
 export const DEFAULT_PRICES = {
+  jobs: [
+    { title: "Atendente de comércio", sector: "COMMERCE", salary: 14, class: "LOW" },
+    { title: "Operário industrial", sector: "INDUSTRY", salary: 22, class: "LOW" },
+    { title: "Professor", sector: "PUBLIC", salary: 32, class: "MIDDLE" },
+    { title: "Técnico de serviços", sector: "SERVICES", salary: 38, class: "MIDDLE" },
+    { title: "Engenheiro de tecnologia", sector: "TECHNOLOGY", salary: 72, class: "HIGH" },
+    { title: "Gestor logístico", sector: "LOGISTICS", salary: 58, class: "HIGH" },
+  ],
   salary: { LOW: 12, MIDDLE: 28, HIGH: 65 },
   rent: { LOW: 5, MIDDLE: 12, HIGH: 28 },
   consumption: { market: 8, water: 2, energy: 3, fuel: 4, transit: 3 },

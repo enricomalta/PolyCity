@@ -49,7 +49,29 @@ export type CitizenClass = "LOW" | "MIDDLE" | "HIGH"
 
 export type SelectiveTax = "consumption" | "energy" | "water" | "fuel"
 
+export type EmploymentSector = "PUBLIC" | "COMMERCE" | "INDUSTRY" | "TECHNOLOGY" | "SERVICES" | "LOGISTICS" | "AGRICULTURE"
+
+export interface JobSalary {
+  title: string
+  sector: EmploymentSector
+  salary: number
+  class: CitizenClass
+}
+
+export type RegionZone = "RESIDENTIAL" | "COMMERCIAL" | "INDUSTRIAL" | "MIXED" | "PARK"
+
+export interface CityRegion {
+  id: string
+  name: string
+  zone: RegionZone
+  citizenClass?: CitizenClass
+  tiles: Array<{ x: number; z: number }>
+  taxRate?: number
+  createdAt: string
+}
+
 export interface EconomyPrices {
+  jobs: JobSalary[]
   salary: Record<CitizenClass, number>
   rent: Record<CitizenClass, number>
   consumption: { market: number; water: number; energy: number; fuel: number; transit: number }

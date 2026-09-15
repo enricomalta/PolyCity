@@ -274,6 +274,7 @@ function sanitizePolicy(
   const classTaxRates = { ...DEFAULT_POLICY.classTaxRates }
   const selectiveTaxes = { ...DEFAULT_POLICY.selectiveTaxes }
   const prices = {
+    jobs: DEFAULT_PRICES.jobs.map((job) => ({ ...job })),
     salary: { ...DEFAULT_PRICES.salary },
     rent: { ...DEFAULT_PRICES.rent },
     consumption: { ...DEFAULT_PRICES.consumption },
