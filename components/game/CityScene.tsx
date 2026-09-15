@@ -29,6 +29,7 @@ import {
 } from "@/lib/game/constants"
 
 import { canPlace } from "@/lib/game/grid"
+import { createGameClock } from "@/lib/game/clock"
 
 import { useGame } from "@/hooks/useGame"
 
@@ -173,16 +174,25 @@ export function CityScene() {
   }, [])
 
   const buildings =
-    state?.buildings ?? []
-  const isNight =
-    String(state?.timeStage) === "1" ||
-    state?.timeStage === "NIGHT"
+  state?.buildings ?? []
+  const [, setVisualClockTick] = useState(0)
 
-  const minuteOfDay = state?.clock
-    ? state.clock.hour * 60 + state.clock.minute
-    : isNight
-      ? 0
-      : 720
+  useEffect(() => {
+    if (!state?.clockStartedAt) return
+    const interval = window.setInterval(() => setVisualClockTick((tick) => tick + 1), 1000)
+    return () => window.clearInterval(interval)
+  }, [state?.clockStartedAt])
+
+  const visualClock = state?.clockStartedAt ? createGameClock(state.clockStartedAt, Date.now()) : state?.clock
+  const visualStage = visualClock?.stage ?? (String(state?.timeStage) === "1" || state?.timeStage === "NIGHT" ? "NIGHT" : "DAY")
+  const isNight =
+  visualStage === "NIGHT"
+
+  const minuteOfDay = visualClock
+  ? visualClock.hour * 60 + visualClock.minute
+  : isNight
+  ? 0
+  : 720
 
   const smoothstep = (edge0: number, edge1: number, value: number) => {
     const progress = Math.max(
