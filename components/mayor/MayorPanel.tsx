@@ -95,7 +95,7 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
 
   return (
     <main className="min-h-svh bg-background text-foreground">
-      <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
+      <div className="mx-auto flex min-h-svh w-full max-w-[1500px] flex-col px-4 py-6 sm:px-8 sm:py-8">
         {/* Header */}
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -173,7 +173,8 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
             <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
               <span>0%</span>
               <span>10%</span>
-              <span>20%</span>
+              <span>25%</span>
+              <span>50%</span>
             </div>
           </div>
 
@@ -183,8 +184,16 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
             <div className="mt-4 grid gap-4 md:grid-cols-3">
               {(["LOW", "MIDDLE", "HIGH"] as CitizenClass[]).map((group) => <label key={group} className="text-sm text-muted-foreground">{group === "LOW" ? "Baixa" : group === "MIDDLE" ? "Média" : "Alta"} · imposto %<input type="number" min={0} max={50} value={policy.classTaxRates[group]} onChange={(e) => setDraft({ ...policy, classTaxRates: { ...policy.classTaxRates, [group]: Number(e.target.value) } })} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground" /></label>)}
             </div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-4">
-              {(["consumption", "energy", "water", "fuel"] as SelectiveTax[]).map((tax) => <label key={tax} className="text-sm text-muted-foreground">{tax === "consumption" ? "Consumo" : tax === "energy" ? "Energia" : tax === "water" ? "Água" : "Combustível"} %<input type="number" min={0} max={50} value={policy.selectiveTaxes[tax]} onChange={(e) => setDraft({ ...policy, selectiveTaxes: { ...policy.selectiveTaxes, [tax]: Number(e.target.value) } })} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground" /></label>)}
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {(["consumption", "energy", "water", "fuel"] as SelectiveTax[]).map((tax) => <label key={tax} className="text-sm text-muted-foreground">{tax === "consumption" ? "Consumo" : tax === "energy" ? "Energia" : tax === "water" ? "Água" : "Combustível"} · alíquota %<input type="number" min={0} max={50} value={policy.selectiveTaxes[tax]} onChange={(e) => setDraft({ ...policy, selectiveTaxes: { ...policy.selectiveTaxes, [tax]: Math.max(0, Math.min(50, Number(e.target.value) || 0)) } })} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground" /></label>)}
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">Os impostos seletivos encarecem diretamente o custo de vida e reduzem a opinião dos moradores afetados.</p>
+            <div className="mt-6 border-t border-border pt-5">
+              <h3 className="text-sm font-semibold text-card-foreground">Tabela de salários, moradia e consumo</h3>
+              <div className="mt-3 grid gap-4 md:grid-cols-3">
+                {(["LOW", "MIDDLE", "HIGH"] as CitizenClass[]).map((group) => <div key={group} className="rounded-xl bg-secondary/40 p-3"><div className="text-xs font-semibold text-card-foreground">{group === "LOW" ? "Baixa" : group === "MIDDLE" ? "Média" : "Alta"}</div><label className="mt-2 block text-xs text-muted-foreground">Salário<input type="number" min={1} value={policy.prices.salary[group]} onChange={(e) => setDraft({ ...policy, prices: { ...policy.prices, salary: { ...policy.prices.salary, [group]: Math.max(1, Number(e.target.value) || 1) } } })} className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-card-foreground" /></label><label className="mt-2 block text-xs text-muted-foreground">Aluguel<input type="number" min={0} value={policy.prices.rent[group]} onChange={(e) => setDraft({ ...policy, prices: { ...policy.prices, rent: { ...policy.prices.rent, [group]: Math.max(0, Number(e.target.value) || 0) } } })} className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-card-foreground" /></label></div>)}
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{(["market", "water", "energy", "fuel", "transit"] as const).map((item) => <label key={item} className="text-xs text-muted-foreground">{item === "market" ? "Mercado" : item === "water" ? "Água" : item === "energy" ? "Energia" : item === "fuel" ? "Gasolina" : "Transporte"}<input type="number" min={0} value={policy.prices.consumption[item]} onChange={(e) => setDraft({ ...policy, prices: { ...policy.prices, consumption: { ...policy.prices.consumption, [item]: Math.max(0, Number(e.target.value) || 0) } } })} className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-card-foreground" /></label>)}</div>
             </div>
           </div>
 

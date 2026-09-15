@@ -273,6 +273,13 @@ function sanitizePolicy(
   const rawPolicy = p as CityPolicy & { classTaxRates?: Record<string, number>; selectiveTaxes?: Record<string, number>; prices?: typeof DEFAULT_PRICES }
   for (const key of ["LOW", "MIDDLE", "HIGH"] as const) classTaxRates[key] = Math.max(0, Math.min(50, Math.round(Number(rawPolicy.classTaxRates?.[key] ?? classTaxRates[key]))))
   for (const key of ["consumption", "energy", "water", "fuel"] as const) selectiveTaxes[key] = Math.max(0, Math.min(50, Math.round(Number(rawPolicy.selectiveTaxes?.[key] ?? selectiveTaxes[key]))))
+  for (const key of ["LOW", "MIDDLE", "HIGH"] as const) {
+    prices.salary[key] = Math.max(1, Number(rawPolicy.prices?.salary?.[key] ?? prices.salary[key]))
+    prices.rent[key] = Math.max(0, Number(rawPolicy.prices?.rent?.[key] ?? prices.rent[key]))
+  }
+  for (const key of ["market", "water", "energy", "fuel", "transit"] as const) {
+    prices.consumption[key] = Math.max(0, Number(rawPolicy.prices?.consumption?.[key] ?? prices.consumption[key]))
+  }
   return { taxRate, classTaxRates, selectiveTaxes, services, prices }
 }
 
@@ -713,10 +720,12 @@ export async function getOrCreateCity(
     doc.policy,
     doc.citizens.length,
   )
-  doc.citizens = doc.citizens.map((citizen) => ({
-    ...citizen,
-    opinion: calculateCitizenOpinion(citizen, doc.policy, serviceIndices),
-  }))
+  doc.citizens = doc.citizens.map((citizen) => {
+    const salary = doc.policy.prices.salary[citizen.citizenClass]
+    const monthlyExpenses = doc.policy.prices.rent[citizen.citizenClass] + doc.policy.prices.consumption.market + doc.policy.prices.consumption.water + doc.policy.prices.consumption.energy
+    const updatedCitizen = { ...citizen, salary, monthlyExpenses }
+    return { ...updatedCitizen, opinion: calculateCitizenOpinion(updatedCitizen, doc.policy, serviceIndices) }
+  })
 
   const shouldPersist =
     economyChanged ||

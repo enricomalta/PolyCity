@@ -75,7 +75,9 @@ function serviceIndex(service: PublicService, level: number, population: number)
 }
 
 export function calculateCitizenOpinion(citizen: Citizen, policy: CityPolicy, services: ServiceIndices, neighborhoodBonus = 0): Citizen["opinion"] {
-  const taxScore = clamp(100 - policy.classTaxRates[citizen.citizenClass] * 4)
+  const classTax = policy.classTaxRates[citizen.citizenClass]
+  const selectiveTax = Object.values(policy.selectiveTaxes).reduce((sum, rate) => sum + rate, 0) / Object.values(policy.selectiveTaxes).length
+  const taxScore = clamp(100 - classTax * 3.5 - selectiveTax * 1.5)
   const affordability = clamp(Math.round((citizen.salary - citizen.monthlyExpenses) / Math.max(1, citizen.salary) * 100))
   const serviceScore = Math.round((services.education + services.health + services.security + services.prevention) / 4)
   const government = clamp(Math.round(serviceScore * 0.45 + taxScore * 0.25 + affordability * 0.2 + neighborhoodBonus * 0.1))
