@@ -38,6 +38,7 @@ export function GameHUD() {
     closeBuilding,
     openBuilding,
     demarcateRegion,
+    deleteRegion,
     setTerrainBatch,
     lastMessage,
     clearMessage,
@@ -272,7 +273,7 @@ export function GameHUD() {
           {tool === "ZONING" && (state.regions ?? []).length > 0 && (
             <div className="pointer-events-auto max-h-[min(42vh,360px)] w-[min(88vw,340px)] overflow-y-auto rounded-2xl border border-border bg-card/95 p-3 shadow-lg shadow-black/30 backdrop-blur">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Regiões demarcadas</p>
-              <div className="mt-2 flex flex-col gap-2">{(state.regions ?? []).map((region) => <button key={region.id} type="button" onClick={() => { if (editingRegionId === region.id) { window.dispatchEvent(new Event("polycity:clear-selection")) } else { setEditingRegionId(region.id); setZoneName(region.name); setZoneType(region.zone as typeof zoneType); setZoneClass(region.citizenClass ?? "MIDDLE"); setZoningTiles(region.tiles); window.dispatchEvent(new CustomEvent("polycity:zone-preview", { detail: { zone: region.zone, citizenClass: region.citizenClass ?? "MIDDLE", tiles: region.tiles } })) } }} className={`rounded-xl border px-3 py-2 text-left text-xs ${editingRegionId === region.id ? "border-primary bg-primary/10" : "border-border bg-secondary/60"}`}><span className="font-semibold text-foreground">{region.name}</span><span className="ml-2 text-muted-foreground">{region.tiles.length} tiles · {region.zone}</span></button>)}</div>
+              <div className="mt-2 flex flex-col gap-2">{(state.regions ?? []).map((region) => <div key={region.id} className={`flex items-center gap-2 rounded-xl border p-2 ${editingRegionId === region.id ? "border-primary bg-primary/10" : "border-border bg-secondary/60"}`}><button type="button" onClick={() => { if (editingRegionId === region.id) { window.dispatchEvent(new Event("polycity:clear-selection")) } else { setEditingRegionId(region.id); setZoneName(region.name); setZoneType(region.zone as typeof zoneType); setZoneClass(region.citizenClass ?? "MIDDLE"); setZoningTiles(region.tiles); window.dispatchEvent(new CustomEvent("polycity:zone-preview", { detail: { zone: region.zone, citizenClass: region.citizenClass ?? "MIDDLE", tiles: region.tiles } })) } }} className="min-w-0 flex-1 text-left text-xs"><span className="font-semibold text-foreground">{region.name}</span><span className="ml-2 text-muted-foreground">{region.tiles.length} tiles · {region.zone}</span></button><button type="button" onClick={() => { if (window.confirm(`Excluir a região ${region.name}?`)) { void deleteRegion(region.id); if (editingRegionId === region.id) { setEditingRegionId(null); setZoningTiles([]) } } }} className="rounded-lg px-2 py-1 text-xs font-semibold text-destructive hover:bg-destructive/10">Excluir</button></div>)}</div>
             </div>
           )}
 

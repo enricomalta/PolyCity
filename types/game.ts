@@ -85,6 +85,10 @@ export type GameAction =
       name: string
     }
   | {
+      type: "DELETE_REGION"
+      regionId: string
+    }
+  | {
       // Disparada pelo sistema de tráfego (client) quando um carro chega a
       // uma casa vaga. O servidor revalida tudo: a casa existe, é
       // residencial, está vaga, e está conectada à rede viária a partir de
