@@ -123,11 +123,11 @@ export function ToolBar({
         submenuOpen ? "pointer-events-auto translate-x-0 scale-x-100 opacity-100" : "pointer-events-none -translate-x-3 scale-x-90 opacity-0",
       )}
     >
-      {/* CONSTRUÇÃO */}
-      <button type="button" onClick={onBuild} aria-label="Modo construção" title="Modo construção" className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl transition-all duration-150", tool === "BUILD_MENU" || tool === "BUILD" || tool === "ROAD" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-card-foreground")}><Hammer className="size-5" /></button>
+      {/* CONSTRUÇÃO aparece no submenu apenas quando outro modo está ativo */}
+      {!isConstructionMode && <button type="button" onClick={onBuild} aria-label="Modo construção" title="Modo construção" className="flex size-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-all duration-150 hover:bg-secondary hover:text-card-foreground"><Hammer className="size-5" /></button>}
 
       {/* TERRENO */}
-      <button
+      {tool !== "TERRAIN_EDIT" && <button
         type="button"
         onClick={onTerrainEdit}
         aria-label="Editar terreno"
@@ -140,9 +140,10 @@ export function ToolBar({
         )}
       >
         <Shovel className="size-5" />
-      </button>
+      </button>}
 
       {/* ZONEAMENTO */}
+      {tool !== "ZONING" && (
       <button
         type="button"
         onClick={onZoning}
@@ -156,9 +157,10 @@ export function ToolBar({
         )}
       >
         <Grid3X3 className="size-5" />
-      </button>
+      </button>)}
 
       {/* EDIÇÃO */}
+      {tool !== "EDIT" && (
       <button
         type="button"
         onClick={onEdit}
@@ -172,9 +174,10 @@ export function ToolBar({
         )}
       >
         <Pencil className="size-5" />
-      </button>
+      </button>)}
 
       {/* DEMOLIR */}
+      {tool !== "DEMOLISH" && (
       <button
         type="button"
         onClick={onDemolish}
@@ -188,7 +191,7 @@ export function ToolBar({
         )}
       >
         <Trash2 className="size-5" />
-      </button>
+      </button>)}
     </div>
   </div>
 </div>
