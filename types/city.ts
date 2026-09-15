@@ -21,6 +21,8 @@ export interface City {
 // mayor controls from the "Gabinete do Prefeito" page.
 export type PublicService = "education" | "health" | "security" | "prevention" | "waste" | "transit" | "roads"
 
+export type EconomicModel = "SANDBOX" | "SOCIAL_MARKET" | "FREE_MARKET" | "PLANNED_ECONOMY" | "WELFARE_STATE"
+
 export type PoliticalIdeology =
   | "SOCIAL_DEMOCRACY"
   | "LIBERALISM"
@@ -56,6 +58,7 @@ export interface EconomyPrices {
 export interface CityPolicy {
   // Tax rates are percentages. Municipal income tax is capped at 50%.
   taxRate: number
+  economicModel: EconomicModel
   ideology: PoliticalIdeology
   classTaxRates: Record<CitizenClass, number>
   selectiveTaxes: Record<SelectiveTax, number>

@@ -189,24 +189,7 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
           <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
             <div className="flex items-center gap-2 text-card-foreground"><Banknote className="size-5 text-primary" /><h2 className="font-display text-lg font-semibold">Sistema político e custo de vida</h2></div>
             <p className="mt-1 text-sm text-muted-foreground">Alíquotas e preços alteram diretamente a opinião individual dos moradores.</p>
-            <label className="mt-4 block max-w-sm text-sm text-muted-foreground">Modelo econômico e ideologia
-              <select value={policy.ideology} onChange={(e) => setDraft({ ...policy, ideology: e.target.value as CityPolicy["ideology"] })} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground">
-                <option value="SOCIAL_DEMOCRACY">Social-democracia</option>
-                <option value="LIBERALISM">Liberalismo</option>
-                <option value="CONSERVATISM">Conservadorismo</option>
-                <option value="ECOLOGISM">Ecologismo</option>
-                <option value="LIBERTARIANISM">Libertarianismo</option>
-                <option value="SOCIALISM">Socialismo</option>
-                <option value="NEOLIBERALISM">Neoliberalismo</option>
-                <option value="WELFARE_STATE">Estado de bem-estar social</option>
-                <option value="FISCAL_AUSTERITY">Austeridade fiscal</option>
-                <option value="DEVELOPMENTALISM">Desenvolvimentismo</option>
-                <option value="ECO_SOCIALISM">Ecossocialismo</option>
-                <option value="STATE_CAPITALISM">Capitalismo de Estado</option>
-                <option value="PROGRESSIVISM">Progressismo</option>
-                <option value="TECHNOCRACY">Tecnocracia</option>
-              </select>
-            </label>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2"><div className="rounded-xl border border-border bg-background p-3"><p className="text-xs text-muted-foreground">Modelo econômico</p><p className="mt-1 font-semibold text-card-foreground">{policy.economicModel === "SANDBOX" ? "Sandbox" : policy.economicModel === "FREE_MARKET" ? "Livre mercado" : policy.economicModel === "PLANNED_ECONOMY" ? "Economia planejada" : policy.economicModel === "WELFARE_STATE" ? "Estado de bem-estar" : "Economia social de mercado"}</p></div><div className="rounded-xl border border-border bg-background p-3"><p className="text-xs text-muted-foreground">Ideologia</p><p className="mt-1 font-semibold text-card-foreground">{policy.ideology.replaceAll("_", " ")}</p></div></div>
             <div className="mt-4 grid gap-4 md:grid-cols-3">
               {(["LOW", "MIDDLE", "HIGH"] as CitizenClass[]).map((group) => <label key={group} className="text-sm text-muted-foreground">{group === "LOW" ? "Baixa" : group === "MIDDLE" ? "Média" : "Alta"} · imposto %<input type="number" min={0} max={50} value={policy.classTaxRates[group]} onChange={(e) => setDraft({ ...policy, classTaxRates: { ...policy.classTaxRates, [group]: Number(e.target.value) } })} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground" /></label>)}
             </div>

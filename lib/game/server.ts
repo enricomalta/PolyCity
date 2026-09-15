@@ -224,7 +224,11 @@ function sanitizePolicy(
   const p =
     (input ?? {}) as Partial<CityPolicy>
 
-  const ideology = ["SOCIAL_DEMOCRACY", "LIBERALISM", "CONSERVATISM", "ECOLOGISM", "LIBERTARIANISM"].includes(String((p as Partial<CityPolicy>).ideology))
+  const economicModel = ["SANDBOX", "SOCIAL_MARKET", "FREE_MARKET", "PLANNED_ECONOMY", "WELFARE_STATE"].includes(String((p as Partial<CityPolicy>).economicModel))
+    ? (String((p as Partial<CityPolicy>).economicModel) as CityPolicy["economicModel"])
+    : DEFAULT_POLICY.economicModel
+
+  const ideology = ["SOCIAL_DEMOCRACY", "LIBERALISM", "CONSERVATISM", "ECOLOGISM", "LIBERTARIANISM", "SOCIALISM", "NEOLIBERALISM", "WELFARE_STATE", "FISCAL_AUSTERITY", "DEVELOPMENTALISM", "ECO_SOCIALISM", "STATE_CAPITALISM", "PROGRESSIVISM", "TECHNOCRACY"].includes(String((p as Partial<CityPolicy>).ideology))
     ? (String((p as Partial<CityPolicy>).ideology) as CityPolicy["ideology"])
     : DEFAULT_POLICY.ideology
 
@@ -284,7 +288,7 @@ function sanitizePolicy(
   for (const key of ["market", "water", "energy", "fuel", "transit"] as const) {
     prices.consumption[key] = Math.max(0, Number(rawPolicy.prices?.consumption?.[key] ?? prices.consumption[key]))
   }
-  return { taxRate, ideology, classTaxRates, selectiveTaxes, services, prices }
+  return { taxRate, economicModel, ideology, classTaxRates, selectiveTaxes, services, prices }
 }
 
 function docToState(
@@ -533,6 +537,7 @@ export class CityNotCreatedError extends Error {
 
 export interface CityCreationOptions {
   name: string
+  economicModel: CityPolicy["economicModel"]
   ideology: CityPolicy["ideology"]
 }
 
@@ -595,6 +600,7 @@ export async function getOrCreateCity(
       timeStage: 0,
       policy: {
         ...DEFAULT_POLICY,
+        economicModel: creation.economicModel,
         ideology: creation.ideology,
         services: { ...DEFAULT_POLICY.services },
         classTaxRates: { ...DEFAULT_POLICY.classTaxRates },

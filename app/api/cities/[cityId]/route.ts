@@ -9,13 +9,14 @@ import { CityNotCreatedError, getOrCreateCity } from "@/lib/game/server"
 export async function POST(request: Request) {
   try {
     const user = await verifyBearer(request.headers.get("authorization"))
-    const body = (await request.json()) as { name?: string; ideology?: string }
+    const body = (await request.json()) as { name?: string; economicModel?: string; ideology?: string }
     const name = body.name?.trim() ?? ""
+    const allowedModels = ["SANDBOX", "SOCIAL_MARKET", "FREE_MARKET", "PLANNED_ECONOMY", "WELFARE_STATE"]
     const allowed = ["SOCIAL_DEMOCRACY", "LIBERALISM", "CONSERVATISM", "ECOLOGISM", "LIBERTARIANISM", "SOCIALISM", "NEOLIBERALISM", "WELFARE_STATE", "FISCAL_AUSTERITY", "DEVELOPMENTALISM", "ECO_SOCIALISM", "STATE_CAPITALISM", "PROGRESSIVISM", "TECHNOCRACY"]
-    if (name.length < 2 || name.length > 40 || !allowed.includes(body.ideology ?? "")) {
+    if (name.length < 2 || name.length > 40 || !allowedModels.includes(body.economicModel ?? "") || !allowed.includes(body.ideology ?? "")) {
       return NextResponse.json({ message: "Nome ou ideologia inválidos." }, { status: 400 })
     }
-    const result = await getOrCreateCity(user, { name, ideology: body.ideology as never })
+    const result = await getOrCreateCity(user, { name, economicModel: body.economicModel as never, ideology: body.ideology as never })
     return NextResponse.json(result, { status: 201 })
   } catch (err) {
     if (err instanceof UnauthenticatedError) return NextResponse.json({ message: err.message }, { status: 401 })

@@ -5,7 +5,7 @@ import type { GameAction, GameResponse } from "@/types/game"
 // this interface, so the transport can change without touching the UI.
 export interface GameService {
   getCity(cityId: string): Promise<{ city: City; state: CityState }>
-  createCity(cityId: string, options: { name: string; ideology: CityPolicy["ideology"] }): Promise<{ city: City; state: CityState }>
+  createCity(cityId: string, options: { name: string; economicModel: CityPolicy["economicModel"]; ideology: CityPolicy["ideology"] }): Promise<{ city: City; state: CityState }>
   performAction(cityId: string, action: GameAction): Promise<GameResponse>
   // Convenience wrapper around a SET_POLICY action for the mayor page.
   updatePolicy(cityId: string, policy: CityPolicy): Promise<GameResponse>

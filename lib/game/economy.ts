@@ -16,6 +16,7 @@ export const DEFAULT_PRICES = {
 
 export const DEFAULT_POLICY: CityPolicy = {
   taxRate: 8,
+  economicModel: "SOCIAL_MARKET",
   ideology: "SOCIAL_DEMOCRACY",
   classTaxRates: { LOW: 3, MIDDLE: 8, HIGH: 14 },
   selectiveTaxes: { consumption: 4, energy: 3, water: 2, fuel: 5 },
