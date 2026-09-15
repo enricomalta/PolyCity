@@ -1,4 +1,4 @@
-import type { BuildingType } from "./game"
+import type { BuildingType, TerrainType } from "./game"
 
 // A city is owned by a single user. The backend is the source of truth
 // for ownership and for the authoritative CityState.
@@ -177,6 +177,7 @@ export interface Budget {
 }
 
 export interface CityState extends ResourceState {
+  terrainOverrides?: Record<string, TerrainType>
   buildings: Building[]
   citizens: Citizen[]
   policy: CityPolicy

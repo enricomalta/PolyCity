@@ -21,6 +21,7 @@ import type {
 
 import type {
   BuildingType,
+  TerrainType,
   Tile,
   ToolMode,
 } from "@/types/game"
@@ -126,6 +127,8 @@ interface GameContextValue {
     x: number,
     z: number,
   ) => Promise<void>
+
+  setTerrain: (x: number, z: number, terrain: TerrainType) => Promise<void>
 
   // Disparada pelo TrafficSystem quando um carro chega a uma casa vaga. O
   // servidor revalida tudo (ver lib/game/traffic.ts) antes de aceitar.
@@ -239,13 +242,14 @@ export function GameProvider({
   // Terrain
   // ---------------------------------------------------------------------------
 
-  const baseTiles = useMemo<Tile[][]>(
-    () =>
-      generateTerrain(
-        city?.seed ?? 1,
-      ),
-    [city?.seed],
-  )
+  const baseTiles = useMemo<Tile[][]>(() => {
+    const generated = generateTerrain(city?.seed ?? 1)
+    for (const [key, terrain] of Object.entries(state?.terrainOverrides ?? {})) {
+      const [x, z] = key.split(":").map(Number)
+      if (generated[x]?.[z]) generated[x][z] = { ...generated[x][z], terrain }
+    }
+    return generated
+  }, [city?.seed, state?.terrainOverrides])
 
   const tiles = useMemo(
     () =>
@@ -395,6 +399,19 @@ export function GameProvider({
   // ---------------------------------------------------------------------------
   // Demolish
   // ---------------------------------------------------------------------------
+
+  const setTerrain = useCallback(async (x: number, z: number, terrain: TerrainType) => {
+    setPending(true)
+    try {
+      const res = await gameService.performAction(cityId, { type: "SET_TERRAIN", x, z, terrain })
+      setState(res.state)
+      setLastMessage(res.message ?? null)
+    } catch {
+      setLastMessage("Não foi possível alterar o terreno.")
+    } finally {
+      setPending(false)
+    }
+  }, [cityId])
 
   const demolish =
     useCallback<GameContextValue["demolish"]>(
@@ -873,6 +890,7 @@ export function GameProvider({
         build,
 
         demolish,
+        setTerrain,
 
         moveBuilding,
 
@@ -919,6 +937,7 @@ export function GameProvider({
         build,
 
         demolish,
+        setTerrain,
 
         moveBuilding,
 

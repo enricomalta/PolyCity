@@ -48,6 +48,12 @@ export type GameAction =
       z: number
     }
   | {
+      type: "SET_TERRAIN"
+      x: number
+      z: number
+      terrain: TerrainType
+    }
+  | {
       type: "ROTATE"
       x: number
       z: number

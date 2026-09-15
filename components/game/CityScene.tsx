@@ -122,6 +122,7 @@ export function CityScene() {
 
     rotateBuilding,
     moveBuilding,
+    setTerrain,
   } = useGame()
 
   const [zoningStart, setZoningStart] = useState<[number, number] | null>(null)
@@ -337,6 +338,15 @@ export function CityScene() {
     (x: number, z: number) => {
       const tile =
         tiles[x]?.[z]
+
+      if (tool === "TERRAIN_EDIT") {
+        if (!tile || tile.occupiedBy) return
+        const terrainTypes = ["GRASS", "WATER", "ROCK", "FOREST", "SAND"] as const
+        const nextTerrain = terrainTypes[(terrainTypes.indexOf(tile.terrain) + 1) % terrainTypes.length]
+        void setTerrain(x, z, nextTerrain)
+        selectTile({ x, z })
+        return
+      }
 
       if (tool === "EDIT") {
         // Primeiro clique:

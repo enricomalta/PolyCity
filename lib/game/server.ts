@@ -79,7 +79,17 @@ interface CityDoc {
   policy: CityPolicy
   regions: CityRegion[]
   buildings: Building[]
+  terrainOverrides?: Record<string, import("@/types/game").TerrainType>
   citizens: Citizen[]
+}
+
+function terrainWithOverrides(seed: number, overrides?: Record<string, import("@/types/game").TerrainType>) {
+  const terrain = generateTerrain(seed)
+  for (const [key, value] of Object.entries(overrides ?? {})) {
+    const [x, z] = key.split(":").map(Number)
+    if (terrain[x]?.[z]) terrain[x][z] = { ...terrain[x][z], terrain: value }
+  }
+  return terrain
 }
 
 function normalizeBuildings(input: unknown): Building[] {
@@ -314,6 +324,7 @@ function docToState(
 
   return {
     ...state,
+    terrainOverrides: doc.terrainOverrides ?? {},
     regions: doc.regions ?? [],
     citizens:
       doc.citizens ?? [],
@@ -986,6 +997,17 @@ export async function performAction(
     }
   }
 
+  if (action.type === "SET_TERRAIN") {
+    const allowed = ["GRASS", "WATER", "ROCK", "FOREST", "SAND"] as const
+    if (!allowed.includes(action.terrain)) return reject("Tipo de terreno inválido.")
+    const terrain = terrainWithOverrides(doc.seed, doc.terrainOverrides)
+    const tile = terrain[action.x]?.[action.z]
+    if (!tile) return reject("Tile inválido.")
+    if (doc.buildings.some((building) => building.x === action.x && building.z === action.z)) return reject("Remova a construção antes de alterar o terreno.")
+    doc.terrainOverrides = { ...(doc.terrainOverrides ?? {}), [`${action.x}:${action.z}`]: action.terrain }
+    return commit(doc, "Terreno alterado.")
+  }
+
   if (
     action.type ===
     "BUILD"
@@ -997,9 +1019,7 @@ export async function performAction(
 
     const terrain =
       applyOccupancy(
-        generateTerrain(
-          doc.seed,
-        ),
+terrainWithOverrides(doc.seed, doc.terrainOverrides),
         doc.buildings,
       )
 
@@ -1105,7 +1125,7 @@ export async function performAction(
 
     const terrain =
       applyOccupancy(
-        generateTerrain(doc.seed),
+        terrainWithOverrides(doc.seed, doc.terrainOverrides),
         doc.buildings,
       )
 
