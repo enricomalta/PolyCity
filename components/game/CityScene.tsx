@@ -116,6 +116,17 @@ export function CityScene() {
 
   const [zoningStart, setZoningStart] = useState<[number, number] | null>(null)
   const [zoningEnd, setZoningEnd] = useState<[number, number] | null>(null)
+  const [zoningSelectionComplete, setZoningSelectionComplete] = useState(false)
+
+  useEffect(() => {
+    const handleSaved = () => {
+      setZoningStart(null)
+      setZoningEnd(null)
+      setZoningSelectionComplete(false)
+    }
+    window.addEventListener("polycity:zoning-saved", handleSaved)
+    return () => window.removeEventListener("polycity:zoning-saved", handleSaved)
+  }, [])
 
   const publishZoningRange = (from: [number, number], to: [number, number]) => {
     const minX = Math.min(from[0], to[0])
@@ -359,13 +370,14 @@ export function CityScene() {
       }
 
       if (tool === "ZONING") {
-        if (!zoningStart) {
+        if (!zoningStart || zoningSelectionComplete) {
           setZoningStart([x, z])
           setZoningEnd([x, z])
+          setZoningSelectionComplete(false)
         } else {
+          setZoningEnd([x, z])
           publishZoningRange(zoningStart, [x, z])
-          setZoningStart(null)
-          setZoningEnd(null)
+          setZoningSelectionComplete(true)
         }
         selectTile({ x, z })
         return
@@ -403,6 +415,7 @@ export function CityScene() {
       tiles,
       tool,
       zoningStart,
+      zoningSelectionComplete,
       selectedBuilding,
       buildRotation,
       buildings,
