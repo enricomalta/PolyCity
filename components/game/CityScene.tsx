@@ -17,6 +17,7 @@ import {
 } from "@react-three/drei"
 
 import {
+  Color,
   PCFShadowMap,
   MOUSE,
 } from "three"
@@ -91,6 +92,39 @@ export function CityScene() {
   const isNight =
     String(state?.timeStage) === "1" ||
     state?.timeStage === "NIGHT"
+
+  const minuteOfDay = state?.clock
+    ? state.clock.hour * 60 + state.clock.minute
+    : isNight
+      ? 0
+      : 720
+
+  const smoothstep = (edge0: number, edge1: number, value: number) => {
+    const progress = Math.max(
+      0,
+      Math.min(1, (value - edge0) / (edge1 - edge0)),
+    )
+
+    return progress * progress * (3 - 2 * progress)
+  }
+
+  // O céu muda gradualmente entre 05:00–07:00 e 19:00–21:00,
+  // criando um amanhecer e um pôr do sol em vez de um corte abrupto.
+  const daylight = Math.min(
+    smoothstep(5 * 60, 7 * 60, minuteOfDay),
+    1 - smoothstep(19 * 60, 21 * 60, minuteOfDay),
+  )
+  const nightIntensity = 1 - daylight
+  const visualNight = nightIntensity > 0.45
+
+  const skyColor = new Color("#18243d").lerp(
+    new Color("#9fc9e8"),
+    daylight,
+  )
+  const groundColor = new Color("#111827").lerp(
+    new Color("#4a6b3a"),
+    daylight,
+  )
 
   const citizens =
     state?.citizens ?? []
@@ -342,27 +376,27 @@ export function CityScene() {
       <PerformanceMonitor />
       <color
         attach="background"
-        args={[isNight ? "#18243d" : "#9fc9e8"]}
+        args={[skyColor.getStyle()]}
       />
 
       <fog
         attach="fog"
         args={[
-          isNight ? "#18243d" : "#9fc9e8",
+          skyColor.getStyle(),
           55,
           120,
         ]}
       />
 
       <ambientLight
-        intensity={isNight ? 0.28 : 0.75}
+        intensity={0.28 + daylight * 0.47}
       />
 
       <hemisphereLight
         args={[
-          isNight ? "#445b92" : "#dcefff",
-          isNight ? "#111827" : "#4a6b3a",
-          isNight ? 0.16 : 0.7,
+          new Color("#445b92").lerp(new Color("#dcefff"), daylight).getStyle(),
+          groundColor.getStyle(),
+          0.16 + daylight * 0.54,
         ]}
       />
 
@@ -372,7 +406,7 @@ export function CityScene() {
           28,
           12,
         ]}
-        intensity={isNight ? 0.35 : 1.5}
+        intensity={0.35 + daylight * 1.15}
         castShadow
         shadow-mapSize={[
           2048,
@@ -427,7 +461,7 @@ export function CityScene() {
               rotation={
                 b.rotation
               }
-              isNight={isNight}
+              isNight={visualNight}
               occupied={b.occupied}
             />
           )
