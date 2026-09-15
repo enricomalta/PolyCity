@@ -122,6 +122,7 @@ export type ToolMode =
   | "BUILD"
   | "ROAD"
   | "TERRAIN_EDIT"
+  | "ZONING"
   | "EDIT"
   | "DEMOLISH"
   | "GOVERNANCE"

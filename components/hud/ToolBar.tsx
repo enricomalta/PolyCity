@@ -7,6 +7,7 @@ import {
   MousePointer2,
   Pencil,
   Shovel,
+  Grid3X3,
   Trash2,
 } from "lucide-react"
 import type { ToolMode } from "@/types/game"
@@ -18,6 +19,7 @@ interface ToolBarProps {
   onSelect: () => void
   onBuild: () => void
   onTerrainEdit: () => void
+  onZoning: () => void
   onEdit: () => void
   onDemolish: () => void
   onGovernance: () => void
@@ -45,6 +47,7 @@ export function ToolBar({
     tool === "BUILD" ||
     tool === "ROAD" ||
     tool === "TERRAIN_EDIT" ||
+    tool === "ZONING" ||
     tool === "EDIT"
   
   const hasSelectedBuilding =
@@ -147,6 +150,22 @@ export function ToolBar({
         )}
       >
         <Shovel className="size-5" />
+      </button>
+
+      {/* ZONEAMENTO */}
+      <button
+        type="button"
+        onClick={onZoning}
+        aria-label="Demarcar região"
+        title="Demarcar região"
+        className={cn(
+          "flex size-11 shrink-0 items-center justify-center rounded-xl transition-all duration-150",
+          tool === "ZONING"
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:bg-secondary hover:text-card-foreground",
+        )}
+      >
+        <Grid3X3 className="size-5" />
       </button>
 
       {/* EDIÇÃO */}

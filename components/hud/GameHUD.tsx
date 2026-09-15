@@ -49,6 +49,8 @@ export function GameHUD() {
   const [clockNow, setClockNow] =
     useState(() => Date.now())
   const [mayorOpen, setMayorOpen] = useState(false)
+  const [zoneType, setZoneType] = useState<"RESIDENTIAL" | "COMMERCIAL" | "INDUSTRIAL" | "MIXED">("RESIDENTIAL")
+  const [zoneClass, setZoneClass] = useState<"LOW" | "MIDDLE" | "HIGH">("MIDDLE")
 
   useEffect(() => {
     const intervalId =
@@ -163,6 +165,10 @@ export function GameHUD() {
               setTool("TERRAIN_EDIT")
               selectBuildingType(null)
             }}
+            onZoning={() => {
+              setTool("ZONING")
+              selectBuildingType(null)
+            }}
             onEdit={() => {
               setTool("EDIT")
               selectBuildingType(null)
@@ -251,6 +257,16 @@ export function GameHUD() {
             selected={selectedBuilding}
             onSelect={selectBuildingType}
           />
+        )}
+
+        {tool === "ZONING" && (
+          <div className="pointer-events-auto w-full max-w-xl rounded-2xl border border-border bg-card/95 p-4 shadow-lg shadow-black/30 backdrop-blur">
+            <p className="text-sm font-semibold text-card-foreground">Demarcar região</p>
+            <p className="mt-1 text-xs text-muted-foreground">Clique nos tiles do mapa para selecionar uma área. Escolha o uso e a classe predominante antes de nomear o bairro.</p>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{([['RESIDENTIAL','Residencial'],['COMMERCIAL','Comercial'],['INDUSTRIAL','Industrial'],['MIXED','Mista']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setZoneType(value)} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${zoneType === value ? "border-primary bg-primary/15 text-primary" : "border-border bg-secondary text-muted-foreground"}`}>{label}</button>)}</div>
+            <div className="mt-3 grid grid-cols-3 gap-2">{([['LOW','Baixa'],['MIDDLE','Média'],['HIGH','Alta']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setZoneClass(value)} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${zoneClass === value ? "border-accent bg-accent/15 text-accent" : "border-border bg-secondary text-muted-foreground"}`}>{label}</button>)}</div>
+            <p className="mt-3 rounded-lg bg-secondary/70 px-3 py-2 text-xs text-muted-foreground">Zona selecionada: <span className="font-semibold text-foreground">{zoneType}</span> · classe: <span className="font-semibold text-foreground">{zoneClass}</span></p>
+          </div>
         )}
 
         {showTerrainEditMenu && (
