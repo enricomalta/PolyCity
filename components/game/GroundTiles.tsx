@@ -14,6 +14,7 @@ import type {
 interface GroundTilesProps {
   tiles: Tile[][]
   onSelect: (x: number, z: number) => void
+  onCancelSelect?: () => void
   onDragSelect?: (from: [number, number], to: [number, number]) => void
   allowDragSelect?: boolean
   hoverControllerRef: React.RefObject<SelectionIndicatorHandle | null>
@@ -25,7 +26,7 @@ interface GroundTilesProps {
  * the pointer's world position instead of rendering thousands of meshes, which
  * keeps the scene light even on a 30x30 grid.
  */
-export function GroundTiles({ tiles, onSelect, onDragSelect, allowDragSelect = false, hoverControllerRef, }: GroundTilesProps) {
+export function GroundTiles({ tiles, onSelect, onCancelSelect, onDragSelect, allowDragSelect = false, hoverControllerRef, }: GroundTilesProps) {
   const worldSize = GRID_SIZE * TILE_SIZE
   const half = worldSize / 2
 
@@ -162,6 +163,11 @@ export function GroundTiles({ tiles, onSelect, onDragSelect, allowDragSelect = f
         }}
         onPointerDown={(e) => {
           pressRef.current = { screenX: e.nativeEvent.clientX, screenY: e.nativeEvent.clientY, tile: coordFromPoint(e) }
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          onCancelSelect?.()
         }}
         onPointerUp={(e) => {
           const start = pressRef.current

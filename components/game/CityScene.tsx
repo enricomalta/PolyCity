@@ -509,6 +509,12 @@ export function CityScene() {
         <GroundTiles
           tiles={tiles}
           onSelect={handleSelect}
+          onCancelSelect={() => {
+            setZoningStart(null)
+            setZoningEnd(null)
+            setZoningSelectionComplete(false)
+            window.dispatchEvent(new Event("polycity:clear-selection"))
+          }}
           allowDragSelect={false}
           hoverControllerRef={
             hoverControllerRef
