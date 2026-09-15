@@ -174,6 +174,7 @@ export interface CityState extends ResourceState {
   buildings: Building[]
   citizens: Citizen[]
   policy: CityPolicy
+  regions: CityRegion[]
   services: ServiceIndices
   budget: Budget
   timeStage: "DAY" | "NIGHT"

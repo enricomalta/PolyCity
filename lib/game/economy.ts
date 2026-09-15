@@ -169,6 +169,7 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
     water: waterProduction - waterConsumption,
     buildings,
     policy,
+    regions: [],
     services,
     budget,
     timeStage: clock.stage,

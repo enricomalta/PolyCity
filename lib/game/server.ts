@@ -9,6 +9,7 @@ import type {
   Building,
   Citizen,
   FundingLevel,
+  CityRegion,
 } from "@/types/city"
 
 import type {
@@ -76,6 +77,7 @@ interface CityDoc {
   gameTime: GameTime
   timeStage: number
   policy: CityPolicy
+  regions: CityRegion[]
   buildings: Building[]
   citizens: Citizen[]
 }
@@ -312,6 +314,7 @@ function docToState(
 
   return {
     ...state,
+    regions: doc.regions ?? [],
     citizens:
       doc.citizens ?? [],
   }
@@ -607,11 +610,13 @@ export async function getOrCreateCity(
         classTaxRates: { ...DEFAULT_POLICY.classTaxRates },
         selectiveTaxes: { ...DEFAULT_POLICY.selectiveTaxes },
         prices: {
+          jobs: DEFAULT_POLICY.prices.jobs.map((job) => ({ ...job })),
           salary: { ...DEFAULT_POLICY.prices.salary },
           rent: { ...DEFAULT_POLICY.prices.rent },
           consumption: { ...DEFAULT_POLICY.prices.consumption },
         },
       },
+      regions: [],
       buildings:
         starterBuildings(seed),
       citizens: [],
