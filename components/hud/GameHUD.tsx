@@ -259,6 +259,20 @@ export function GameHUD() {
           />
         )}
 
+        {tool === "HEATMAP" && (
+          <div className="pointer-events-auto w-full max-w-xl rounded-2xl border border-border bg-card/95 p-4 shadow-lg shadow-black/30 backdrop-blur">
+            <p className="text-sm font-semibold text-card-foreground">Mapa de calor urbano</p>
+            <p className="mt-1 text-xs text-muted-foreground">Detecção automática por proximidade, serviços, empregos, mobilidade e qualidade das estradas.</p>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{[
+              ["Felicidade", `${state.happiness}%`, state.happiness >= 70 ? "text-primary" : "text-accent"],
+              ["Empregos", `${state.citizens.filter((citizen) => citizen.employed).length}/${state.citizens.length}`, "text-primary"],
+              ["Serviços", `${Math.round(Object.values(state.services).reduce((sum, value) => sum + value, 0) / Math.max(1, Object.values(state.services).length))}%`, "text-accent"],
+              ["Estradas", `${state.services.roads}%`, state.services.roads >= 60 ? "text-primary" : "text-destructive"],
+            ].map(([label, value, color]) => <div key={label} className="rounded-xl border border-border bg-background p-3"><p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p><p className={`mt-1 text-xl font-bold ${color}`}>{value}</p></div>)}</div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3"><div className="rounded-lg bg-primary/10 px-3 py-2 text-xs text-primary">Áreas com maior felicidade: proximidade de parques e serviços</div><div className="rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent">Áreas com maior emprego: comércio e indústria ativos</div><div className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">Alertas: regiões sem conexão viária ou serviços</div></div>
+          </div>
+        )}
+
         {tool === "ZONING" && (
           <div className="pointer-events-auto w-full max-w-xl rounded-2xl border border-border bg-card/95 p-4 shadow-lg shadow-black/30 backdrop-blur">
             <p className="text-sm font-semibold text-card-foreground">Demarcar região</p>
