@@ -1045,12 +1045,13 @@ terrainWithOverrides(doc.seed, doc.terrainOverrides),
       action.z
       ]
 
-    if (
-      !canPlace(tile)
-    ) {
-      return reject(
-        "Não é possível construir aqui.",
-      )
+    const sharedRoadNetwork = action.buildingType === "ELECTRIC_GRID" || action.buildingType === "SEWER_NETWORK"
+    const occupiedBuilding = doc.buildings.find((building) => building.x === action.x && building.z === action.z)
+    const canShareRoad = sharedRoadNetwork && occupiedBuilding?.type === "ROAD"
+    const sameNetworkExists = sharedRoadNetwork && doc.buildings.some((building) => building.x === action.x && building.z === action.z && building.type === action.buildingType)
+
+    if (!tile || tile.terrain === "WATER" || tile.terrain === "ROCK" || (tile.occupiedBy && !canShareRoad) || sameNetworkExists) {
+      return reject("Não é possível construir aqui.")
     }
 
     if (
@@ -1212,7 +1213,9 @@ terrainWithOverrides(doc.seed, doc.terrainOverrides),
       doc.buildings.findIndex(
         (b) =>
           b.x === action.x &&
-          b.z === action.z,
+          b.z === action.z &&
+          b.type !== "ELECTRIC_GRID" &&
+          b.type !== "SEWER_NETWORK",
       )
 
     if (idx === -1) {
