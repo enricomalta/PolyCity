@@ -58,8 +58,8 @@ function Model({
         ? "SHOP"
         : ["FACTORY", "CONSTRUCTION_FACTORY", "AUTOMOTIVE_FACTORY", "TECH_FACTORY"].includes(type)
           ? "FACTORY"
-          : type === "SEWAGE_TREATMENT_PLANT"
-            ? "SEWAGE_TREATMENT_PLANT"
+          : ["PARK", "POWER_PLANT", "WATER_TOWER", "SEWAGE_TREATMENT_PLANT"].includes(type)
+            ? type
             : "HOUSE"
 
   switch (modelType) {
@@ -777,9 +777,7 @@ export const BuildingMesh = memo(
         ]}
       >
         <Model type={type} isNight={isNight} nightIntensity={nightIntensity} occupied={occupied} />
-
         {occupied && ["HOUSE", "LOW_INCOME_HOUSE", "MIDDLE_INCOME_HOUSE", "HIGH_INCOME_HOUSE", "SMALL_APARTMENT", "LOW_INCOME_APARTMENT", "MIDDLE_INCOME_APARTMENT", "HIGH_INCOME_APARTMENT"].includes(type) && nightIntensity > 0.01 && (
-
           <pointLight position={[0, 0.7, 0.25]} color="#ffc46b" intensity={0.7 * nightIntensity} distance={2.2} decay={2} />
         )}
       </group>

@@ -10,10 +10,8 @@ import {
 } from "react"
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
-
 import { createGameClock, DEFAULT_GAME_CLOCK_CONFIG } from "@/lib/game/clock"
 import { getUtilityNetwork, utilityKey } from "@/lib/game/utilityNetwork"
-
 
 import {
   OrbitControls,
@@ -29,7 +27,6 @@ import {
   HemisphereLight,
   Fog,
   Group,
-
 } from "three"
 
 import {
@@ -77,7 +74,6 @@ function LiveDayNightController({ clockStartedAt }: { clockStartedAt?: number | 
     if (!Number.isFinite(startedAt)) return
     const currentClock = createGameClock(startedAt, Date.now(), DEFAULT_GAME_CLOCK_CONFIG)
     const minute = currentClock.hour * 60 + currentClock.minute
-
     const smoothstep = (a: number, b: number, value: number) => {
       const t = Math.max(0, Math.min(1, (value - a) / (b - a)))
       return t * t * (3 - 2 * t)
@@ -277,9 +273,7 @@ export function CityScene() {
     ).flat()
     window.dispatchEvent(new CustomEvent("polycity:zoning-range", { detail: { from, to, tiles } }))
   }
-
   const [heatMetric, setHeatMetric] = useState<"happiness" | "employment" | "services" | "roads" | "energy" | "sewer">("happiness")
-
 
   useEffect(() => {
     const handleHeatmap = (event: Event) => setHeatMetric((event as CustomEvent<typeof heatMetric>).detail)
@@ -604,10 +598,8 @@ export function CityScene() {
       />
 
       <LiveDayNightController clockStartedAt={city?.clockStartedAt ?? null} />
-
       {tool === "BUILD" && selectedBuilding === "ELECTRIC_GRID" && <UtilityPipes buildings={state?.buildings ?? []} type="ELECTRIC_GRID" />}
       {tool === "BUILD" && selectedBuilding === "SEWER_NETWORK" && <UtilityPipes buildings={state?.buildings ?? []} type="SEWER_NETWORK" />}
-
 
 
 
