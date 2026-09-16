@@ -58,7 +58,9 @@ function Model({
         ? "SHOP"
         : ["FACTORY", "CONSTRUCTION_FACTORY", "AUTOMOTIVE_FACTORY", "TECH_FACTORY"].includes(type)
           ? "FACTORY"
-          : "HOUSE"
+          : type === "SEWAGE_TREATMENT_PLANT"
+            ? "SEWAGE_TREATMENT_PLANT"
+            : "HOUSE"
 
   switch (modelType) {
     case "HOUSE":
@@ -444,6 +446,31 @@ function Model({
               </mesh>
             ),
           )}
+        </group>
+      )
+
+    case "SEWAGE_TREATMENT_PLANT":
+      return (
+        <group>
+          <Foundation color="#456c70" />
+          <mesh castShadow receiveShadow position={[0, def.height / 2 + 0.06, 0]}>
+            <boxGeometry args={[0.82, def.height, 0.72]} />
+            <meshStandardMaterial color={c} flatShading />
+          </mesh>
+          <mesh castShadow position={[0, def.height + 0.12, 0]}>
+            <boxGeometry args={[0.86, 0.12, 0.76]} />
+            <meshStandardMaterial color={roof} flatShading />
+          </mesh>
+          {[[-0.24, -0.18], [0.24, -0.18], [-0.24, 0.18], [0.24, 0.18]].map(([x, z], index) => (
+            <mesh key={index} castShadow position={[x, def.height + 0.28, z]}>
+              <cylinderGeometry args={[0.1, 0.12, 0.26, 10]} />
+              <meshStandardMaterial color="#9fc8c7" flatShading />
+            </mesh>
+          ))}
+          <mesh position={[0, def.height + 0.28, 0.38]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.14, 0.035, 6, 12]} />
+            <meshStandardMaterial color="#c8e6e5" flatShading />
+          </mesh>
         </group>
       )
 
