@@ -3,7 +3,7 @@ import {
   createGameClock,
 } from "@/lib/game/clock"
 import { getBuilding } from "./buildings"
-import { hasBuildingUtility } from "./utilityNetwork"
+import { hasBuildingUtility, hasBuildingUtilityToEdge } from "./utilityNetwork"
 
 // IMPORTANT: economy math here is the SAME code the backend runs. The server
 // imports these helpers so the authoritative economy and the optimistic
@@ -129,8 +129,10 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
   let jobs = 0
   let buildingHappiness = 0
   let energyProduction = 0
+  let edgeEnergyProduction = 0
   let energyConsumption = 0
   let waterProduction = 0
+  let edgeWaterProduction = 0
   let waterConsumption = 0
 
   const hasElectricUtility = (building: Building) => hasBuildingUtility(buildings, building, "ELECTRIC_GRID")
@@ -150,8 +152,14 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
     // A produção local entra no balanço assim que o produtor está ligado à
     // sua rede. A ligação até a borda é uma condição de exportação, não de
     // existência do recurso dentro da cidade.
-    if (b.type === "POWER_PLANT" && hasElectricUtility(b)) energyProduction += def.energyProduction
-    if (b.type === "WATER_TOWER" && hasSewerUtility(b)) waterProduction += def.waterProduction
+    if (b.type === "POWER_PLANT" && hasElectricUtility(b)) {
+      energyProduction += def.energyProduction
+      if (hasBuildingUtilityToEdge(buildings, b, "ELECTRIC_GRID")) edgeEnergyProduction += def.energyProduction
+    }
+    if (b.type === "WATER_TOWER" && hasSewerUtility(b)) {
+      waterProduction += def.waterProduction
+      if (hasBuildingUtilityToEdge(buildings, b, "SEWER_NETWORK")) edgeWaterProduction += def.waterProduction
+    }
     if (b.type === "SEWAGE_TREATMENT_PLANT" && hasSewerUtility(b) && connectedTowers.length > 0) {
       waterConsumption = Math.max(0, waterConsumption - def.waterConsumption)
     }
@@ -179,6 +187,10 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
     happiness,
     energy: energyProduction - energyConsumption,
     water: waterProduction - waterConsumption,
+    // Isolated districts keep their local production in the internal balance,
+    // but only edge-connected producer capacity can create an export surplus.
+    energyExport: Math.max(0, edgeEnergyProduction - energyConsumption),
+    waterExport: Math.max(0, edgeWaterProduction - waterConsumption),
     buildings,
     policy,
     regions: [],
