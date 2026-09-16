@@ -10,6 +10,7 @@ import {
 } from "react"
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
+import { createGameClock, DEFAULT_GAME_CLOCK_CONFIG } from "@/lib/game/clock"
 
 import {
   OrbitControls,
@@ -67,9 +68,8 @@ function LiveDayNightController({ clockStartedAt }: { clockStartedAt?: number | 
 
   useFrame(({ clock }) => {
     if (!clockStartedAt) return
-    const elapsed = (Date.now() - clockStartedAt) / 1000
-    const gameMinutes = elapsed * 2
-    const minute = ((gameMinutes % 1440) + 1440) % 1440
+    const currentClock = createGameClock(Date.parse(String(clockStartedAt)) || clockStartedAt, Date.now(), DEFAULT_GAME_CLOCK_CONFIG)
+    const minute = currentClock.hour * 60 + currentClock.minute
     const smoothstep = (a: number, b: number, value: number) => {
       const t = Math.max(0, Math.min(1, (value - a) / (b - a)))
       return t * t * (3 - 2 * t)
