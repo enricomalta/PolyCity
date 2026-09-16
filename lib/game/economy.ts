@@ -3,7 +3,7 @@ import {
   createGameClock,
 } from "@/lib/game/clock"
 import { getBuilding } from "./buildings"
-import { hasBuildingUtility, hasBuildingUtilityToEdge } from "./utilityNetwork"
+import { hasBuildingUtility } from "./utilityNetwork"
 
 // IMPORTANT: economy math here is the SAME code the backend runs. The server
 // imports these helpers so the authoritative economy and the optimistic
@@ -135,10 +135,7 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
 
   const hasElectricUtility = (building: Building) => hasBuildingUtility(buildings, building, "ELECTRIC_GRID")
   const hasSewerUtility = (building: Building) => hasBuildingUtility(buildings, building, "SEWER_NETWORK")
-  const hasElectricEdge = (building: Building) => hasBuildingUtilityToEdge(buildings, building, "ELECTRIC_GRID")
-  const hasSewerEdge = (building: Building) => hasBuildingUtilityToEdge(buildings, building, "SEWER_NETWORK")
   const connectedTowers = buildings.filter((building) => building.type === "WATER_TOWER" && hasSewerUtility(building))
-  const connectedTreatment = buildings.filter((building) => building.type === "SEWAGE_TREATMENT_PLANT" && hasSewerUtility(building))
 
   for (const b of buildings) {
     const def = getBuilding(b.type)
@@ -150,12 +147,12 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
     buildingHappiness += def.happiness
     if (def.energyConsumption > 0 && hasElectricUtility(b)) energyConsumption += def.energyConsumption
     if (def.waterConsumption > 0 && hasSewerUtility(b)) waterConsumption += def.waterConsumption
-    // Produção só entra no balanço exportável quando o produtor tem fluxo
-    // contínuo até a borda. Uma rede isolada pode servir o bairro local,
-    // mas não injeta excedente automaticamente na cidade.
-    if (b.type === "POWER_PLANT" && hasElectricEdge(b)) energyProduction += def.energyProduction
-    if (b.type === "WATER_TOWER" && hasSewerEdge(b)) waterProduction += def.waterProduction
-    if (b.type === "SEWAGE_TREATMENT_PLANT" && hasSewerUtility(b) && connectedTowers.length > 0 && hasSewerEdge(b)) {
+    // A produção local entra no balanço assim que o produtor está ligado à
+    // sua rede. A ligação até a borda é uma condição de exportação, não de
+    // existência do recurso dentro da cidade.
+    if (b.type === "POWER_PLANT" && hasElectricUtility(b)) energyProduction += def.energyProduction
+    if (b.type === "WATER_TOWER" && hasSewerUtility(b)) waterProduction += def.waterProduction
+    if (b.type === "SEWAGE_TREATMENT_PLANT" && hasSewerUtility(b) && connectedTowers.length > 0) {
       waterConsumption = Math.max(0, waterConsumption - def.waterConsumption)
     }
   }
