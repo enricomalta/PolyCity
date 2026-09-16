@@ -91,6 +91,7 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
 
   const dirty = draft !== null
   const { budget, services } = preview
+  const utilityFunding = policy.utilityFunding ?? { energy: 2 as FundingLevel, sewage: 2 as FundingLevel }
 
   const setTax = (taxRate: number) => setDraft({ ...policy, taxRate })
   const setService = (service: PublicService, level: FundingLevel) =>
@@ -103,7 +104,7 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
   const importingEnergy = !utilityBuildings.some((building) => building.type === "POWER_PLANT") && edgeNetwork("ELECTRIC_GRID")
   const ownSewage = utilityBuildings.some((building) => building.type === "SEWAGE_TREATMENT_PLANT") && utilityBuildings.some((building) => building.type === "WATER_TOWER")
   const importingSewage = !ownSewage && edgeNetwork("SEWER_NETWORK")
-  const setUtilityFunding = (utility: "energy" | "sewage", level: FundingLevel) => setDraft({ ...policy, utilityFunding: { ...policy.utilityFunding, [utility]: level } })
+  const setUtilityFunding = (utility: "energy" | "sewage", level: FundingLevel) => setDraft({ ...policy, utilityFunding: { ...utilityFunding, [utility]: level } })
 
   const save = async () => {
     const ok = await updatePolicy(draft ?? policy)
@@ -235,8 +236,8 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
             </p>
 
             <div className="mt-5 flex flex-col gap-4">
-              <UtilityFundingRow label="Energia" description={importingEnergy ? "Importada pela conexão de borda; fixa em 50%." : "Ajuste a verba da produção própria."} level={importingEnergy ? 2 : policy.utilityFunding.energy} locked={importingEnergy} onChange={(level) => setUtilityFunding("energy", level)} />
-              <UtilityFundingRow label="Tratamento de esgoto" description={importingSewage ? "Importado pela conexão de borda; fixo em 50%." : "Requer estação de tratamento e caixa d’água conectadas."} level={importingSewage ? 2 : policy.utilityFunding.sewage} locked={importingSewage} onChange={(level) => setUtilityFunding("sewage", level)} />
+              <UtilityFundingRow label="Energia" description={importingEnergy ? "Importada pela conexão de borda; fixa em 50%." : "Ajuste a verba da produção própria."} level={importingEnergy ? 2 : utilityFunding.energy} locked={importingEnergy} onChange={(level) => setUtilityFunding("energy", level)} />
+              <UtilityFundingRow label="Tratamento de esgoto" description={importingSewage ? "Importado pela conexão de borda; fixo em 50%." : "Requer estação de tratamento e caixa d’água conectadas."} level={importingSewage ? 2 : utilityFunding.sewage} locked={importingSewage} onChange={(level) => setUtilityFunding("sewage", level)} />
               {(Object.keys(SERVICE_META) as PublicService[]).map((service) => (
                 <ServiceRow
                   key={service}
