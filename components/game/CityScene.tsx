@@ -140,21 +140,25 @@ function UtilityPipes({ buildings, type }: { buildings: Array<{ x: number; z: nu
   const tileSet = new Set(networkTiles.map((building) => utilityKey(building.x, building.z)))
   const offset = type === "ELECTRIC_GRID" ? -0.22 : 0.22
   const pipeMaterial = (active: boolean) => <meshBasicMaterial color={color} transparent={!active} opacity={active ? 1 : 0.45} />
-  const segment = (x1: number, z1: number, x2: number, z2: number, id: string, active: boolean) => {
-    const horizontal = z1 === z2
-    return <mesh key={`${type}-${id}`} position={[(tileToWorld(x1) + tileToWorld(x2)) / 2 + offset, 0.15, (tileToWorld(z1) + tileToWorld(z2)) / 2]} rotation={[0, 0, horizontal ? Math.PI / 2 : 0]}><cylinderGeometry args={[0.035, 0.035, TILE_SIZE, 8]} />{pipeMaterial(active)}</mesh>
+  const segment = (x: number, z: number, dx: number, dz: number, id: string, active: boolean) => {
+    const horizontal = dx !== 0
+    const centerX = tileToWorld(x) + offset + (dx * TILE_SIZE) / 4
+    const centerZ = tileToWorld(z) + (dz * TILE_SIZE) / 4
+    return <mesh key={`${type}-${id}`} position={[centerX, 0.15, centerZ]} rotation={horizontal ? [0, 0, Math.PI / 2] : [Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.035, 0.035, TILE_SIZE / 2, 8]} />{pipeMaterial(active)}</mesh>
   }
   return <group ref={group}>{networkTiles.flatMap((network) => {
     const active = connected.has(utilityKey(network.x, network.z))
-    const segments = []
-    const east = tileSet.has(utilityKey(network.x + 1, network.z))
-    const south = tileSet.has(utilityKey(network.x, network.z + 1))
-    const west = tileSet.has(utilityKey(network.x - 1, network.z))
-    const north = tileSet.has(utilityKey(network.x, network.z - 1))
-    if (east) segments.push(segment(network.x, network.z, network.x + 1, network.z, `${network.x}-${network.z}-e`, active && connected.has(utilityKey(network.x + 1, network.z))))
-    if (south) segments.push(segment(network.x, network.z, network.x, network.z + 1, `${network.x}-${network.z}-s`, active && connected.has(utilityKey(network.x, network.z + 1))))
-    if (!east && !south && !west && !north) segments.push(<mesh key={`${type}-${network.x}-${network.z}-stub`} position={[tileToWorld(network.x) + offset, 0.15, tileToWorld(network.z)]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.035, 0.035, TILE_SIZE * 0.5, 8]} />{pipeMaterial(active)}</mesh>)
-    return segments
+    const neighbors = [
+      [1, 0, "e"],
+      [0, 1, "s"],
+      [-1, 0, "w"],
+      [0, -1, "n"],
+    ] as const
+    const segments = neighbors.filter(([dx, dz]) => tileSet.has(utilityKey(network.x + dx, network.z + dz))).map(([dx, dz, direction]) => segment(network.x, network.z, dx, dz, `${network.x}-${network.z}-${direction}`, active && connected.has(utilityKey(network.x + dx, network.z + dz))))
+    return [
+      <mesh key={`${type}-${network.x}-${network.z}-node`} position={[tileToWorld(network.x) + offset, 0.15, tileToWorld(network.z)]}><sphereGeometry args={[0.055, 8, 6]} />{pipeMaterial(active)}</mesh>,
+      ...segments,
+    ]
   })}</group>
 }
 
