@@ -421,7 +421,7 @@ export function GameProvider({
                 x,
                 z,
                 ...(buildingType ? { buildingType } : {}),
-rqu              },
+              },
             )
 
           setState(res.state)
