@@ -93,7 +93,30 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
   const { budget, services } = preview
   const utilityFunding = policy.utilityFunding ?? { energy: 2 as FundingLevel, sewage: 2 as FundingLevel }
 
-  const setTax = (taxRate: number) => setDraft({ ...policy, taxRate })
+  const individualTaxes = [
+    ...Object.values(policy.classTaxRates),
+    ...Object.values(policy.selectiveTaxes),
+  ]
+  const municipalTax = Math.round(individualTaxes.reduce((sum, value) => sum + value, 0) / individualTaxes.length)
+  const setTax = (taxRate: number) => {
+    const bounded = Math.max(0, Math.min(50, taxRate))
+    setDraft({
+      ...policy,
+      taxRate: bounded,
+      classTaxRates: { LOW: bounded, MIDDLE: bounded, HIGH: bounded },
+      selectiveTaxes: { consumption: bounded, energy: bounded, water: bounded, fuel: bounded },
+    })
+  }
+  const setClassTax = (group: CitizenClass, value: number) => {
+    const classTaxRates = { ...policy.classTaxRates, [group]: Math.max(0, Math.min(50, value)) }
+    const values = [...Object.values(classTaxRates), ...Object.values(policy.selectiveTaxes)]
+    setDraft({ ...policy, classTaxRates, taxRate: Math.round(values.reduce((sum, tax) => sum + tax, 0) / values.length) })
+  }
+  const setSelectiveTax = (tax: SelectiveTax, value: number) => {
+    const selectiveTaxes = { ...policy.selectiveTaxes, [tax]: Math.max(0, Math.min(50, value)) }
+    const values = [...Object.values(policy.classTaxRates), ...Object.values(selectiveTaxes)]
+    setDraft({ ...policy, selectiveTaxes, taxRate: Math.round(values.reduce((sum, current) => sum + current, 0) / values.length) })
+  }
   const setService = (service: PublicService, level: FundingLevel) =>
     setDraft({ ...policy, services: { ...policy.services, [service]: level } })
   const importingEnergy = state.energy <= 0
@@ -184,7 +207,7 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
               min={0}
               max={50}
               step={1}
-              value={policy.taxRate}
+              value={municipalTax}
               onChange={(e) => setTax(Number(e.target.value))}
               className="mt-3 w-full accent-[var(--primary)]"
               aria-label="Alíquota de imposto"
@@ -202,10 +225,10 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
             <p className="mt-1 text-sm text-muted-foreground">Alíquotas e preços alteram diretamente a opinião individual dos moradores.</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2"><div className="rounded-xl border border-border bg-background p-3"><p className="text-xs text-muted-foreground">Modelo econômico</p><p className="mt-1 font-semibold text-card-foreground">{policy.economicModel === "SANDBOX" ? "Sandbox" : policy.economicModel === "FREE_MARKET" ? "Livre mercado" : policy.economicModel === "PLANNED_ECONOMY" ? "Economia planejada" : policy.economicModel === "WELFARE_STATE" ? "Estado de bem-estar" : "Economia social de mercado"}</p></div><div className="rounded-xl border border-border bg-background p-3"><p className="text-xs text-muted-foreground">Ideologia</p><p className="mt-1 font-semibold text-card-foreground">{policy.ideology.replaceAll("_", " ")}</p></div></div>
             <div className="mt-4 grid gap-4 md:grid-cols-3">
-              {(["LOW", "MIDDLE", "HIGH"] as CitizenClass[]).map((group) => <label key={group} className="text-sm text-muted-foreground">{group === "LOW" ? "Baixa" : group === "MIDDLE" ? "Média" : "Alta"} · imposto %<input type="number" min={0} max={50} value={policy.classTaxRates[group]} onChange={(e) => setDraft({ ...policy, classTaxRates: { ...policy.classTaxRates, [group]: Number(e.target.value) } })} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground" /></label>)}
+              {(["LOW", "MIDDLE", "HIGH"] as CitizenClass[]).map((group) => <label key={group} className="text-sm text-muted-foreground">{group === "LOW" ? "Baixa" : group === "MIDDLE" ? "Média" : "Alta"} · imposto %<input type="number" min={0} max={50} value={policy.classTaxRates[group]} onChange={(e) => setClassTax(group, Number(e.target.value))} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground" /></label>)}
             </div>
             <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {(["consumption", "energy", "water", "fuel"] as SelectiveTax[]).map((tax) => <label key={tax} className="text-sm text-muted-foreground">{tax === "consumption" ? "Consumo" : tax === "energy" ? "Energia" : tax === "water" ? "Água" : "Combustível"} · alíquota %<input type="number" min={0} max={50} value={policy.selectiveTaxes[tax]} onChange={(e) => setDraft({ ...policy, selectiveTaxes: { ...policy.selectiveTaxes, [tax]: Math.max(0, Math.min(50, Number(e.target.value) || 0)) } })} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground" /></label>)}
+              {(["consumption", "energy", "water", "fuel"] as SelectiveTax[]).map((tax) => <label key={tax} className="text-sm text-muted-foreground">{tax === "consumption" ? "Consumo" : tax === "energy" ? "Energia" : tax === "water" ? "Água" : "Combustível"} · alíquota %<input type="number" min={0} max={50} value={policy.selectiveTaxes[tax]} onChange={(e) => setSelectiveTax(tax, Number(e.target.value) || 0)} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground" /></label>)}
             </div>
             <p className="mt-3 text-xs text-muted-foreground">Os impostos seletivos encarecem diretamente o custo de vida e reduzem a opinião dos moradores afetados.</p>
             <div className="mt-6 border-t border-border pt-5">
@@ -241,7 +264,7 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
                   label={SERVICE_LABELS[service]}
                   description={SERVICE_META[service].description}
                   level={service === "sewage" && importingSewage ? 2 : (policy.services[service] ?? 0) as FundingLevel}
-                  index={services[service] ?? (policy.services[service] ?? 0) * 30}
+                  index={service === "sewage" && importingSewage ? 50 : services[service] ?? (policy.services[service] ?? 0) * 30}
                   locked={service === "sewage" && importingSewage}
                   onChange={(lvl) => setServiceFunding(service, lvl)}
                 />
