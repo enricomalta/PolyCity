@@ -9,7 +9,7 @@ import {
   useState,
 } from "react"
 
-import { Canvas } from "@react-three/fiber"
+import { Canvas, useFrame, useThree } from "@react-three/fiber"
 
 import {
   OrbitControls,
@@ -20,6 +20,10 @@ import {
   Color,
   PCFShadowMap,
   MOUSE,
+  AmbientLight,
+  DirectionalLight,
+  HemisphereLight,
+  Fog,
 } from "three"
 
 import {
@@ -30,8 +34,6 @@ import {
 
 import { canPlace } from "@/lib/game/grid"
 import { useGame } from "@/hooks/useGame"
-import { useGameClock } from "@/hooks/useGameClock"
-
 import { BuildingMesh } from "./Building"
 import { Road } from "./Road"
 import { GroundTiles } from "./GroundTiles"
@@ -49,6 +51,43 @@ import type {
 import type {
   SelectionIndicatorHandle,
 } from "./SelectionIndicator"
+
+function LiveDayNightController({ clockStartedAt }: { clockStartedAt?: number | null }) {
+  const { scene } = useThree()
+  const ambient = useRef<AmbientLight | null>(null)
+  const hemisphere = useRef<HemisphereLight | null>(null)
+  const directional = useRef<DirectionalLight | null>(null)
+  const daylight = useRef(1)
+  const dawnSky = useMemo(() => new Color("#9fc9e8"), [])
+  const nightSky = useMemo(() => new Color("#18243d"), [])
+  const dawnGround = useMemo(() => new Color("#4a6b3a"), [])
+  const nightGround = useMemo(() => new Color("#111827"), [])
+  const currentSky = useMemo(() => new Color(), [])
+  const currentGround = useMemo(() => new Color(), [])
+
+  useFrame(({ clock }) => {
+    if (!clockStartedAt) return
+    const elapsed = (Date.now() - clockStartedAt) / 1000
+    const gameMinutes = elapsed * 2
+    const minute = ((gameMinutes % 1440) + 1440) % 1440
+    const smoothstep = (a: number, b: number, value: number) => {
+      const t = Math.max(0, Math.min(1, (value - a) / (b - a)))
+      return t * t * (3 - 2 * t)
+    }
+    const nextDaylight = Math.min(smoothstep(300, 420, minute), 1 - smoothstep(1140, 1260, minute))
+    daylight.current += (nextDaylight - daylight.current) * Math.min(1, clock.getDelta() * 8)
+    const light = daylight.current
+    currentSky.copy(nightSky).lerp(dawnSky, light)
+    currentGround.copy(nightGround).lerp(dawnGround, light)
+    scene.background = currentSky
+    if (scene.fog instanceof Fog) { scene.fog.color.copy(currentSky) }
+    if (ambient.current) ambient.current.intensity = 0.28 + light * 0.47
+    if (hemisphere.current) { hemisphere.current.color.set("#445b92").lerp(new Color("#dcefff"), light); hemisphere.current.groundColor.copy(currentGround); hemisphere.current.intensity = 0.16 + light * 0.54 }
+    if (directional.current) directional.current.intensity = 0.35 + light * 1.15
+  })
+
+  return <><ambientLight ref={ambient} intensity={0.28} /><hemisphereLight ref={hemisphere} args={["#445b92", "#111827", 0.16]} /><directionalLight ref={directional} position={[18, 28, 12]} intensity={0.35} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-24} shadow-camera-right={24} shadow-camera-top={24} shadow-camera-bottom={-24} shadow-bias={-0.0004} /></>
+}
 
 function regionColor(region: { zone: string; citizenClass?: string }) {
   if (region.zone === "COMMERCIAL") return "#2563eb"
@@ -206,44 +245,14 @@ export function CityScene() {
   }, [])
 
   const buildings = state?.buildings ?? []
-  const liveClock = useGameClock(city?.clockStartedAt ?? null)
-  const visualClock = liveClock ?? state?.clock
-  const visualStage = visualClock?.stage ?? (String(state?.timeStage) === "1" || state?.timeStage === "NIGHT" ? "NIGHT" : "DAY")
-  const isNight =
-  visualStage === "NIGHT"
+  const visualStage = state?.timeStage === "NIGHT" ? "NIGHT" : "DAY"
+  const isNight = visualStage === "NIGHT"
+  const minuteOfDay = isNight ? 0 : 720
 
-  const minuteOfDay = visualClock
-  ? visualClock.hour * 60 + visualClock.minute
-  : isNight
-  ? 0
-  : 720
-
-  const smoothstep = (edge0: number, edge1: number, value: number) => {
-    const progress = Math.max(
-      0,
-      Math.min(1, (value - edge0) / (edge1 - edge0)),
-    )
-
-    return progress * progress * (3 - 2 * progress)
-  }
-
-  // O céu muda gradualmente entre 05:00–07:00 e 19:00–21:00,
-  // criando um amanhecer e um pôr do sol em vez de um corte abrupto.
-  const daylight = Math.min(
-    smoothstep(5 * 60, 7 * 60, minuteOfDay),
-    1 - smoothstep(19 * 60, 21 * 60, minuteOfDay),
-  )
-  const nightIntensity = 1 - daylight
-  const visualNight = nightIntensity > 0.01
-
-  const skyColor = new Color("#18243d").lerp(
-    new Color("#9fc9e8"),
-    daylight,
-  )
-  const groundColor = new Color("#111827").lerp(
-    new Color("#4a6b3a"),
-    daylight,
-  )
+  const visualNight = isNight
+  const nightIntensity = isNight ? 1 : 0
+  const skyColor = new Color(isNight ? "#18243d" : "#9fc9e8")
+  const groundColor = new Color(isNight ? "#111827" : "#4a6b3a")
 
   const citizens =
     state?.citizens ?? []
@@ -547,17 +556,8 @@ export function CityScene() {
         ]}
       />
 
-      <ambientLight
-        intensity={0.28 + daylight * 0.47}
-      />
+      <LiveDayNightController clockStartedAt={city?.clockStartedAt ?? null} />
 
-      <hemisphereLight
-        args={[
-          new Color("#445b92").lerp(new Color("#dcefff"), daylight).getStyle(),
-          groundColor.getStyle(),
-          0.16 + daylight * 0.54,
-        ]}
-      />
 
       <directionalLight
         position={[
