@@ -453,23 +453,37 @@ function Model({
       return (
         <group>
           <Foundation color="#456c70" />
-          <mesh castShadow receiveShadow position={[0, def.height / 2 + 0.06, 0]}>
-            <boxGeometry args={[0.82, def.height, 0.72]} />
+          <mesh castShadow receiveShadow position={[-0.22, def.height / 2 + 0.06, 0.08]}>
+            <boxGeometry args={[0.42, def.height, 0.58]} />
             <meshStandardMaterial color={c} flatShading />
           </mesh>
-          <mesh castShadow position={[0, def.height + 0.12, 0]}>
-            <boxGeometry args={[0.86, 0.12, 0.76]} />
+          <mesh castShadow position={[-0.22, def.height + 0.14, 0.08]}>
+            <boxGeometry args={[0.48, 0.12, 0.64]} />
             <meshStandardMaterial color={roof} flatShading />
           </mesh>
-          {[[-0.24, -0.18], [0.24, -0.18], [-0.24, 0.18], [0.24, 0.18]].map(([x, z], index) => (
-            <mesh key={index} castShadow position={[x, def.height + 0.28, z]}>
-              <cylinderGeometry args={[0.1, 0.12, 0.26, 10]} />
-              <meshStandardMaterial color="#9fc8c7" flatShading />
-            </mesh>
+          {[-0.28, 0.12].map((z, index) => (
+            <group key={index}>
+              <mesh castShadow position={[0.2, 0.18, z]}>
+                <cylinderGeometry args={[0.17, 0.19, 0.2, 16]} />
+                <meshStandardMaterial color="#78aeb0" flatShading />
+              </mesh>
+              <mesh position={[0.2, 0.29, z]} rotation={[Math.PI / 2, 0, 0]}>
+                <torusGeometry args={[0.12, 0.025, 6, 16]} />
+                <meshStandardMaterial color="#c3e2df" flatShading />
+              </mesh>
+            </group>
           ))}
-          <mesh position={[0, def.height + 0.28, 0.38]} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.14, 0.035, 6, 12]} />
-            <meshStandardMaterial color="#c8e6e5" flatShading />
+          <mesh castShadow position={[0.38, 0.42, 0.08]}>
+            <cylinderGeometry args={[0.055, 0.07, 0.52, 8]} />
+            <meshStandardMaterial color="#789399" flatShading />
+          </mesh>
+          <mesh position={[0.38, 0.7, 0.08]}>
+            <torusGeometry args={[0.08, 0.02, 6, 12]} />
+            <meshStandardMaterial color="#b6d5d3" flatShading />
+          </mesh>
+          <mesh position={[0.02, 0.12, 0.38]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.025, 0.025, 0.32, 8]} />
+            <meshBasicMaterial color="#9bd0ca" />
           </mesh>
         </group>
       )
