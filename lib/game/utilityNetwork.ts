@@ -1,4 +1,6 @@
 import type { Building } from "@/types/city"
+import { areRoadsConnected } from "./roadAutoTile"
+
 
 export type UtilityType = "ELECTRIC_GRID" | "SEWER_NETWORK"
 
@@ -37,12 +39,13 @@ export function getUtilityNetwork(buildings: Building[], type: UtilityType): Set
   while (queue.length) {
     const current = queue.shift()!
     const [x, z] = current.split(":").map(Number)
-    for (const next of [key(x, z - 1), key(x + 1, z), key(x, z + 1), key(x - 1, z)]) {
-      if (utilities.has(next) && !connected.has(next)) {
-        connected.add(next)
-        queue.push(next)
-      }
-      if (roads.has(next) && !connected.has(next)) {
+    const currentIsRoad = roads.has(current)
+
+    for (const [nextX, nextZ] of [[x, z - 1], [x + 1, z], [x, z + 1], [x - 1, z]]) {
+      const next = key(nextX, nextZ)
+      const roadsAreConnected = !currentIsRoad || !roads.has(next) || areRoadsConnected(x, z, nextX, nextZ, roads)
+
+      if (roadsAreConnected && (utilities.has(next) || roads.has(next)) && !connected.has(next)) {
         connected.add(next)
         queue.push(next)
       }
