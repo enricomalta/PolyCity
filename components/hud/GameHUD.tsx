@@ -31,8 +31,6 @@ export function GameHUD() {
     setTool,
     selectBuildingType,
     selectTile,
-    demolish,
-    rotateSelectedBuilding,
     moveBuilding,
     vacateBuilding,
     closeBuilding,
@@ -296,24 +294,6 @@ export function GameHUD() {
               tile={inspected.tile}
               building={inspected.building}
               onClose={() => selectTile(null)}
-
-              onDemolish={(x, z) => {
-                void demolish(x, z)
-                selectTile(null)
-              }}
-
-              onRotate={(
-                x,
-                z,
-                rotation,
-              ) => {
-                void rotateSelectedBuilding(
-                  x,
-                  z,
-                  rotation,
-                )
-              }}
-              
               onVacate={vacateBuilding}
               onCloseBuilding={closeBuilding}
               onOpenBuilding={openBuilding}
