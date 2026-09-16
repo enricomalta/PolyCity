@@ -1038,10 +1038,11 @@ export async function performAction(
     const tile = terrain[action.x]?.[action.z]
     const sharedRoadNetwork = action.buildingType === "ELECTRIC_GRID" || action.buildingType === "SEWER_NETWORK"
     const occupiedBuilding = doc.buildings.find((building) => building.x === action.x && building.z === action.z && building.type !== "ELECTRIC_GRID" && building.type !== "SEWER_NETWORK")
-    const canShareRoad = sharedRoadNetwork && occupiedBuilding?.type === "ROAD"
+    const roadAtTile = doc.buildings.some((building) => building.x === action.x && building.z === action.z && building.type === "ROAD")
+    const canShareRoad = sharedRoadNetwork && roadAtTile
     const sameNetworkExists = sharedRoadNetwork && doc.buildings.some((building) => building.x === action.x && building.z === action.z && building.type === action.buildingType)
 
-    if (!tile || tile.terrain === "WATER" || tile.terrain === "ROCK" || (occupiedBuilding && !canShareRoad) || sameNetworkExists) {
+    if (!tile || tile.terrain === "WATER" || tile.terrain === "ROCK" || (sharedRoadNetwork && !roadAtTile) || (occupiedBuilding && !canShareRoad) || sameNetworkExists) {
       return reject("Não é possível construir aqui.")
     }
 
@@ -1200,14 +1201,11 @@ export async function performAction(
     action.type ===
     "DEMOLISH"
   ) {
-    const idx =
-      doc.buildings.findIndex(
-        (b) =>
-          b.x === action.x &&
-          b.z === action.z &&
-          b.type !== "ELECTRIC_GRID" &&
-          b.type !== "SEWER_NETWORK",
-      )
+    const idx = doc.buildings.findIndex((b) =>
+      b.x === action.x &&
+      b.z === action.z &&
+      (action.buildingType ? b.type === action.buildingType : b.type !== "ELECTRIC_GRID" && b.type !== "SEWER_NETWORK"),
+    )
 
     if (idx === -1) {
       return reject(

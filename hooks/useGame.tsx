@@ -126,6 +126,7 @@ interface GameContextValue {
   demolish: (
     x: number,
     z: number,
+    buildingType?: BuildingType,
   ) => Promise<void>
 
   setTerrain: (x: number, z: number, terrain: TerrainType) => Promise<void>
@@ -366,31 +367,18 @@ export function GameProvider({
         setPending(true)
 
         try {
-          const normalizedRotation =
-            ((rotation % 4) + 4) % 4
-
-          const res =
-            await gameService.performAction(
-              cityId,
-              {
-                type: "BUILD",
-                buildingType,
-                x,
-                z,
-                rotation:
-                  normalizedRotation,
-              },
-            )
-
+          const normalizedRotation = ((rotation % 4) + 4) % 4
+          const res = await gameService.performAction(cityId, {
+            type: "BUILD",
+            buildingType,
+            x,
+            z,
+            rotation: normalizedRotation,
+          })
           setState(res.state)
-
-          setLastMessage(
-            res.message ?? null,
-          )
+          setLastMessage(res.message ?? null)
         } catch {
-          setLastMessage(
-            "Não foi possível concluir a ação.",
-          )
+          setLastMessage("Não foi possível concluir a ação.")
         } finally {
           setPending(false)
         }
@@ -421,7 +409,7 @@ export function GameProvider({
 
   const demolish =
     useCallback<GameContextValue["demolish"]>(
-      async (x, z) => {
+      async (x, z, buildingType) => {
         setPending(true)
 
         try {
@@ -432,6 +420,7 @@ export function GameProvider({
                 type: "DEMOLISH",
                 x,
                 z,
+                ...(buildingType ? { buildingType } : {}),
               },
             )
 

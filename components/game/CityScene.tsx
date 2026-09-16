@@ -136,9 +136,10 @@ function UtilityPipes({ buildings, type }: { buildings: Array<{ x: number; z: nu
   const utilityBuildings = buildings as Building[]
   const connected = getUtilityNetwork(utilityBuildings, type)
   useFrame(({ clock }) => { if (group.current) group.current.children.forEach((child, index) => { child.position.y = 0.15 + Math.sin(clock.elapsedTime * 4 + index * 0.7) * 0.015 }) })
-  return <group ref={group}>{utilityBuildings.filter((building) => building.type === type && connected.has(utilityKey(building.x, building.z))).map((network) => {
-    const horizontal = connected.has(utilityKey(network.x - 1, network.z)) || connected.has(utilityKey(network.x + 1, network.z))
-    return <mesh key={`${type}-${network.x}-${network.z}`} position={[tileToWorld(network.x) + (type === "ELECTRIC_GRID" ? -0.22 : 0.22), 0.15, tileToWorld(network.z)]} rotation={[0, horizontal ? 0 : Math.PI / 2, 0]}><cylinderGeometry args={[0.035, 0.035, TILE_SIZE * 0.72, 8]} /><meshBasicMaterial color={color} /></mesh>
+  return <group ref={group}>{utilityBuildings.filter((building) => building.type === type).map((network) => {
+    const isConnected = connected.has(utilityKey(network.x, network.z))
+    const horizontal = utilityBuildings.some((building) => building.type === type && building.z === network.z && (building.x === network.x - 1 || building.x === network.x + 1))
+    return <mesh key={`${type}-${network.x}-${network.z}`} position={[tileToWorld(network.x) + (type === "ELECTRIC_GRID" ? -0.22 : 0.22), 0.15, tileToWorld(network.z)]} rotation={[0, 0, horizontal ? Math.PI / 2 : 0]}><cylinderGeometry args={[0.035, 0.035, TILE_SIZE * 0.72, 8]} /><meshBasicMaterial color={isConnected ? color : "#64748b"} transparent={!isConnected} opacity={isConnected ? 1 : 0.45} /></mesh>
   })}</group>
 }
 
@@ -490,10 +491,10 @@ export function CityScene() {
       }
 
       if (tool === "DEMOLISH") {
-        if (tile?.occupiedBy) {
-          void demolish(x, z)
-        }
-
+        const selectedUtility = selectedBuilding === "ELECTRIC_GRID" || selectedBuilding === "SEWER_NETWORK" ? selectedBuilding : null
+        const utilityAtTile = buildings.find((building) => building.x === x && building.z === z && (selectedUtility ? building.type === selectedUtility : building.type === "ELECTRIC_GRID" || building.type === "SEWER_NETWORK"))
+        if (utilityAtTile) void demolish(x, z, utilityAtTile.type)
+        else if (tile?.occupiedBy) void demolish(x, z)
         return
       }
 
@@ -502,9 +503,10 @@ export function CityScene() {
           tool === "ROAD") &&
         selectedBuilding
       ) {
-        const networkOnRoad = (selectedBuilding === "ELECTRIC_GRID" || selectedBuilding === "SEWER_NETWORK") && buildings.some((building) => building.x === x && building.z === z && building.type === "ROAD")
+        const isUtilityNetwork = selectedBuilding === "ELECTRIC_GRID" || selectedBuilding === "SEWER_NETWORK"
+        const networkOnRoad = isUtilityNetwork && buildings.some((building) => building.x === x && building.z === z && building.type === "ROAD")
         const duplicateNetwork = buildings.some((building) => building.x === x && building.z === z && building.type === selectedBuilding)
-        if ((canPlace(tile) || networkOnRoad) && !duplicateNetwork) {
+        if ((canPlace(tile) || networkOnRoad) && (!isUtilityNetwork || networkOnRoad) && !duplicateNetwork) {
           void build(x, z, selectedBuilding, buildRotation)
         }
 

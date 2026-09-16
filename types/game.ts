@@ -64,6 +64,7 @@ export type GameAction =
       type: "DEMOLISH"
       x: number
       z: number
+      buildingType?: BuildingType
     }
   | {
       type: "SET_TERRAIN"
