@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Home, Building2, Store, Factory, Trees, Zap, Droplets, Route, ShoppingCart, Fuel, Shirt, CarFront, Hammer, Cpu, Cable, Waves } from "lucide-react"
 import type { BuildingType } from "@/types/game"
 import {
@@ -42,6 +42,41 @@ const ICONS: Record<BuildingType, React.ReactNode> = {
   SEWAGE_TREATMENT_PLANT: <Droplets className="size-5" />,
 }
 
+type BuildGroup = { label: string; types: BuildingType[] }
+
+const GROUPS: Record<string, BuildGroup[]> = {
+  RESIDENTIAL: [
+    { label: "Casas", types: ["HOUSE", "LOW_INCOME_HOUSE", "MIDDLE_INCOME_HOUSE", "HIGH_INCOME_HOUSE"] },
+    { label: "Prédios", types: ["SMALL_APARTMENT", "LOW_INCOME_APARTMENT", "MIDDLE_INCOME_APARTMENT", "HIGH_INCOME_APARTMENT"] },
+    { label: "Hotéis", types: [] },
+  ],
+  COMMERCIAL: [
+    { label: "Comércio local", types: ["SHOP", "CLOTHING_STORE", "BUILDING_SUPPLY_STORE"] },
+    { label: "Serviços e abastecimento", types: ["GROCERY_STORE", "GAS_STATION"] },
+    { label: "Automóveis", types: ["CAR_DEALERSHIP"] },
+    { label: "Edifícios comerciais", types: ["COMMERCIAL_BUILDING"] },
+  ],
+  INDUSTRIAL: [
+    { label: "Fábricas", types: ["FACTORY", "CONSTRUCTION_FACTORY"] },
+    { label: "Automobilística", types: ["AUTOMOTIVE_FACTORY"] },
+    { label: "Tecnologia", types: ["TECH_FACTORY"] },
+  ],
+  SERVICES: [
+    { label: "Qualidade de vida", types: ["PARK"] },
+    { label: "Energia", types: ["POWER_PLANT", "ELECTRIC_GRID"] },
+    { label: "Água", types: ["WATER_TOWER", "SEWAGE_TREATMENT_PLANT", "SEWER_NETWORK"] },
+    { label: "Educação", types: [] },
+    { label: "Saúde", types: [] },
+    { label: "Segurança", types: [] },
+    { label: "Prevenção", types: [] },
+    { label: "Coleta de lixo", types: [] },
+    { label: "Transporte", types: [] },
+  ],
+  INFRASTRUCTURE: [
+    { label: "Vias", types: ["ROAD"] },
+  ],
+}
+
 interface BuildMenuProps {
   state: ResourceState
   selected: BuildingType | null
@@ -50,42 +85,34 @@ interface BuildMenuProps {
 
 export function BuildMenu({ state, selected, onSelect }: BuildMenuProps) {
   const [category, setCategory] = useState(CATEGORY_ORDER[0])
-  const items = BUILDING_LIST.filter((b) => b.category === category)
+  const [groupLabel, setGroupLabel] = useState<string | null>(null)
+  const groups = GROUPS[category] ?? []
+  const activeGroup = groups.find((group) => group.label === groupLabel)
+  const items = useMemo(() => BUILDING_LIST.filter((building) => activeGroup?.types.includes(building.type)), [activeGroup])
+
+  function changeCategory(nextCategory: typeof category) {
+    setCategory(nextCategory)
+    setGroupLabel(null)
+    onSelect(null)
+  }
 
   return (
     <div className="pointer-events-auto w-full max-w-xl rounded-2xl border border-border bg-card/90 p-3 shadow-lg shadow-black/30 backdrop-blur">
-      {/* Category tabs */}
       <div className="mb-3 flex flex-wrap gap-1.5">
         {CATEGORY_ORDER.map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => setCategory(c)}
-            className={cn(
-              "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-              c === category
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-muted-foreground hover:text-secondary-foreground",
-            )}
-          >
-            {CATEGORY_LABELS[c]}
-          </button>
+          <button key={c} type="button" onClick={() => changeCategory(c)} className={cn("rounded-full px-3 py-1 text-xs font-medium transition-colors", c === category ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-secondary-foreground")}>{CATEGORY_LABELS[c]}</button>
         ))}
       </div>
 
-      {/* Building cards */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {items.map((def) => (
-          <BuildingCard
-            key={def.type}
-            def={def}
-            icon={ICONS[def.type]}
-            active={selected === def.type}
-            canAfford={affordable(state, def.cost)}
-            onClick={() => onSelect(selected === def.type ? null : def.type)}
-          />
+      <div className="mb-3 flex flex-wrap gap-2">
+        {groupLabel && <button type="button" onClick={() => { setGroupLabel(null); onSelect(null) }} className="rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground">← Categorias</button>}
+        {(groupLabel ? [activeGroup].filter(Boolean) : groups).map((group) => group && (
+          <button key={group.label} type="button" onClick={() => setGroupLabel(group.label)} className={cn("rounded-lg border px-2.5 py-1.5 text-xs font-medium", groupLabel === group.label ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/60 text-secondary-foreground hover:border-primary/50")}>{group.label}<span className="ml-1 text-muted-foreground">({group.types.length})</span></button>
         ))}
       </div>
+
+      {groupLabel && <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{items.map((def) => <BuildingCard key={def.type} def={def} icon={ICONS[def.type]} active={selected === def.type} canAfford={affordable(state, def.cost)} onClick={() => onSelect(selected === def.type ? null : def.type)} />)}</div>}
+      {!groupLabel && <p className="px-1 text-xs text-muted-foreground">Escolha um grupo para ver as construções disponíveis.</p>}
     </div>
   )
 }
