@@ -11,6 +11,7 @@ import {
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { createGameClock, DEFAULT_GAME_CLOCK_CONFIG } from "@/lib/game/clock"
+import { getUtilityNetwork, utilityKey } from "@/lib/game/utilityNetwork"
 
 import {
   OrbitControls,
@@ -25,6 +26,7 @@ import {
   DirectionalLight,
   HemisphereLight,
   Fog,
+  Group,
 } from "three"
 
 import {
@@ -129,11 +131,14 @@ function heatColor(value: number) {
 }
 
 function UtilityPipes({ buildings, type }: { buildings: Array<{ x: number; z: number; type: string }>; type: "ELECTRIC_GRID" | "SEWER_NETWORK" }) {
+  const group = useRef<Group>(null)
   const color = type === "ELECTRIC_GRID" ? "#facc15" : "#60a5fa"
-  return <group>{buildings.filter((building) => building.type === "ROAD").map((road) => {
-    const installed = buildings.some((building) => building.x === road.x && building.z === road.z && building.type === type)
-    if (!installed) return null
-    return <mesh key={`${type}-${road.x}-${road.z}`} position={[tileToWorld(road.x) + (type === "ELECTRIC_GRID" ? -0.22 : 0.22), 0.15, tileToWorld(road.z)]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.035, 0.035, TILE_SIZE * 0.75, 8]} /><meshBasicMaterial color={color} /></mesh>
+  const utilityBuildings = buildings as Building[]
+  const connected = getUtilityNetwork(utilityBuildings, type)
+  useFrame(({ clock }) => { if (group.current) group.current.children.forEach((child, index) => { child.position.y = 0.15 + Math.sin(clock.elapsedTime * 4 + index * 0.7) * 0.015 }) })
+  return <group ref={group}>{utilityBuildings.filter((building) => building.type === type && connected.has(utilityKey(building.x, building.z))).map((network) => {
+    const horizontal = connected.has(utilityKey(network.x - 1, network.z)) || connected.has(utilityKey(network.x + 1, network.z))
+    return <mesh key={`${type}-${network.x}-${network.z}`} position={[tileToWorld(network.x) + (type === "ELECTRIC_GRID" ? -0.22 : 0.22), 0.15, tileToWorld(network.z)]} rotation={[0, horizontal ? 0 : Math.PI / 2, 0]}><cylinderGeometry args={[0.035, 0.035, TILE_SIZE * 0.72, 8]} /><meshBasicMaterial color={color} /></mesh>
   })}</group>
 }
 
