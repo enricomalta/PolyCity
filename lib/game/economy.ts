@@ -146,20 +146,17 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
     const def = getBuilding(b.type)
     const active = isActiveResident(b, def)
 
-    if (active) {
-      population += def.population
-      energyConsumption += def.energyConsumption
-      waterConsumption += def.waterConsumption
-    }
+    if (active) population += def.population
 
     jobs += def.jobs
     buildingHappiness += def.happiness
+    if (def.energyConsumption > 0) energyConsumption += def.energyConsumption
+    if (def.waterConsumption > 0) waterConsumption += def.waterConsumption
     if (b.type === "POWER_PLANT" && hasAdjacentNetwork(b, electricNetwork)) energyProduction += def.energyProduction
-    if (def.energyConsumption > 0 && hasElectricEdge && connectedPower.length === 0) energyProduction += def.energyConsumption
     if (b.type === "WATER_TOWER" && hasAdjacentNetwork(b, sewerNetwork)) waterProduction += def.waterProduction
-    if (b.type === "SEWAGE_TREATMENT_PLANT" && hasAdjacentNetwork(b, sewerNetwork) && connectedTowers.length > 0) waterProduction += def.waterProduction
-    if (def.waterProduction > 0 && b.type !== "WATER_TOWER" && b.type !== "SEWAGE_TREATMENT_PLANT") waterProduction += def.waterProduction
-    if (b.type === "SEWAGE_TREATMENT_PLANT" && hasAdjacentNetwork(b, sewerNetwork) && connectedTowers.length > 0 && connectedTreatment.length > 0 && hasSewerEdge) waterProduction += def.waterProduction
+    if (b.type === "SEWAGE_TREATMENT_PLANT" && hasAdjacentNetwork(b, sewerNetwork) && connectedTowers.length > 0 && hasSewerEdge) {
+      waterConsumption = Math.max(0, waterConsumption - def.waterConsumption)
+    }
   }
 
   const services = deriveServiceIndices(policy, population)
