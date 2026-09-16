@@ -301,7 +301,13 @@ function sanitizePolicy(
   for (const key of ["market", "water", "energy", "fuel", "transit"] as const) {
     prices.consumption[key] = Math.max(0, Number(rawPolicy.prices?.consumption?.[key] ?? prices.consumption[key]))
   }
-  return { taxRate, economicModel, ideology, classTaxRates, selectiveTaxes, services, prices }
+  const averageTax = Math.round([...Object.values(classTaxRates), ...Object.values(selectiveTaxes)].reduce((sum, value) => sum + value, 0) / 7)
+  const rawUtilityFunding = (p as Partial<CityPolicy>).utilityFunding as Partial<CityPolicy["utilityFunding"]> | undefined
+  const utilityFunding = {
+    energy: Math.max(0, Math.min(3, Math.round(Number(rawUtilityFunding?.energy ?? DEFAULT_POLICY.utilityFunding.energy)))) as FundingLevel,
+    sewage: Math.max(0, Math.min(3, Math.round(Number(rawUtilityFunding?.sewage ?? DEFAULT_POLICY.utilityFunding.sewage)))) as FundingLevel,
+  }
+  return { taxRate: averageTax, economicModel, ideology, classTaxRates, selectiveTaxes, services, utilityFunding, prices }
 }
 
 function docToState(
@@ -617,8 +623,9 @@ export async function getOrCreateCity(
         ...DEFAULT_POLICY,
         economicModel: creation.economicModel,
         ideology: creation.ideology,
-        services: { ...DEFAULT_POLICY.services },
-        classTaxRates: { ...DEFAULT_POLICY.classTaxRates },
+  services: { ...DEFAULT_POLICY.services },
+  utilityFunding: { ...DEFAULT_POLICY.utilityFunding },
+  classTaxRates: { ...DEFAULT_POLICY.classTaxRates },
         selectiveTaxes: { ...DEFAULT_POLICY.selectiveTaxes },
         prices: {
           jobs: DEFAULT_POLICY.prices.jobs.map((job) => ({ ...job })),
@@ -1034,7 +1041,6 @@ export async function performAction(
         action.buildingType,
       )
 
-
     const terrain = terrainWithOverrides(doc.seed, doc.terrainOverrides)
     const tile = terrain[action.x]?.[action.z]
     const sharedRoadNetwork = action.buildingType === "ELECTRIC_GRID" || action.buildingType === "SEWER_NETWORK"
@@ -1119,7 +1125,7 @@ export async function performAction(
 
     if (idx === -1) {
       return reject(
-        "Nenhuma construção encontrada aqui.",
+        "Nenhuma construç����o encontrada aqui.",
       )
     }
 
@@ -1344,10 +1350,19 @@ export async function performAction(
   action.type ===
   "SET_POLICY"
   ) {
-    doc.policy =
-      sanitizePolicy(
-        action.policy,
-      )
+    const requestedPolicy = sanitizePolicy(action.policy)
+    const currentState = deriveState(doc.buildings, doc.money, requestedPolicy, doc.clockStartedAt, now)
+    doc.policy = {
+      ...requestedPolicy,
+      utilityFunding: {
+        energy: currentState.energy <= 0 ? 2 : requestedPolicy.utilityFunding.energy,
+        sewage: currentState.water <= 0 ? 2 : requestedPolicy.utilityFunding.sewage,
+      },
+      services: {
+        ...requestedPolicy.services,
+        sewage: currentState.water <= 0 ? 2 : requestedPolicy.services.sewage,
+      },
+    }
 
     doc.updatedAt =
       new Date(

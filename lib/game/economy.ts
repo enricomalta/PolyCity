@@ -3,7 +3,7 @@ import {
   createGameClock,
 } from "@/lib/game/clock"
 import { getBuilding } from "./buildings"
-import { isUtilityConnected } from "./utilityNetwork"
+import { getUtilityNetwork, isUtilityConnected } from "./utilityNetwork"
 
 // IMPORTANT: economy math here is the SAME code the backend runs. The server
 // imports these helpers so the authoritative economy and the optimistic
@@ -30,6 +30,7 @@ export const DEFAULT_POLICY: CityPolicy = {
   classTaxRates: { LOW: 3, MIDDLE: 8, HIGH: 14 },
   selectiveTaxes: { consumption: 4, energy: 3, water: 2, fuel: 5 },
   services: { education: 1, health: 1, security: 1, prevention: 1, waste: 1, transit: 1, roads: 1, sewage: 1 },
+  utilityFunding: { energy: 2, sewage: 2 },
   prices: DEFAULT_PRICES,
 }
 
@@ -111,7 +112,7 @@ export function deriveServiceIndices(policy: CityPolicy, population: number): Se
 
 export function deriveBudget(policy: CityPolicy, population: number, jobs: number): Budget {
   const taxRevenue = Math.round(
-    population * (policy.taxRate / 100) * INCOME_PER_CITIZEN + jobs * (policy.taxRate / 100) * INCOME_PER_JOB,
+    (population * INCOME_PER_CITIZEN + jobs * INCOME_PER_JOB) * (policy.taxRate / 100),
   )
   let serviceExpenses = 0
   for (const s of PUBLIC_SERVICES) {
@@ -132,20 +133,30 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
   let waterProduction = 0
   let waterConsumption = 0
 
+  const electricNetwork = getUtilityNetwork(buildings, "ELECTRIC_GRID")
+  const sewerNetwork = getUtilityNetwork(buildings, "SEWER_NETWORK")
+  const hasAdjacentNetwork = (building: Building, network: Set<string>) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => network.has(`${building.x + dx}:${building.z + dz}`))
+  const connectedPower = buildings.filter((building) => building.type === "POWER_PLANT" && hasAdjacentNetwork(building, electricNetwork))
+  const connectedTowers = buildings.filter((building) => building.type === "WATER_TOWER" && hasAdjacentNetwork(building, sewerNetwork))
+  const connectedTreatment = buildings.filter((building) => building.type === "SEWAGE_TREATMENT_PLANT" && hasAdjacentNetwork(building, sewerNetwork))
+  const hasElectricEdge = Array.from(electricNetwork).some((key) => { const [x, z] = key.split(":").map(Number); return x === 0 || z === 0 || x === 31 || z === 31 })
+  const hasSewerEdge = Array.from(sewerNetwork).some((key) => { const [x, z] = key.split(":").map(Number); return x === 0 || z === 0 || x === 31 || z === 31 })
+
   for (const b of buildings) {
     const def = getBuilding(b.type)
     const active = isActiveResident(b, def)
 
-    if (active) {
-      population += def.population
-      energyConsumption += def.energyConsumption
-      waterConsumption += def.waterConsumption
-    }
+    if (active) population += def.population
 
     jobs += def.jobs
     buildingHappiness += def.happiness
-    if (def.energyProduction > 0 && (b.type === "POWER_PLANT" || isUtilityConnected(buildings, b.x, b.z, "ELECTRIC_GRID"))) energyProduction += def.energyProduction
-    waterProduction += def.waterProduction
+    if (def.energyConsumption > 0) energyConsumption += def.energyConsumption
+    if (def.waterConsumption > 0) waterConsumption += def.waterConsumption
+    if (b.type === "POWER_PLANT" && hasAdjacentNetwork(b, electricNetwork)) energyProduction += def.energyProduction
+    if (b.type === "WATER_TOWER" && hasAdjacentNetwork(b, sewerNetwork)) waterProduction += def.waterProduction
+    if (b.type === "SEWAGE_TREATMENT_PLANT" && hasAdjacentNetwork(b, sewerNetwork) && connectedTowers.length > 0 && hasSewerEdge) {
+      waterConsumption = Math.max(0, waterConsumption - def.waterConsumption)
+    }
   }
 
   const services = deriveServiceIndices(policy, population)

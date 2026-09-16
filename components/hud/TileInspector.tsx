@@ -55,22 +55,38 @@ function Detail({
 function isResidential(
   type: Building["type"],
 ): boolean {
-  return (
-    type === "HOUSE" ||
-    type === "SMALL_APARTMENT"
-  )
+  return [
+    "HOUSE",
+    "LOW_INCOME_HOUSE",
+    "MIDDLE_INCOME_HOUSE",
+    "HIGH_INCOME_HOUSE",
+    "SMALL_APARTMENT",
+    "LOW_INCOME_APARTMENT",
+    "MIDDLE_INCOME_APARTMENT",
+    "HIGH_INCOME_APARTMENT",
+  ].includes(type)
 }
 
 function hasJobs(
   type: Building["type"],
 ): boolean {
-  return (
-    type === "SHOP" ||
-    type === "FACTORY" ||
-    type === "PARK" ||
-    type === "POWER_PLANT" ||
-    type === "WATER_TOWER"
-  )
+  return [
+    "SHOP",
+    "COMMERCIAL_BUILDING",
+    "GROCERY_STORE",
+    "GAS_STATION",
+    "CLOTHING_STORE",
+    "CAR_DEALERSHIP",
+    "BUILDING_SUPPLY_STORE",
+    "FACTORY",
+    "CONSTRUCTION_FACTORY",
+    "AUTOMOTIVE_FACTORY",
+    "TECH_FACTORY",
+    "PARK",
+    "POWER_PLANT",
+    "WATER_TOWER",
+    "SEWAGE_TREATMENT_PLANT",
+  ].includes(type)
 }
 
 export function TileInspector({
