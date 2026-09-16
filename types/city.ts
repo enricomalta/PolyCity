@@ -141,8 +141,11 @@ export interface ResourceState {
   money: number
   population: number
   happiness: number // 0-100
-  energy: number // net available (production - consumption)
-  water: number // net available (production - consumption)
+  energy: number // net available (production - consumption), including isolated local production
+  water: number // net available (production - consumption), including isolated local production
+  // Only the surplus from producer networks that reach the city edge can be exported.
+  energyExport?: number
+  waterExport?: number
 }
 
 export interface Building {

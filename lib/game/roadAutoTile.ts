@@ -126,6 +126,49 @@ export function getRoadAutoTile(
   }
 }
 
+/**
+ * A visual adjacency is only a real road connection when both tiles expose
+ * the same side. This prevents traffic from crossing a road tile whose road
+ * ends against a building or another disconnected segment.
+ */
+export function areRoadsConnected(
+  fromX: number,
+  fromZ: number,
+  toX: number,
+  toZ: number,
+  roads: Set<string>,
+): boolean {
+  if (!roads.has(key(fromX, fromZ)) || !roads.has(key(toX, toZ))) {
+    return false
+  }
+
+  const dx = toX - fromX
+  const dz = toZ - fromZ
+  let fromSide = 0
+  let toSide = 0
+
+  if (dx === 1 && dz === 0) {
+    fromSide = ROAD_E
+    toSide = ROAD_W
+  } else if (dx === -1 && dz === 0) {
+    fromSide = ROAD_W
+    toSide = ROAD_E
+  } else if (dx === 0 && dz === 1) {
+    fromSide = ROAD_S
+    toSide = ROAD_N
+  } else if (dx === 0 && dz === -1) {
+    fromSide = ROAD_N
+    toSide = ROAD_S
+  } else {
+    return false
+  }
+
+  return (
+    (getRoadConnectionMask(fromX, fromZ, roads) & fromSide) !== 0 &&
+    (getRoadConnectionMask(toX, toZ, roads) & toSide) !== 0
+  )
+}
+
 function getRoadRotation(
   mask: RoadConnectionMask,
 ): number {

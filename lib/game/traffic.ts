@@ -3,6 +3,7 @@ import { getBuilding } from "./buildings"
 import {
   createRoadSet,
   getRoadAutoTile,
+  areRoadsConnected,
   ROAD_N,
   ROAD_E,
   ROAD_S,
@@ -143,7 +144,10 @@ export function reachableRoadTiles(
 
     for (const n of neighbors4(cur.x, cur.z)) {
       const k = tileKey(n.x, n.z)
-      if (roads.has(k) && !visited.has(k)) {
+      if (
+        areRoadsConnected(cur.x, cur.z, n.x, n.z, roads) &&
+        !visited.has(k)
+      ) {
         visited.add(k)
         queue.push(n)
       }
@@ -245,7 +249,10 @@ export function findRoadPath(
 
     for (const n of neighbors4(cur.x, cur.z)) {
       const k = tileKey(n.x, n.z)
-      if (roads.has(k) && !visited.has(k)) {
+      if (
+        areRoadsConnected(cur.x, cur.z, n.x, n.z, roads) &&
+        !visited.has(k)
+      ) {
         visited.add(k)
         cameFrom.set(k, curKey)
         queue.push(n)
