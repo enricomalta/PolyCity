@@ -5,12 +5,30 @@ import type { CityState, CityPolicy } from "./city"
 export type BuildingType =
   | "ROAD"
   | "HOUSE"
+  | "LOW_INCOME_HOUSE"
+  | "MIDDLE_INCOME_HOUSE"
+  | "HIGH_INCOME_HOUSE"
   | "SMALL_APARTMENT"
+  | "COMMERCIAL_BUILDING"
   | "SHOP"
+  | "GROCERY_STORE"
+  | "GAS_STATION"
+  | "CLOTHING_STORE"
+  | "CAR_DEALERSHIP"
+  | "BUILDING_SUPPLY_STORE"
   | "FACTORY"
+  | "CONSTRUCTION_FACTORY"
+  | "AUTOMOTIVE_FACTORY"
+  | "TECH_FACTORY"
   | "PARK"
   | "POWER_PLANT"
   | "WATER_TOWER"
+  | "LOW_INCOME_APARTMENT"
+  | "MIDDLE_INCOME_APARTMENT"
+  | "HIGH_INCOME_APARTMENT"
+  | "ELECTRIC_GRID"
+  | "SEWER_NETWORK"
+  | "SEWAGE_TREATMENT_PLANT"
 
 export type BuildingCategory =
   | "INFRASTRUCTURE"
@@ -46,6 +64,18 @@ export type GameAction =
       type: "DEMOLISH"
       x: number
       z: number
+      buildingType?: BuildingType
+    }
+  | {
+      type: "SET_TERRAIN"
+      x: number
+      z: number
+      terrain: TerrainType
+    }
+  | {
+      type: "SET_TERRAIN_BATCH"
+      tiles: Array<{ x: number; z: number }>
+      terrain: TerrainType
     }
   | {
       type: "SET_TERRAIN"

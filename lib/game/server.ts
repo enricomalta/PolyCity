@@ -1034,23 +1034,17 @@ export async function performAction(
         action.buildingType,
       )
 
-    const terrain =
-      applyOccupancy(
-terrainWithOverrides(doc.seed, doc.terrainOverrides),
-        doc.buildings,
-      )
 
-    const tile =
-      terrain[action.x]?.[
-      action.z
-      ]
+    const terrain = terrainWithOverrides(doc.seed, doc.terrainOverrides)
+    const tile = terrain[action.x]?.[action.z]
+    const sharedRoadNetwork = action.buildingType === "ELECTRIC_GRID" || action.buildingType === "SEWER_NETWORK"
+    const occupiedBuilding = doc.buildings.find((building) => building.x === action.x && building.z === action.z && building.type !== "ELECTRIC_GRID" && building.type !== "SEWER_NETWORK")
+    const roadAtTile = doc.buildings.some((building) => building.x === action.x && building.z === action.z && building.type === "ROAD")
+    const canShareRoad = sharedRoadNetwork && roadAtTile
+    const sameNetworkExists = sharedRoadNetwork && doc.buildings.some((building) => building.x === action.x && building.z === action.z && building.type === action.buildingType)
 
-    if (
-      !canPlace(tile)
-    ) {
-      return reject(
-        "Não é possível construir aqui.",
-      )
+    if (!tile || tile.terrain === "WATER" || tile.terrain === "ROCK" || (sharedRoadNetwork && !roadAtTile) || (occupiedBuilding && !canShareRoad) || sameNetworkExists) {
+      return reject("Não é possível construir aqui.")
     }
 
     if (
@@ -1208,12 +1202,11 @@ terrainWithOverrides(doc.seed, doc.terrainOverrides),
     action.type ===
     "DEMOLISH"
   ) {
-    const idx =
-      doc.buildings.findIndex(
-        (b) =>
-          b.x === action.x &&
-          b.z === action.z,
-      )
+    const idx = doc.buildings.findIndex((b) =>
+      b.x === action.x &&
+      b.z === action.z &&
+      (action.buildingType ? b.type === action.buildingType : b.type !== "ELECTRIC_GRID" && b.type !== "SEWER_NETWORK"),
+    )
 
     if (idx === -1) {
       return reject(
@@ -1221,18 +1214,24 @@ terrainWithOverrides(doc.seed, doc.terrainOverrides),
       )
     }
 
-    const [removed] =
-      doc.buildings.splice(
-        idx,
-        1,
-      )
+    const removed = doc.buildings[idx]
+    const removedTypes = new Set([removed.type])
+    doc.buildings.splice(idx, 1)
 
-    doc.money +=
-      Math.floor(
-        getBuilding(
-          removed.type,
-        ).cost * 0.25,
+    if (removed.type === "ROAD") {
+      const utilityBuildings = doc.buildings.filter(
+        (building) => building.x === action.x && building.z === action.z && (building.type === "ELECTRIC_GRID" || building.type === "SEWER_NETWORK"),
       )
+      for (const utility of utilityBuildings) removedTypes.add(utility.type)
+      doc.buildings = doc.buildings.filter(
+        (building) => !(building.x === action.x && building.z === action.z && (building.type === "ELECTRIC_GRID" || building.type === "SEWER_NETWORK")),
+      )
+    }
+
+    doc.money += Array.from(removedTypes).reduce(
+      (refund, buildingType) => refund + Math.floor(getBuilding(buildingType).cost * 0.25),
+      0,
+    )
 
     doc.citizens =
       assignCitizensToWorkplaces(

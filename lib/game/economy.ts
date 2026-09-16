@@ -3,6 +3,7 @@ import {
   createGameClock,
 } from "@/lib/game/clock"
 import { getBuilding } from "./buildings"
+import { isUtilityConnected } from "./utilityNetwork"
 
 // IMPORTANT: economy math here is the SAME code the backend runs. The server
 // imports these helpers so the authoritative economy and the optimistic
@@ -143,7 +144,7 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
 
     jobs += def.jobs
     buildingHappiness += def.happiness
-    energyProduction += def.energyProduction
+    if (def.energyProduction > 0 && (b.type === "POWER_PLANT" || isUtilityConnected(buildings, b.x, b.z, "ELECTRIC_GRID"))) energyProduction += def.energyProduction
     waterProduction += def.waterProduction
   }
 

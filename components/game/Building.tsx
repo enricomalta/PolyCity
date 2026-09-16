@@ -50,10 +50,19 @@ function Model({
   const def = getBuilding(type)
 
   const c = def.color
-  const roof =
-    def.roofColor ?? c
+  const roof = def.roofColor ?? c
+  const modelType: BuildingType =
+    type === "SMALL_APARTMENT" || type === "LOW_INCOME_APARTMENT" || type === "MIDDLE_INCOME_APARTMENT" || type === "HIGH_INCOME_APARTMENT" || type === "COMMERCIAL_BUILDING" || type === "HIGH_INCOME_HOUSE"
+      ? "SMALL_APARTMENT"
+      : ["SHOP", "GROCERY_STORE", "GAS_STATION", "CLOTHING_STORE", "CAR_DEALERSHIP", "BUILDING_SUPPLY_STORE"].includes(type)
+        ? "SHOP"
+        : ["FACTORY", "CONSTRUCTION_FACTORY", "AUTOMOTIVE_FACTORY", "TECH_FACTORY"].includes(type)
+          ? "FACTORY"
+          : type === "SEWAGE_TREATMENT_PLANT"
+            ? "SEWAGE_TREATMENT_PLANT"
+            : "HOUSE"
 
-  switch (type) {
+  switch (modelType) {
     case "HOUSE":
       return (
         <group>
@@ -440,6 +449,45 @@ function Model({
         </group>
       )
 
+    case "SEWAGE_TREATMENT_PLANT":
+      return (
+        <group>
+          <Foundation color="#456c70" />
+          <mesh castShadow receiveShadow position={[-0.22, def.height / 2 + 0.06, 0.08]}>
+            <boxGeometry args={[0.42, def.height, 0.58]} />
+            <meshStandardMaterial color={c} flatShading />
+          </mesh>
+          <mesh castShadow position={[-0.22, def.height + 0.14, 0.08]}>
+            <boxGeometry args={[0.48, 0.12, 0.64]} />
+            <meshStandardMaterial color={roof} flatShading />
+          </mesh>
+          {[-0.28, 0.12].map((z, index) => (
+            <group key={index}>
+              <mesh castShadow position={[0.2, 0.18, z]}>
+                <cylinderGeometry args={[0.17, 0.19, 0.2, 16]} />
+                <meshStandardMaterial color="#78aeb0" flatShading />
+              </mesh>
+              <mesh position={[0.2, 0.29, z]} rotation={[Math.PI / 2, 0, 0]}>
+                <torusGeometry args={[0.12, 0.025, 6, 16]} />
+                <meshStandardMaterial color="#c3e2df" flatShading />
+              </mesh>
+            </group>
+          ))}
+          <mesh castShadow position={[0.38, 0.42, 0.08]}>
+            <cylinderGeometry args={[0.055, 0.07, 0.52, 8]} />
+            <meshStandardMaterial color="#789399" flatShading />
+          </mesh>
+          <mesh position={[0.38, 0.7, 0.08]}>
+            <torusGeometry args={[0.08, 0.02, 6, 12]} />
+            <meshStandardMaterial color="#b6d5d3" flatShading />
+          </mesh>
+          <mesh position={[0.02, 0.12, 0.38]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.025, 0.025, 0.32, 8]} />
+            <meshBasicMaterial color="#9bd0ca" />
+          </mesh>
+        </group>
+      )
+
     case "PARK":
       return (
         <group>
@@ -729,7 +777,9 @@ export const BuildingMesh = memo(
         ]}
       >
         <Model type={type} isNight={isNight} nightIntensity={nightIntensity} occupied={occupied} />
-        {occupied && (type === "HOUSE" || type === "SMALL_APARTMENT") && nightIntensity > 0.01 && (
+
+        {occupied && ["HOUSE", "LOW_INCOME_HOUSE", "MIDDLE_INCOME_HOUSE", "HIGH_INCOME_HOUSE", "SMALL_APARTMENT", "LOW_INCOME_APARTMENT", "MIDDLE_INCOME_APARTMENT", "HIGH_INCOME_APARTMENT"].includes(type) && nightIntensity > 0.01 && (
+
           <pointLight position={[0, 0.7, 0.25]} color="#ffc46b" intensity={0.7 * nightIntensity} distance={2.2} decay={2} />
         )}
       </group>

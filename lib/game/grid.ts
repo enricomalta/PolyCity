@@ -97,9 +97,9 @@ export function isInBounds(x: number, z: number, size = GRID_SIZE): boolean {
 export function applyOccupancy(tiles: Tile[][], buildings: Building[]): Tile[][] {
   const next = tiles.map((row) => row.map((t) => ({ ...t, occupiedBy: null as string | null })))
   for (const b of buildings) {
-    if (isInBounds(b.x, b.z) && next[b.x][b.z]) {
-      next[b.x][b.z].occupiedBy = b.id
-    }
+    if (!isInBounds(b.x, b.z) || !next[b.x][b.z]) continue
+    if ((b.type === "ELECTRIC_GRID" || b.type === "SEWER_NETWORK") && next[b.x][b.z].occupiedBy) continue
+    next[b.x][b.z].occupiedBy = b.id
   }
   return next
 }

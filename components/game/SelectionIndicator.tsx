@@ -59,6 +59,8 @@ interface SelectionIndicatorProps {
     | null
 
   editingRotation: number
+
+  buildings: Building[]
 }
 
 /**
@@ -90,6 +92,7 @@ export const SelectionIndicator =
         rotation,
         editingBuilding,
         editingRotation,
+        buildings,
       },
       ref,
     ) {
@@ -207,7 +210,10 @@ export const SelectionIndicator =
                 }
               }
             } else {
-              valid = canPlace(tile)
+              const isUtilityNetwork = selectedBuilding === "ELECTRIC_GRID" || selectedBuilding === "SEWER_NETWORK"
+              const hasRoad = isUtilityNetwork && buildings.some((item) => item.x === x && item.z === z && item.type === "ROAD")
+              const hasDuplicateNetwork = isUtilityNetwork && buildings.some((item) => item.x === x && item.z === z && item.type === selectedBuilding)
+              valid = isUtilityNetwork ? Boolean(hasRoad && !hasDuplicateNetwork) : canPlace(tile)
             }
 
             const highlight =

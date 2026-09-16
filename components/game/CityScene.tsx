@@ -11,6 +11,10 @@ import {
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 
+import { createGameClock, DEFAULT_GAME_CLOCK_CONFIG } from "@/lib/game/clock"
+import { getUtilityNetwork, utilityKey } from "@/lib/game/utilityNetwork"
+
+
 import {
   OrbitControls,
   ContactShadows,
@@ -24,6 +28,8 @@ import {
   DirectionalLight,
   HemisphereLight,
   Fog,
+  Group,
+
 } from "three"
 
 import {
@@ -57,7 +63,7 @@ function LiveDayNightController({ clockStartedAt }: { clockStartedAt?: number | 
   const ambient = useRef<AmbientLight | null>(null)
   const hemisphere = useRef<HemisphereLight | null>(null)
   const directional = useRef<DirectionalLight | null>(null)
-  const daylight = useRef(1)
+  const daylight = useRef<number | null>(null)
   const dawnSky = useMemo(() => new Color("#9fc9e8"), [])
   const nightSky = useMemo(() => new Color("#18243d"), [])
   const dawnGround = useMemo(() => new Color("#4a6b3a"), [])
@@ -67,15 +73,18 @@ function LiveDayNightController({ clockStartedAt }: { clockStartedAt?: number | 
 
   useFrame(({ clock }) => {
     if (!clockStartedAt) return
-    const elapsed = (Date.now() - clockStartedAt) / 1000
-    const gameMinutes = elapsed * 2
-    const minute = ((gameMinutes % 1440) + 1440) % 1440
+    const startedAt = typeof clockStartedAt === "number" ? clockStartedAt : Date.parse(String(clockStartedAt))
+    if (!Number.isFinite(startedAt)) return
+    const currentClock = createGameClock(startedAt, Date.now(), DEFAULT_GAME_CLOCK_CONFIG)
+    const minute = currentClock.hour * 60 + currentClock.minute
+
     const smoothstep = (a: number, b: number, value: number) => {
       const t = Math.max(0, Math.min(1, (value - a) / (b - a)))
       return t * t * (3 - 2 * t)
     }
-    const nextDaylight = Math.min(smoothstep(300, 420, minute), 1 - smoothstep(1140, 1260, minute))
-    daylight.current += (nextDaylight - daylight.current) * Math.min(1, clock.getDelta() * 8)
+    const nextDaylight = Math.min(smoothstep(300, 420, minute), 1 - smoothstep(1080, 1200, minute))
+    if (daylight.current === null) daylight.current = nextDaylight
+    else daylight.current += (nextDaylight - daylight.current) * Math.min(1, clock.getDelta() * 8)
     const light = daylight.current
     currentSky.copy(nightSky).lerp(dawnSky, light)
     currentGround.copy(nightGround).lerp(dawnGround, light)
@@ -123,6 +132,38 @@ function heatColor(value: number) {
   if (value < 50) return "#ef4444"
   if (value < 70) return "#eab308"
   return "#22c55e"
+}
+
+function UtilityPipes({ buildings, type }: { buildings: Array<{ x: number; z: number; type: string }>; type: "ELECTRIC_GRID" | "SEWER_NETWORK" }) {
+  const group = useRef<Group>(null)
+  const color = type === "ELECTRIC_GRID" ? "#facc15" : "#60a5fa"
+  const utilityBuildings = buildings as Building[]
+  const connected = getUtilityNetwork(utilityBuildings, type)
+  useFrame(({ clock }) => { if (group.current) group.current.children.forEach((child, index) => { child.position.y = 0.15 + Math.sin(clock.elapsedTime * 4 + index * 0.7) * 0.015 }) })
+  const networkTiles = utilityBuildings.filter((building) => building.type === type)
+  const tileSet = new Set(networkTiles.map((building) => utilityKey(building.x, building.z)))
+  const offset = type === "ELECTRIC_GRID" ? -0.22 : 0.22
+  const pipeMaterial = (active: boolean) => <meshBasicMaterial color={color} transparent={!active} opacity={active ? 1 : 0.45} />
+  const segment = (x: number, z: number, dx: number, dz: number, id: string, active: boolean) => {
+    const horizontal = dx !== 0
+    const centerX = tileToWorld(x) + offset + (dx * TILE_SIZE) / 4
+    const centerZ = tileToWorld(z) + (dz * TILE_SIZE) / 4
+    return <mesh key={`${type}-${id}`} position={[centerX, 0.15, centerZ]} rotation={horizontal ? [0, 0, Math.PI / 2] : [Math.PI / 2, 0, 0]}><cylinderGeometry args={[0.035, 0.035, TILE_SIZE / 2, 8]} />{pipeMaterial(active)}</mesh>
+  }
+  return <group ref={group}>{networkTiles.flatMap((network) => {
+    const active = connected.has(utilityKey(network.x, network.z))
+    const neighbors = [
+      [1, 0, "e"],
+      [0, 1, "s"],
+      [-1, 0, "w"],
+      [0, -1, "n"],
+    ] as const
+    const segments = neighbors.filter(([dx, dz]) => tileSet.has(utilityKey(network.x + dx, network.z + dz))).map(([dx, dz, direction]) => segment(network.x, network.z, dx, dz, `${network.x}-${network.z}-${direction}`, active && connected.has(utilityKey(network.x + dx, network.z + dz))))
+    return [
+      <mesh key={`${type}-${network.x}-${network.z}-node`} position={[tileToWorld(network.x) + offset, 0.15, tileToWorld(network.z)]}><sphereGeometry args={[0.055, 8, 6]} />{pipeMaterial(active)}</mesh>,
+      ...segments,
+    ]
+  })}</group>
 }
 
 /**
@@ -236,7 +277,9 @@ export function CityScene() {
     ).flat()
     window.dispatchEvent(new CustomEvent("polycity:zoning-range", { detail: { from, to, tiles } }))
   }
-  const [heatMetric, setHeatMetric] = useState<"happiness" | "employment" | "services" | "roads">("happiness")
+
+  const [heatMetric, setHeatMetric] = useState<"happiness" | "employment" | "services" | "roads" | "energy" | "sewer">("happiness")
+
 
   useEffect(() => {
     const handleHeatmap = (event: Event) => setHeatMetric((event as CustomEvent<typeof heatMetric>).detail)
@@ -473,10 +516,16 @@ export function CityScene() {
       }
 
       if (tool === "DEMOLISH") {
-        if (tile?.occupiedBy) {
-          void demolish(x, z)
+        const roadAtTile = buildings.some((building) => building.x === x && building.z === z && building.type === "ROAD")
+        if (roadAtTile) {
+          void demolish(x, z, "ROAD")
+          return
         }
 
+        const selectedUtility = selectedBuilding === "ELECTRIC_GRID" || selectedBuilding === "SEWER_NETWORK" ? selectedBuilding : null
+        const utilityAtTile = buildings.find((building) => building.x === x && building.z === z && (selectedUtility ? building.type === selectedUtility : building.type === "ELECTRIC_GRID" || building.type === "SEWER_NETWORK"))
+        if (utilityAtTile) void demolish(x, z, utilityAtTile.type)
+        else if (tile?.occupiedBy) void demolish(x, z)
         return
       }
 
@@ -485,13 +534,11 @@ export function CityScene() {
           tool === "ROAD") &&
         selectedBuilding
       ) {
-        if (canPlace(tile)) {
-          void build(
-            x,
-            z,
-            selectedBuilding,
-            buildRotation,
-          )
+        const isUtilityNetwork = selectedBuilding === "ELECTRIC_GRID" || selectedBuilding === "SEWER_NETWORK"
+        const networkOnRoad = isUtilityNetwork && buildings.some((building) => building.x === x && building.z === z && building.type === "ROAD")
+        const duplicateNetwork = buildings.some((building) => building.x === x && building.z === z && building.type === selectedBuilding)
+        if ((canPlace(tile) || networkOnRoad) && (!isUtilityNetwork || networkOnRoad) && !duplicateNetwork) {
+          void build(x, z, selectedBuilding, buildRotation)
         }
 
         return
@@ -558,6 +605,10 @@ export function CityScene() {
 
       <LiveDayNightController clockStartedAt={city?.clockStartedAt ?? null} />
 
+      {tool === "BUILD" && selectedBuilding === "ELECTRIC_GRID" && <UtilityPipes buildings={state?.buildings ?? []} type="ELECTRIC_GRID" />}
+      {tool === "BUILD" && selectedBuilding === "SEWER_NETWORK" && <UtilityPipes buildings={state?.buildings ?? []} type="SEWER_NETWORK" />}
+
+
 
 
       <Suspense fallback={null}>
@@ -573,7 +624,9 @@ export function CityScene() {
           const previewRegion = previewZone
           return <mesh key={`zone-preview-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.035, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.92, TILE_SIZE * 0.92]} /><meshBasicMaterial color={regionColor(previewRegion)} transparent opacity={0.72} /></mesh>
         })}
-        {tool === "HEATMAP" && Array.from({ length: 30 * 30 }, (_, index) => { const x = index % 30; const z = Math.floor(index / 30); const region = state?.regions?.find((item) => item.tiles.some((tile) => tile.x === x && tile.z === z)); const road = state?.buildings?.find((building: any) => building.type === "ROAD" && building.x === x && building.z === z); const status = road ? roadStatus(road) : null; const value = heatMetric === "roads" ? (status === "CLOSED" ? 25 : status === "IRREGULAR" ? 58 : status === "REGULAR" ? 86 : -1) : heatValue(heatMetric, state, region); return <mesh key={`heat-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.16, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={heatColor(value)} transparent opacity={heatMetric === "roads" && road ? 0.9 : 0.62} depthWrite={false} /></mesh> })}
+
+        {tool === "HEATMAP" && Array.from({ length: 30 * 30 }, (_, index) => { const x = index % 30; const z = Math.floor(index / 30); const region = state?.regions?.find((item) => item.tiles.some((tile) => tile.x === x && tile.z === z)); const road = state?.buildings?.find((building: any) => building.type === "ROAD" && building.x === x && building.z === z); const status = road ? roadStatus(road) : null; const network = state?.buildings?.some((building: any) => building.x === x && building.z === z && building.type === (heatMetric === "energy" ? "ELECTRIC_GRID" : "SEWER_NETWORK")); const value = heatMetric === "energy" || heatMetric === "sewer" ? (network ? 100 : -1) : heatMetric === "roads" ? (status === "CLOSED" ? 25 : status === "IRREGULAR" ? 58 : status === "REGULAR" ? 86 : -1) : heatValue(heatMetric, state, region); return <mesh key={`heat-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.16, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={heatColor(value)} transparent opacity={heatMetric === "roads" && road ? 0.9 : 0.62} depthWrite={false} /></mesh> })}
+
         <GroundTiles
           tiles={tiles}
           onSelect={handleSelect}
@@ -591,7 +644,7 @@ export function CityScene() {
 
         {/* Placed buildings */}
 
-        {buildings.map((b) => {
+        {buildings.filter((b) => b.type !== "ELECTRIC_GRID" && b.type !== "SEWER_NETWORK").map((b) => {
           const position: [
             number,
             number,
@@ -644,9 +697,10 @@ export function CityScene() {
           tool={tool}
           selectedBuilding={selectedBuilding}
           rotation={buildRotation}
-          editingBuilding={editingBuilding}
-          editingRotation={editingRotation}
-        />
+  editingBuilding={editingBuilding}
+  editingRotation={editingRotation}
+  buildings={buildings}
+  />
 
         <ContactShadows
           position={[

@@ -54,7 +54,7 @@ export function GameHUD() {
   const [zoneType, setZoneType] = useState<"RESIDENTIAL" | "COMMERCIAL" | "INDUSTRIAL" | "MIXED">("RESIDENTIAL")
   const [zoneClass, setZoneClass] = useState<"LOW" | "MIDDLE" | "HIGH">("MIDDLE")
   const [zoneName, setZoneName] = useState("")
-  const [heatMetric, setHeatMetric] = useState<"happiness" | "employment" | "services" | "roads">("happiness")
+  const [heatMetric, setHeatMetric] = useState<"happiness" | "employment" | "services" | "roads" | "energy" | "sewer">("happiness")
   const [zoningTiles, setZoningTiles] = useState<Array<{ x: number; z: number }>>([])
   const [editingRegionId, setEditingRegionId] = useState<string | null>(null)
   const [regionToDelete, setRegionToDelete] = useState<{ id: string; name: string } | null>(null)
@@ -227,7 +227,6 @@ export function GameHUD() {
             }}
             onDemolish={() => {
               setTool("DEMOLISH")
-              selectBuildingType(null)
             }}
             onGovernance={() => {
               setTool("GOVERNANCE")
@@ -317,7 +316,7 @@ export function GameHUD() {
           <div className="pointer-events-auto fixed bottom-4 left-1/2 z-20 w-[min(92vw,520px)] -translate-x-1/2 rounded-2xl border border-border bg-card/95 p-4 shadow-lg shadow-black/30 backdrop-blur">
             <p className="text-sm font-semibold text-card-foreground">Mapa de calor urbano</p>
             <p className="mt-1 text-xs text-muted-foreground">Selecione um indicador para colorir os tiles da cidade.</p>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{([['happiness','Felicidade'],['employment','Empregos'],['services','Serviços'],['roads','Estradas']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => { setHeatMetric(value); window.dispatchEvent(new CustomEvent("polycity:heatmap", { detail: value })) }} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${heatMetric === value ? "border-primary bg-primary/15 text-primary" : "border-border bg-secondary text-muted-foreground"}`}>{label}</button>)}</div>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">{([['happiness','Felicidade'],['employment','Empregos'],['services','Serviços'],['roads','Estradas'],['energy','Rede elétrica'],['sewer','Rede de esgoto']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => { setHeatMetric(value); window.dispatchEvent(new CustomEvent("polycity:heatmap", { detail: value })) }} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${heatMetric === value ? "border-primary bg-primary/15 text-primary" : "border-border bg-secondary text-muted-foreground"}`}>{label}</button>)}</div>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground"><span><i className="mr-1 inline-block size-2 rounded-full bg-red-500" />Baixo</span><span><i className="mr-1 inline-block size-2 rounded-full bg-yellow-500" />Médio</span><span><i className="mr-1 inline-block size-2 rounded-full bg-green-500" />Alto</span><span className="ml-auto">Sem dados: cinza</span></div>
           </div>
         )}
