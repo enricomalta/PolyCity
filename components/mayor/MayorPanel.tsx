@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils"
 import { FullScreenLoader } from "@/components/ui/loader"
 
 const FUNDING_LABELS = ["Sem verba", "Baixa", "Média", "Máxima"] as const
+const FUNDING_PERCENTAGES = [0, 30, 50, 100] as const
 
 const SERVICE_META: Record<
   PublicService,
@@ -59,6 +60,7 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
   const { city, state, status, updatePolicy, renameCity, pending } = useGame()
   const [cityName, setCityName] = useState(city?.name ?? "")
   const [editingName, setEditingName] = useState(false)
+  const [activeSection, setActiveSection] = useState<"CABINET" | "JOBS" | "REAL_ESTATE" | "CONSUMPTION">("CABINET")
 
   // Local draft of the policy so the mayor can preview the impact before
   // committing. The authoritative values still come from the server on save.
@@ -153,6 +155,9 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
           )}
         </header>
 
+        <nav className="mt-6 flex gap-2 overflow-x-auto rounded-2xl border border-border bg-card p-2" aria-label="Seções do gabinete">
+          {([["CABINET", "Gabinete"], ["JOBS", "Empregos"], ["REAL_ESTATE", "Imobiliário"], ["CONSUMPTION", "Consumos"]] as const).map(([key, label]) => <button key={key} type="button" onClick={() => setActiveSection(key)} className={cn("whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold", activeSection === key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary")}>{label}</button>)}
+        </nav>
         <section className="mt-6 rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -187,7 +192,7 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
           />
         </section>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <div className={cn("mt-6 grid gap-6 lg:grid-cols-2", activeSection !== "CABINET" && "hidden")}>
           {/* Taxes */}
           <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
             <div className="flex items-center gap-2 text-card-foreground">
@@ -264,15 +269,23 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
                   label={SERVICE_LABELS[service]}
                   description={service === "sewage" ? `${importingSewage ? "Importando tratamento" : "Exportando excedente de tratamento"} · Saldo: ${state.water > 0 ? "+" : ""}${state.water} · ${importingSewage ? "Verba fixa em 50%" : SERVICE_META[service].description}` : SERVICE_META[service].description}
                   level={service === "sewage" && importingSewage ? 2 : (policy.services[service] ?? 0) as FundingLevel}
-                  index={service === "sewage" && importingSewage ? 50 : services[service] ?? ([0, 25, 50, 100][policy.services[service] ?? 0] ?? 0)}
+                  index={service === "sewage" && importingSewage ? 50 : services[service] ?? (FUNDING_PERCENTAGES[policy.services[service] ?? 0] ?? 0)}
                   locked={service === "sewage" && importingSewage}
                   onChange={(lvl) => setServiceFunding(service, lvl)}
                 />
               ))}
-              <ServiceRow icon={<Zap className="size-5" />} label="Energia" description={`${importingEnergy ? "Importando energia" : "Exportando excedente de energia"} · Saldo: ${state.energy > 0 ? "+" : ""}${state.energy} · Verba ${importingEnergy ? "fixa em 50%" : "ajustável"}`} level={importingEnergy ? 2 : utilityFunding.energy} index={importingEnergy ? 50 : ([0, 25, 50, 100][utilityFunding.energy] ?? 0)} locked={importingEnergy} onChange={setUtilityFunding} />
+              <ServiceRow icon={<Zap className="size-5" />} label="Energia" description={`${importingEnergy ? "Importando energia" : "Exportando excedente de energia"} · Saldo: ${state.energy > 0 ? "+" : ""}${state.energy} · Verba ${importingEnergy ? "fixa em 50%" : "ajustável"}`} level={importingEnergy ? 2 : utilityFunding.energy} index={importingEnergy ? 50 : (FUNDING_PERCENTAGES[utilityFunding.energy] ?? 0)} locked={importingEnergy} onChange={setUtilityFunding} />
             </div>
           </div>
         </div>
+
+        {activeSection !== "CABINET" && <section className="mt-6 rounded-3xl border border-border bg-card p-6">
+          <h2 className="font-display text-lg font-semibold">{activeSection === "JOBS" ? "Empregos e salários" : activeSection === "REAL_ESTATE" ? "Ramo imobiliário" : "Consumos dos cidadãos"}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{activeSection === "JOBS" ? "Salários médios e ocupação por setor." : activeSection === "REAL_ESTATE" ? "Configure aluguel e valores de compra por classe." : "Preços pagos pelos cidadãos, separados dos impostos."}</p>
+          {activeSection === "JOBS" && <div className="mt-5 grid gap-3 sm:grid-cols-3">{(["LOW", "MIDDLE", "HIGH"] as CitizenClass[]).map((group) => <label key={group} className="text-sm text-muted-foreground">Salário {group === "LOW" ? "baixo" : group === "MIDDLE" ? "médio" : "alto"}<input type="number" min={1} value={policy.prices.salary[group]} onChange={(e) => setDraft({ ...policy, prices: { ...policy.prices, salary: { ...policy.prices.salary, [group]: Math.max(1, Number(e.target.value) || 1) } } })} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground" /></label>)}</div>}
+          {activeSection === "REAL_ESTATE" && <div className="mt-5 grid gap-3 sm:grid-cols-3">{(["LOW", "MIDDLE", "HIGH"] as CitizenClass[]).map((group) => <label key={group} className="text-sm text-muted-foreground">Aluguel {group === "LOW" ? "baixo" : group === "MIDDLE" ? "médio" : "alto"}<input type="number" min={0} value={policy.prices.rent[group]} onChange={(e) => setDraft({ ...policy, prices: { ...policy.prices, rent: { ...policy.prices.rent, [group]: Math.max(0, Number(e.target.value) || 0) } } })} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground" /></label>)}</div>}
+          {activeSection === "CONSUMPTION" && <div className="mt-5 grid gap-3 sm:grid-cols-5">{(["market", "water", "energy", "fuel", "transit"] as const).map((item) => <label key={item} className="text-sm text-muted-foreground">{item === "market" ? "Mercado" : item === "water" ? "Água" : item === "energy" ? "Energia" : item === "fuel" ? "Combustível" : "Transporte"}<input type="number" min={0} value={policy.prices.consumption[item]} onChange={(e) => setDraft({ ...policy, prices: { ...policy.prices, consumption: { ...policy.prices.consumption, [item]: Math.max(0, Number(e.target.value) || 0) } } })} className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-card-foreground" /></label>)}</div>}
+        </section>}
 
         {/* Save bar */}
         <div className="sticky bottom-4 mt-8 flex items-center justify-between gap-4 rounded-2xl border border-border bg-card/95 p-4 shadow-lg shadow-black/30 backdrop-blur">

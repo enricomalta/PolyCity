@@ -112,7 +112,7 @@ export function deriveServiceIndices(policy: CityPolicy, population: number): Se
 
 export function deriveBudget(policy: CityPolicy, population: number, jobs: number): Budget {
   const taxRevenue = Math.round(
-    population * (policy.taxRate / 100) * INCOME_PER_CITIZEN + jobs * (policy.taxRate / 100) * INCOME_PER_JOB,
+    (population * INCOME_PER_CITIZEN + jobs * INCOME_PER_JOB) * (policy.taxRate / 100),
   )
   let serviceExpenses = 0
   for (const s of PUBLIC_SERVICES) {
