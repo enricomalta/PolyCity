@@ -687,9 +687,10 @@ export function CityScene() {
           tool={tool}
           selectedBuilding={selectedBuilding}
           rotation={buildRotation}
-          editingBuilding={editingBuilding}
-          editingRotation={editingRotation}
-        />
+  editingBuilding={editingBuilding}
+  editingRotation={editingRotation}
+  buildings={buildings}
+  />
 
         <ContactShadows
           position={[
