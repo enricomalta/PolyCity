@@ -3,7 +3,7 @@ import {
   createGameClock,
 } from "@/lib/game/clock"
 import { getBuilding } from "./buildings"
-import { isUtilityConnected } from "./utilityNetwork"
+import { getUtilityNetwork, isUtilityConnected } from "./utilityNetwork"
 
 // IMPORTANT: economy math here is the SAME code the backend runs. The server
 // imports these helpers so the authoritative economy and the optimistic
