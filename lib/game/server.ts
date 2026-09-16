@@ -1213,18 +1213,24 @@ export async function performAction(
       )
     }
 
-    const [removed] =
-      doc.buildings.splice(
-        idx,
-        1,
-      )
+    const removed = doc.buildings[idx]
+    const removedTypes = new Set([removed.type])
+    doc.buildings.splice(idx, 1)
 
-    doc.money +=
-      Math.floor(
-        getBuilding(
-          removed.type,
-        ).cost * 0.25,
+    if (removed.type === "ROAD") {
+      const utilityBuildings = doc.buildings.filter(
+        (building) => building.x === action.x && building.z === action.z && (building.type === "ELECTRIC_GRID" || building.type === "SEWER_NETWORK"),
       )
+      for (const utility of utilityBuildings) removedTypes.add(utility.type)
+      doc.buildings = doc.buildings.filter(
+        (building) => !(building.x === action.x && building.z === action.z && (building.type === "ELECTRIC_GRID" || building.type === "SEWER_NETWORK")),
+      )
+    }
+
+    doc.money += Array.from(removedTypes).reduce(
+      (refund, buildingType) => refund + Math.floor(getBuilding(buildingType).cost * 0.25),
+      0,
+    )
 
     doc.citizens =
       assignCitizensToWorkplaces(
