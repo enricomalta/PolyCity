@@ -3,7 +3,7 @@ import {
   createGameClock,
 } from "@/lib/game/clock"
 import { getBuilding } from "./buildings"
-import { getUtilityNetwork, isUtilityConnected } from "./utilityNetwork"
+import { hasBuildingUtility, hasBuildingUtilityToEdge } from "./utilityNetwork"
 
 // IMPORTANT: economy math here is the SAME code the backend runs. The server
 // imports these helpers so the authoritative economy and the optimistic
@@ -133,14 +133,12 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
   let waterProduction = 0
   let waterConsumption = 0
 
-  const electricNetwork = getUtilityNetwork(buildings, "ELECTRIC_GRID")
-  const sewerNetwork = getUtilityNetwork(buildings, "SEWER_NETWORK")
-  const hasAdjacentNetwork = (building: Building, network: Set<string>) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => network.has(`${building.x + dx}:${building.z + dz}`))
-  const connectedPower = buildings.filter((building) => building.type === "POWER_PLANT" && hasAdjacentNetwork(building, electricNetwork))
-  const connectedTowers = buildings.filter((building) => building.type === "WATER_TOWER" && hasAdjacentNetwork(building, sewerNetwork))
-  const connectedTreatment = buildings.filter((building) => building.type === "SEWAGE_TREATMENT_PLANT" && hasAdjacentNetwork(building, sewerNetwork))
-  const hasElectricEdge = Array.from(electricNetwork).some((key) => { const [x, z] = key.split(":").map(Number); return x === 0 || z === 0 || x === 31 || z === 31 })
-  const hasSewerEdge = Array.from(sewerNetwork).some((key) => { const [x, z] = key.split(":").map(Number); return x === 0 || z === 0 || x === 31 || z === 31 })
+  const hasElectricUtility = (building: Building) => hasBuildingUtility(buildings, building, "ELECTRIC_GRID")
+  const hasSewerUtility = (building: Building) => hasBuildingUtility(buildings, building, "SEWER_NETWORK")
+  const hasElectricEdge = (building: Building) => hasBuildingUtilityToEdge(buildings, building, "ELECTRIC_GRID")
+  const hasSewerEdge = (building: Building) => hasBuildingUtilityToEdge(buildings, building, "SEWER_NETWORK")
+  const connectedTowers = buildings.filter((building) => building.type === "WATER_TOWER" && hasSewerUtility(building))
+  const connectedTreatment = buildings.filter((building) => building.type === "SEWAGE_TREATMENT_PLANT" && hasSewerUtility(building))
 
   for (const b of buildings) {
     const def = getBuilding(b.type)
@@ -150,11 +148,14 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
 
     jobs += def.jobs
     buildingHappiness += def.happiness
-    if (def.energyConsumption > 0) energyConsumption += def.energyConsumption
-    if (def.waterConsumption > 0) waterConsumption += def.waterConsumption
-    if (b.type === "POWER_PLANT" && hasAdjacentNetwork(b, electricNetwork)) energyProduction += def.energyProduction
-    if (b.type === "WATER_TOWER" && hasAdjacentNetwork(b, sewerNetwork)) waterProduction += def.waterProduction
-    if (b.type === "SEWAGE_TREATMENT_PLANT" && hasAdjacentNetwork(b, sewerNetwork) && connectedTowers.length > 0 && hasSewerEdge) {
+    if (def.energyConsumption > 0 && hasElectricUtility(b)) energyConsumption += def.energyConsumption
+    if (def.waterConsumption > 0 && hasSewerUtility(b)) waterConsumption += def.waterConsumption
+    // Produção só entra no balanço exportável quando o produtor tem fluxo
+    // contínuo até a borda. Uma rede isolada pode servir o bairro local,
+    // mas não injeta excedente automaticamente na cidade.
+    if (b.type === "POWER_PLANT" && hasElectricEdge(b)) energyProduction += def.energyProduction
+    if (b.type === "WATER_TOWER" && hasSewerEdge(b)) waterProduction += def.waterProduction
+    if (b.type === "SEWAGE_TREATMENT_PLANT" && hasSewerUtility(b) && connectedTowers.length > 0 && hasSewerEdge(b)) {
       waterConsumption = Math.max(0, waterConsumption - def.waterConsumption)
     }
   }

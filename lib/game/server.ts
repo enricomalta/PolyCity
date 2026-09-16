@@ -20,6 +20,7 @@ import type {
 import { adminDb } from "@/lib/firebase/admin"
 
 import { getBuilding } from "./buildings"
+import { hasBuildingUtility } from "./utilityNetwork"
 
 import {
   applyBudgetTicks,
@@ -1458,6 +1459,12 @@ export async function performAction(
     ) {
       return reject(
         "Esta casa não está conectada à rede viária da cidade.",
+      )
+    }
+
+    if (!hasBuildingUtility(doc.buildings, building, "ELECTRIC_GRID") || !hasBuildingUtility(doc.buildings, building, "SEWER_NETWORK")) {
+      return reject(
+        "Esta residência precisa de energia e água por uma rede ativa.",
       )
     }
 
