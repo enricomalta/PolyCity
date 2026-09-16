@@ -136,10 +136,25 @@ function UtilityPipes({ buildings, type }: { buildings: Array<{ x: number; z: nu
   const utilityBuildings = buildings as Building[]
   const connected = getUtilityNetwork(utilityBuildings, type)
   useFrame(({ clock }) => { if (group.current) group.current.children.forEach((child, index) => { child.position.y = 0.15 + Math.sin(clock.elapsedTime * 4 + index * 0.7) * 0.015 }) })
-  return <group ref={group}>{utilityBuildings.filter((building) => building.type === type).map((network) => {
-    const isConnected = connected.has(utilityKey(network.x, network.z))
-    const horizontal = utilityBuildings.some((building) => building.type === type && building.z === network.z && (building.x === network.x - 1 || building.x === network.x + 1))
-    return <mesh key={`${type}-${network.x}-${network.z}`} position={[tileToWorld(network.x) + (type === "ELECTRIC_GRID" ? -0.22 : 0.22), 0.15, tileToWorld(network.z)]} rotation={[0, 0, horizontal ? Math.PI / 2 : 0]}><cylinderGeometry args={[0.035, 0.035, TILE_SIZE * 0.72, 8]} /><meshBasicMaterial color={isConnected ? color : "#64748b"} transparent={!isConnected} opacity={isConnected ? 1 : 0.45} /></mesh>
+  const networkTiles = utilityBuildings.filter((building) => building.type === type)
+  const tileSet = new Set(networkTiles.map((building) => utilityKey(building.x, building.z)))
+  const offset = type === "ELECTRIC_GRID" ? -0.22 : 0.22
+  const pipeMaterial = (active: boolean) => <meshBasicMaterial color={color} transparent={!active} opacity={active ? 1 : 0.45} />
+  const segment = (x1: number, z1: number, x2: number, z2: number, id: string, active: boolean) => {
+    const horizontal = z1 === z2
+    return <mesh key={`${type}-${id}`} position={[(tileToWorld(x1) + tileToWorld(x2)) / 2 + offset, 0.15, (tileToWorld(z1) + tileToWorld(z2)) / 2]} rotation={[0, 0, horizontal ? Math.PI / 2 : 0]}><cylinderGeometry args={[0.035, 0.035, TILE_SIZE, 8]} />{pipeMaterial(active)}</mesh>
+  }
+  return <group ref={group}>{networkTiles.flatMap((network) => {
+    const active = connected.has(utilityKey(network.x, network.z))
+    const segments = []
+    const east = tileSet.has(utilityKey(network.x + 1, network.z))
+    const south = tileSet.has(utilityKey(network.x, network.z + 1))
+    const west = tileSet.has(utilityKey(network.x - 1, network.z))
+    const north = tileSet.has(utilityKey(network.x, network.z - 1))
+    if (east) segments.push(segment(network.x, network.z, network.x + 1, network.z, `${network.x}-${network.z}-e`, active && connected.has(utilityKey(network.x + 1, network.z))))
+    if (south) segments.push(segment(network.x, network.z, network.x, network.z + 1, `${network.x}-${network.z}-s`, active && connected.has(utilityKey(network.x, network.z + 1))))
+    if (!east && !south && !west && !north) segments.push(<mesh key={`${type}-${network.x}-${network.z}-stub`} position={[tileToWorld(network.x) + offset, 0.15, tileToWorld(network.z)]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.035, 0.035, TILE_SIZE * 0.5, 8]} />{pipeMaterial(active)}</mesh>)
+    return segments
   })}</group>
 }
 
