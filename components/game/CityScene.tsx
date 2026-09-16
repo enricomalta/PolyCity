@@ -510,6 +510,12 @@ export function CityScene() {
       }
 
       if (tool === "DEMOLISH") {
+        const roadAtTile = buildings.some((building) => building.x === x && building.z === z && building.type === "ROAD")
+        if (roadAtTile) {
+          void demolish(x, z, "ROAD")
+          return
+        }
+
         const selectedUtility = selectedBuilding === "ELECTRIC_GRID" || selectedBuilding === "SEWER_NETWORK" ? selectedBuilding : null
         const utilityAtTile = buildings.find((building) => building.x === x && building.z === z && (selectedUtility ? building.type === selectedUtility : building.type === "ELECTRIC_GRID" || building.type === "SEWER_NETWORK"))
         if (utilityAtTile) void demolish(x, z, utilityAtTile.type)
