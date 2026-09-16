@@ -559,24 +559,6 @@ export function CityScene() {
       <LiveDayNightController clockStartedAt={city?.clockStartedAt ?? null} />
 
 
-      <directionalLight
-        position={[
-          18,
-          28,
-          12,
-        ]}
-        intensity={0.35 + daylight * 1.15}
-        castShadow
-        shadow-mapSize={[
-          2048,
-          2048,
-        ]}
-        shadow-camera-left={-24}
-        shadow-camera-right={24}
-        shadow-camera-top={24}
-        shadow-camera-bottom={-24}
-        shadow-bias={-0.0004}
-      />
 
       <Suspense fallback={null}>
         {tool === "TERRAIN_EDIT" && terrainSelection.map((tile) => <mesh key={`terrain-preview-${tile.x}-${tile.z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(tile.x), 0.055, tileToWorld(tile.z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={terrainPreview === "WATER" ? "#38bdf8" : terrainPreview === "SAND" ? "#facc15" : terrainPreview === "ROCK" ? "#78716c" : terrainPreview === "FOREST" ? "#16a34a" : "#4ade80"} transparent opacity={0.78} /></mesh>)}
