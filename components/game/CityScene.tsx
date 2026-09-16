@@ -128,6 +128,15 @@ function heatColor(value: number) {
   return "#22c55e"
 }
 
+function UtilityPipes({ buildings, type }: { buildings: Array<{ x: number; z: number; type: string }>; type: "ELECTRIC_GRID" | "SEWER_NETWORK" }) {
+  const color = type === "ELECTRIC_GRID" ? "#facc15" : "#60a5fa"
+  return <group>{buildings.filter((building) => building.type === "ROAD").map((road) => {
+    const installed = buildings.some((building) => building.x === road.x && building.z === road.z && building.type === type)
+    if (!installed) return null
+    return <mesh key={`${type}-${road.x}-${road.z}`} position={[tileToWorld(road.x) + (type === "ELECTRIC_GRID" ? -0.22 : 0.22), 0.15, tileToWorld(road.z)]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.035, 0.035, TILE_SIZE * 0.75, 8]} /><meshBasicMaterial color={color} /></mesh>
+  })}</group>
+}
+
 /**
  * The full 3D city. It reads authoritative state from the game store and
  * turns pointer interactions into INTENTIONS (build/demolish/select) that the
@@ -557,6 +566,8 @@ export function CityScene() {
       />
 
       <LiveDayNightController clockStartedAt={city?.clockStartedAt ?? null} />
+      {tool === "BUILD" && selectedBuilding === "ELECTRIC_GRID" && <UtilityPipes buildings={state?.buildings ?? []} type="ELECTRIC_GRID" />}
+      {tool === "BUILD" && selectedBuilding === "SEWER_NETWORK" && <UtilityPipes buildings={state?.buildings ?? []} type="SEWER_NETWORK" />}
 
 
 
@@ -591,7 +602,7 @@ export function CityScene() {
 
         {/* Placed buildings */}
 
-        {buildings.map((b) => {
+        {buildings.filter((b) => b.type !== "ELECTRIC_GRID" && b.type !== "SEWER_NETWORK").map((b) => {
           const position: [
             number,
             number,
