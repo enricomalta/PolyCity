@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Home, Building2, Store, Factory, Trees, Zap, Droplets, Route } from "lucide-react"
+import { Home, Building2, Store, Factory, Trees, Zap, Droplets, Route, ShoppingCart, Fuel, Shirt, CarFront, Hammer, Cpu } from "lucide-react"
 import type { BuildingType } from "@/types/game"
 import {
   BUILDING_LIST,
@@ -16,9 +16,21 @@ import { cn } from "@/lib/utils"
 const ICONS: Record<BuildingType, React.ReactNode> = {
   ROAD: <Route className="size-5" />,
   HOUSE: <Home className="size-5" />,
+  LOW_INCOME_HOUSE: <Home className="size-5" />,
+  MIDDLE_INCOME_HOUSE: <Home className="size-5" />,
+  HIGH_INCOME_HOUSE: <Home className="size-5" />,
   SMALL_APARTMENT: <Building2 className="size-5" />,
+  COMMERCIAL_BUILDING: <Building2 className="size-5" />,
   SHOP: <Store className="size-5" />,
+  GROCERY_STORE: <ShoppingCart className="size-5" />,
+  GAS_STATION: <Fuel className="size-5" />,
+  CLOTHING_STORE: <Shirt className="size-5" />,
+  CAR_DEALERSHIP: <CarFront className="size-5" />,
+  BUILDING_SUPPLY_STORE: <Hammer className="size-5" />,
   FACTORY: <Factory className="size-5" />,
+  CONSTRUCTION_FACTORY: <Hammer className="size-5" />,
+  AUTOMOTIVE_FACTORY: <CarFront className="size-5" />,
+  TECH_FACTORY: <Cpu className="size-5" />,
   PARK: <Trees className="size-5" />,
   POWER_PLANT: <Zap className="size-5" />,
   WATER_TOWER: <Droplets className="size-5" />,

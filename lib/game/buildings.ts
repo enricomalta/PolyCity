@@ -62,6 +62,15 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     roofColor: "#c0433a",
     height: 0.7,
   },
+  LOW_INCOME_HOUSE: {
+    type: "LOW_INCOME_HOUSE", name: "Casa de baixa renda", description: "Moradia compacta e acessível.", category: "RESIDENTIAL", cost: 70, size: { w: 1, d: 1 }, population: 3, jobs: 0, energyProduction: 0, energyConsumption: 1, waterProduction: 0, waterConsumption: 1, happiness: 0, color: "#c98f58", roofColor: "#8f3f36", height: 0.55,
+  },
+  MIDDLE_INCOME_HOUSE: {
+    type: "MIDDLE_INCOME_HOUSE", name: "Casa de média renda", description: "Moradia confortável para famílias.", category: "RESIDENTIAL", cost: 150, size: { w: 1, d: 1 }, population: 5, jobs: 0, energyProduction: 0, energyConsumption: 2, waterProduction: 0, waterConsumption: 2, happiness: 2, color: "#e5b878", roofColor: "#b44c3e", height: 0.8,
+  },
+  HIGH_INCOME_HOUSE: {
+    type: "HIGH_INCOME_HOUSE", name: "Casa de alta renda", description: "Residência ampla e valorizada.", category: "RESIDENTIAL", cost: 320, size: { w: 1, d: 1 }, population: 4, jobs: 0, energyProduction: 0, energyConsumption: 4, waterProduction: 0, waterConsumption: 3, happiness: 5, color: "#f2d6a2", roofColor: "#3b536b", height: 1.05,
+  },
   SMALL_APARTMENT: {
     type: "SMALL_APARTMENT",
     name: "Prédio Residencial",
@@ -79,6 +88,24 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     color: "#e8e2d6",
     roofColor: "#7d8a99",
     height: 1.6,
+  },
+  COMMERCIAL_BUILDING: {
+    type: "COMMERCIAL_BUILDING", name: "Prédio comercial", description: "Centro comercial com vários serviços.", category: "COMMERCIAL", cost: 420, size: { w: 1, d: 1 }, population: 0, jobs: 14, energyProduction: 0, energyConsumption: 7, waterProduction: 0, waterConsumption: 4, happiness: 4, color: "#6c9fc2", roofColor: "#36536d", height: 1.5,
+  },
+  GROCERY_STORE: {
+    type: "GROCERY_STORE", name: "Mercado", description: "Abastece os bairros e emprega comerciantes.", category: "COMMERCIAL", cost: 280, size: { w: 1, d: 1 }, population: 0, jobs: 8, energyProduction: 0, energyConsumption: 5, waterProduction: 0, waterConsumption: 3, happiness: 3, color: "#79b86a", roofColor: "#3f7944", height: 0.85,
+  },
+  GAS_STATION: {
+    type: "GAS_STATION", name: "Posto de gasolina", description: "Abastece veículos e gera empregos de transporte.", category: "COMMERCIAL", cost: 300, size: { w: 1, d: 1 }, population: 0, jobs: 5, energyProduction: 0, energyConsumption: 3, waterProduction: 0, waterConsumption: 1, happiness: 1, color: "#d9a441", roofColor: "#b53f3f", height: 0.65,
+  },
+  CLOTHING_STORE: {
+    type: "CLOTHING_STORE", name: "Loja de roupas", description: "Comércio de moda para a população.", category: "COMMERCIAL", cost: 240, size: { w: 1, d: 1 }, population: 0, jobs: 7, energyProduction: 0, energyConsumption: 4, waterProduction: 0, waterConsumption: 2, happiness: 3, color: "#c17dcc", roofColor: "#6b3f82", height: 0.9,
+  },
+  CAR_DEALERSHIP: {
+    type: "CAR_DEALERSHIP", name: "Loja de carros", description: "Venda de veículos e empregos automotivos.", category: "COMMERCIAL", cost: 450, size: { w: 1, d: 1 }, population: 0, jobs: 9, energyProduction: 0, energyConsumption: 5, waterProduction: 0, waterConsumption: 2, happiness: 2, color: "#5b9dd6", roofColor: "#263e59", height: 0.75,
+  },
+  BUILDING_SUPPLY_STORE: {
+    type: "BUILDING_SUPPLY_STORE", name: "Material de construção", description: "Fornece materiais para a expansão urbana.", category: "COMMERCIAL", cost: 360, size: { w: 1, d: 1 }, population: 0, jobs: 8, energyProduction: 0, energyConsumption: 4, waterProduction: 0, waterConsumption: 2, happiness: 1, color: "#b97a4d", roofColor: "#6f4835", height: 0.8,
   },
   SHOP: {
     type: "SHOP",
@@ -115,6 +142,15 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     color: "#9aa0a6",
     roofColor: "#5b6169",
     height: 1.1,
+  },
+  CONSTRUCTION_FACTORY: {
+    type: "CONSTRUCTION_FACTORY", name: "Fábrica de construção civil", description: "Produz materiais e empregos para obras.", category: "INDUSTRIAL", cost: 650, size: { w: 1, d: 1 }, population: 0, jobs: 14, energyProduction: 0, energyConsumption: 8, waterProduction: 0, waterConsumption: 5, happiness: -2, color: "#c07a45", roofColor: "#68402d", height: 1.2,
+  },
+  AUTOMOTIVE_FACTORY: {
+    type: "AUTOMOTIVE_FACTORY", name: "Fábrica automobilística", description: "Monta veículos e cria empregos técnicos.", category: "INDUSTRIAL", cost: 800, size: { w: 1, d: 1 }, population: 0, jobs: 18, energyProduction: 0, energyConsumption: 10, waterProduction: 0, waterConsumption: 6, happiness: -3, color: "#71849a", roofColor: "#344252", height: 1.35,
+  },
+  TECH_FACTORY: {
+    type: "TECH_FACTORY", name: "Fábrica de tecnologia", description: "Produz tecnologia e empregos qualificados.", category: "INDUSTRIAL", cost: 950, size: { w: 1, d: 1 }, population: 0, jobs: 20, energyProduction: 0, energyConsumption: 9, waterProduction: 0, waterConsumption: 4, happiness: -1, color: "#6b9ed6", roofColor: "#263b61", height: 1.45,
   },
   PARK: {
     type: "PARK",

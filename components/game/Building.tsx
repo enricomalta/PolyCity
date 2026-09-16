@@ -50,10 +50,17 @@ function Model({
   const def = getBuilding(type)
 
   const c = def.color
-  const roof =
-    def.roofColor ?? c
+  const roof = def.roofColor ?? c
+  const modelType: BuildingType =
+    type === "SMALL_APARTMENT" || type === "COMMERCIAL_BUILDING" || type === "HIGH_INCOME_HOUSE"
+      ? "SMALL_APARTMENT"
+      : ["SHOP", "GROCERY_STORE", "GAS_STATION", "CLOTHING_STORE", "CAR_DEALERSHIP", "BUILDING_SUPPLY_STORE"].includes(type)
+        ? "SHOP"
+        : ["FACTORY", "CONSTRUCTION_FACTORY", "AUTOMOTIVE_FACTORY", "TECH_FACTORY"].includes(type)
+          ? "FACTORY"
+          : "HOUSE"
 
-  switch (type) {
+  switch (modelType) {
     case "HOUSE":
       return (
         <group>
