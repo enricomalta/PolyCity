@@ -131,9 +131,11 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
   let energyProduction = 0
   let edgeEnergyProduction = 0
   let energyConsumption = 0
+  let edgeEnergyConsumption = 0
   let waterProduction = 0
   let edgeWaterProduction = 0
   let waterConsumption = 0
+  let edgeWaterConsumption = 0
 
   const hasElectricUtility = (building: Building) => hasBuildingUtility(buildings, building, "ELECTRIC_GRID")
   const hasSewerUtility = (building: Building) => hasBuildingUtility(buildings, building, "SEWER_NETWORK")
@@ -147,8 +149,14 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
 
     jobs += def.jobs
     buildingHappiness += def.happiness
-    if (def.energyConsumption > 0 && hasElectricUtility(b)) energyConsumption += def.energyConsumption
-    if (def.waterConsumption > 0 && hasSewerUtility(b)) waterConsumption += def.waterConsumption
+    if (def.energyConsumption > 0 && hasElectricUtility(b)) {
+      energyConsumption += def.energyConsumption
+      if (hasBuildingUtilityToEdge(buildings, b, "ELECTRIC_GRID")) edgeEnergyConsumption += def.energyConsumption
+    }
+    if (def.waterConsumption > 0 && hasSewerUtility(b)) {
+      waterConsumption += def.waterConsumption
+      if (hasBuildingUtilityToEdge(buildings, b, "SEWER_NETWORK")) edgeWaterConsumption += def.waterConsumption
+    }
     // A produção local entra no balanço assim que o produtor está ligado à
     // sua rede. A ligação até a borda é uma condição de exportação, não de
     // existência do recurso dentro da cidade.
@@ -189,8 +197,10 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
     water: waterProduction - waterConsumption,
     // Isolated districts keep their local production in the internal balance,
     // but only edge-connected producer capacity can create an export surplus.
-    energyExport: Math.max(0, edgeEnergyProduction - energyConsumption),
-    waterExport: Math.max(0, edgeWaterProduction - waterConsumption),
+    // Cada recurso é exportado de forma independente: só entra no excedente
+    // o fluxo que chega à borda, descontando apenas o consumo desse mesmo fluxo.
+    energyExport: Math.max(0, edgeEnergyProduction - edgeEnergyConsumption),
+    waterExport: Math.max(0, edgeWaterProduction - edgeWaterConsumption),
     buildings,
     policy,
     regions: [],
