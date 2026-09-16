@@ -133,6 +133,11 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
   let waterProduction = 0
   let waterConsumption = 0
 
+  const electricNetwork = getUtilityNetwork(buildings, "ELECTRIC_GRID")
+  const sewerNetwork = getUtilityNetwork(buildings, "SEWER_NETWORK")
+  const connectedPower = buildings.filter((building) => building.type === "POWER_PLANT" && electricNetwork.has(`${building.x}:${building.z}`))
+  const connectedTowers = buildings.filter((building) => building.type === "WATER_TOWER" && sewerNetwork.has(`${building.x}:${building.z}`))
+
   for (const b of buildings) {
     const def = getBuilding(b.type)
     const active = isActiveResident(b, def)
@@ -145,9 +150,11 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
 
     jobs += def.jobs
     buildingHappiness += def.happiness
-    if (def.energyProduction > 0 && b.type === "POWER_PLANT" && isUtilityConnected(buildings, b.x, b.z, "ELECTRIC_GRID")) energyProduction += def.energyProduction
-    if (def.energyConsumption > 0 && isUtilityConnected(buildings, b.x, b.z, "ELECTRIC_GRID") && !buildings.some((source) => source.type === "POWER_PLANT" && isUtilityConnected(buildings, source.x, source.z, "ELECTRIC_GRID"))) energyProduction += def.energyConsumption
-    waterProduction += def.waterProduction
+    if (b.type === "POWER_PLANT" && electricNetwork.has(`${b.x}:${b.z}`)) energyProduction += def.energyProduction
+    if (def.energyConsumption > 0 && electricNetwork.has(`${b.x}:${b.z}`) && connectedPower.length === 0) energyProduction += def.energyConsumption
+    if (b.type === "WATER_TOWER" && sewerNetwork.has(`${b.x}:${b.z}`)) waterProduction += def.waterProduction
+    if (b.type === "SEWAGE_TREATMENT_PLANT" && sewerNetwork.has(`${b.x}:${b.z}`) && connectedTowers.length > 0) waterProduction += def.waterProduction
+    if (def.waterProduction > 0 && b.type !== "WATER_TOWER" && b.type !== "SEWAGE_TREATMENT_PLANT") waterProduction += def.waterProduction
   }
 
   const services = deriveServiceIndices(policy, population)
