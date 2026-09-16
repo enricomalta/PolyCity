@@ -135,8 +135,12 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
 
   const electricNetwork = getUtilityNetwork(buildings, "ELECTRIC_GRID")
   const sewerNetwork = getUtilityNetwork(buildings, "SEWER_NETWORK")
-  const connectedPower = buildings.filter((building) => building.type === "POWER_PLANT" && electricNetwork.has(`${building.x}:${building.z}`))
-  const connectedTowers = buildings.filter((building) => building.type === "WATER_TOWER" && sewerNetwork.has(`${building.x}:${building.z}`))
+  const hasAdjacentNetwork = (building: Building, network: Set<string>) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => network.has(`${building.x + dx}:${building.z + dz}`))
+  const connectedPower = buildings.filter((building) => building.type === "POWER_PLANT" && hasAdjacentNetwork(building, electricNetwork))
+  const connectedTowers = buildings.filter((building) => building.type === "WATER_TOWER" && hasAdjacentNetwork(building, sewerNetwork))
+  const connectedTreatment = buildings.filter((building) => building.type === "SEWAGE_TREATMENT_PLANT" && hasAdjacentNetwork(building, sewerNetwork))
+  const hasElectricEdge = Array.from(electricNetwork).some((key) => { const [x, z] = key.split(":").map(Number); return x === 0 || z === 0 || x === 31 || z === 31 })
+  const hasSewerEdge = Array.from(sewerNetwork).some((key) => { const [x, z] = key.split(":").map(Number); return x === 0 || z === 0 || x === 31 || z === 31 })
 
   for (const b of buildings) {
     const def = getBuilding(b.type)
@@ -150,11 +154,12 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
 
     jobs += def.jobs
     buildingHappiness += def.happiness
-    if (b.type === "POWER_PLANT" && electricNetwork.has(`${b.x}:${b.z}`)) energyProduction += def.energyProduction
-    if (def.energyConsumption > 0 && electricNetwork.has(`${b.x}:${b.z}`) && connectedPower.length === 0) energyProduction += def.energyConsumption
-    if (b.type === "WATER_TOWER" && sewerNetwork.has(`${b.x}:${b.z}`)) waterProduction += def.waterProduction
-    if (b.type === "SEWAGE_TREATMENT_PLANT" && sewerNetwork.has(`${b.x}:${b.z}`) && connectedTowers.length > 0) waterProduction += def.waterProduction
+    if (b.type === "POWER_PLANT" && hasAdjacentNetwork(b, electricNetwork)) energyProduction += def.energyProduction
+    if (def.energyConsumption > 0 && hasElectricEdge && connectedPower.length === 0) energyProduction += def.energyConsumption
+    if (b.type === "WATER_TOWER" && hasAdjacentNetwork(b, sewerNetwork)) waterProduction += def.waterProduction
+    if (b.type === "SEWAGE_TREATMENT_PLANT" && hasAdjacentNetwork(b, sewerNetwork) && connectedTowers.length > 0) waterProduction += def.waterProduction
     if (def.waterProduction > 0 && b.type !== "WATER_TOWER" && b.type !== "SEWAGE_TREATMENT_PLANT") waterProduction += def.waterProduction
+    if (b.type === "SEWAGE_TREATMENT_PLANT" && hasAdjacentNetwork(b, sewerNetwork) && connectedTowers.length > 0 && connectedTreatment.length > 0 && hasSewerEdge) waterProduction += def.waterProduction
   }
 
   const services = deriveServiceIndices(policy, population)
