@@ -58,7 +58,7 @@ function LiveDayNightController({ clockStartedAt }: { clockStartedAt?: number | 
   const ambient = useRef<AmbientLight | null>(null)
   const hemisphere = useRef<HemisphereLight | null>(null)
   const directional = useRef<DirectionalLight | null>(null)
-  const daylight = useRef(1)
+  const daylight = useRef<number | null>(null)
   const dawnSky = useMemo(() => new Color("#9fc9e8"), [])
   const nightSky = useMemo(() => new Color("#18243d"), [])
   const dawnGround = useMemo(() => new Color("#4a6b3a"), [])
@@ -68,14 +68,17 @@ function LiveDayNightController({ clockStartedAt }: { clockStartedAt?: number | 
 
   useFrame(({ clock }) => {
     if (!clockStartedAt) return
-    const currentClock = createGameClock(Date.parse(String(clockStartedAt)) || clockStartedAt, Date.now(), DEFAULT_GAME_CLOCK_CONFIG)
+    const startedAt = typeof clockStartedAt === "number" ? clockStartedAt : Date.parse(String(clockStartedAt))
+    if (!Number.isFinite(startedAt)) return
+    const currentClock = createGameClock(startedAt, Date.now(), DEFAULT_GAME_CLOCK_CONFIG)
     const minute = currentClock.hour * 60 + currentClock.minute
     const smoothstep = (a: number, b: number, value: number) => {
       const t = Math.max(0, Math.min(1, (value - a) / (b - a)))
       return t * t * (3 - 2 * t)
     }
-    const nextDaylight = Math.min(smoothstep(300, 420, minute), 1 - smoothstep(1140, 1260, minute))
-    daylight.current += (nextDaylight - daylight.current) * Math.min(1, clock.getDelta() * 8)
+    const nextDaylight = Math.min(smoothstep(300, 420, minute), 1 - smoothstep(1080, 1200, minute))
+    if (daylight.current === null) daylight.current = nextDaylight
+    else daylight.current += (nextDaylight - daylight.current) * Math.min(1, clock.getDelta() * 8)
     const light = daylight.current
     currentSky.copy(nightSky).lerp(dawnSky, light)
     currentGround.copy(nightGround).lerp(dawnGround, light)
