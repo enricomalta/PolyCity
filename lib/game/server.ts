@@ -301,7 +301,12 @@ function sanitizePolicy(
   for (const key of ["market", "water", "energy", "fuel", "transit"] as const) {
     prices.consumption[key] = Math.max(0, Number(rawPolicy.prices?.consumption?.[key] ?? prices.consumption[key]))
   }
-  return { taxRate, economicModel, ideology, classTaxRates, selectiveTaxes, services, prices }
+  const rawUtilityFunding = (p as Partial<CityPolicy>).utilityFunding as Partial<CityPolicy["utilityFunding"]> | undefined
+  const utilityFunding = {
+    energy: Math.max(0, Math.min(3, Math.round(Number(rawUtilityFunding?.energy ?? DEFAULT_POLICY.utilityFunding.energy)))) as FundingLevel,
+    sewage: Math.max(0, Math.min(3, Math.round(Number(rawUtilityFunding?.sewage ?? DEFAULT_POLICY.utilityFunding.sewage)))) as FundingLevel,
+  }
+  return { taxRate, economicModel, ideology, classTaxRates, selectiveTaxes, services, utilityFunding, prices }
 }
 
 function docToState(
@@ -617,8 +622,9 @@ export async function getOrCreateCity(
         ...DEFAULT_POLICY,
         economicModel: creation.economicModel,
         ideology: creation.ideology,
-        services: { ...DEFAULT_POLICY.services },
-        classTaxRates: { ...DEFAULT_POLICY.classTaxRates },
+  services: { ...DEFAULT_POLICY.services },
+  utilityFunding: { ...DEFAULT_POLICY.utilityFunding },
+  classTaxRates: { ...DEFAULT_POLICY.classTaxRates },
         selectiveTaxes: { ...DEFAULT_POLICY.selectiveTaxes },
         prices: {
           jobs: DEFAULT_POLICY.prices.jobs.map((job) => ({ ...job })),

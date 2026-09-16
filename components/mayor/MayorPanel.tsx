@@ -25,6 +25,7 @@ interface MayorPanelProps {
 }
 import { getBuilding } from "@/lib/game/buildings"
 import { deriveBudget, deriveServiceIndices, SERVICE_LABELS } from "@/lib/game/economy"
+import { getUtilityNetwork } from "@/lib/game/utilityNetwork"
 import { cn } from "@/lib/utils"
 import { FullScreenLoader } from "@/components/ui/loader"
 
@@ -94,6 +95,15 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
   const setTax = (taxRate: number) => setDraft({ ...policy, taxRate })
   const setService = (service: PublicService, level: FundingLevel) =>
     setDraft({ ...policy, services: { ...policy.services, [service]: level } })
+  const utilityBuildings = state.buildings
+  const edgeNetwork = (type: "ELECTRIC_GRID" | "SEWER_NETWORK") => Array.from(getUtilityNetwork(utilityBuildings, type)).some((position) => {
+    const [x, z] = position.split(":").map(Number)
+    return x === 0 || z === 0 || x === 31 || z === 31
+  })
+  const importingEnergy = !utilityBuildings.some((building) => building.type === "POWER_PLANT") && edgeNetwork("ELECTRIC_GRID")
+  const ownSewage = utilityBuildings.some((building) => building.type === "SEWAGE_TREATMENT_PLANT") && utilityBuildings.some((building) => building.type === "WATER_TOWER")
+  const importingSewage = !ownSewage && edgeNetwork("SEWER_NETWORK")
+  const setUtilityFunding = (utility: "energy" | "sewage", level: FundingLevel) => setDraft({ ...policy, utilityFunding: { ...policy.utilityFunding, [utility]: level } })
 
   const save = async () => {
     const ok = await updatePolicy(draft ?? policy)
@@ -225,6 +235,8 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
             </p>
 
             <div className="mt-5 flex flex-col gap-4">
+              <UtilityFundingRow label="Energia" description={importingEnergy ? "Importada pela conexão de borda; fixa em 50%." : "Ajuste a verba da produção própria."} level={importingEnergy ? 2 : policy.utilityFunding.energy} locked={importingEnergy} onChange={(level) => setUtilityFunding("energy", level)} />
+              <UtilityFundingRow label="Tratamento de esgoto" description={importingSewage ? "Importado pela conexão de borda; fixo em 50%." : "Requer estação de tratamento e caixa d’água conectadas."} level={importingSewage ? 2 : policy.utilityFunding.sewage} locked={importingSewage} onChange={(level) => setUtilityFunding("sewage", level)} />
               {(Object.keys(SERVICE_META) as PublicService[]).map((service) => (
                 <ServiceRow
                   key={service}
@@ -288,6 +300,10 @@ function SummaryCard({
       <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
     </div>
   )
+}
+
+function UtilityFundingRow({ label, description, level, locked, onChange }: { label: string; description: string; level: FundingLevel; locked: boolean; onChange: (level: FundingLevel) => void }) {
+  return <div className="rounded-2xl border border-border bg-secondary/40 p-4"><div className="flex items-start justify-between gap-3"><div><div className="font-display text-sm font-semibold text-card-foreground">{label}</div><div className="text-xs text-muted-foreground">{description}</div></div><span className="rounded-lg bg-card px-2 py-1 text-xs font-medium text-muted-foreground">{FUNDING_LABELS[level]}</span></div><div className="mt-3 grid grid-cols-4 gap-1.5">{([0, 1, 2, 3] as FundingLevel[]).map((item) => <button key={item} type="button" disabled={locked} onClick={() => onChange(item)} className={cn("rounded-lg px-2 py-1.5 text-xs font-medium", item === level ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground", locked && "cursor-not-allowed opacity-60")}>{FUNDING_LABELS[item]}</button>)}</div></div>
 }
 
 function ServiceRow({

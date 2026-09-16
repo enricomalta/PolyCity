@@ -30,6 +30,7 @@ export const DEFAULT_POLICY: CityPolicy = {
   classTaxRates: { LOW: 3, MIDDLE: 8, HIGH: 14 },
   selectiveTaxes: { consumption: 4, energy: 3, water: 2, fuel: 5 },
   services: { education: 1, health: 1, security: 1, prevention: 1, waste: 1, transit: 1, roads: 1, sewage: 1 },
+  utilityFunding: { energy: 2, sewage: 2 },
   prices: DEFAULT_PRICES,
 }
 
@@ -144,7 +145,8 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
 
     jobs += def.jobs
     buildingHappiness += def.happiness
-    if (def.energyProduction > 0 && (b.type === "POWER_PLANT" || isUtilityConnected(buildings, b.x, b.z, "ELECTRIC_GRID"))) energyProduction += def.energyProduction
+    if (def.energyProduction > 0 && b.type === "POWER_PLANT" && isUtilityConnected(buildings, b.x, b.z, "ELECTRIC_GRID")) energyProduction += def.energyProduction
+    if (def.energyConsumption > 0 && isUtilityConnected(buildings, b.x, b.z, "ELECTRIC_GRID") && !buildings.some((source) => source.type === "POWER_PLANT" && isUtilityConnected(buildings, source.x, source.z, "ELECTRIC_GRID"))) energyProduction += def.energyConsumption
     waterProduction += def.waterProduction
   }
 

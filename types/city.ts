@@ -85,6 +85,7 @@ export interface CityPolicy {
   classTaxRates: Record<CitizenClass, number>
   selectiveTaxes: Record<SelectiveTax, number>
   services: Record<PublicService, FundingLevel>
+  utilityFunding: { energy: FundingLevel; sewage: FundingLevel }
   prices: EconomyPrices
 }
 
