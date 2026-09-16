@@ -52,7 +52,7 @@ function Model({
   const c = def.color
   const roof = def.roofColor ?? c
   const modelType: BuildingType =
-    type === "SMALL_APARTMENT" || type === "COMMERCIAL_BUILDING" || type === "HIGH_INCOME_HOUSE"
+    type === "SMALL_APARTMENT" || type === "LOW_INCOME_APARTMENT" || type === "MIDDLE_INCOME_APARTMENT" || type === "HIGH_INCOME_APARTMENT" || type === "COMMERCIAL_BUILDING" || type === "HIGH_INCOME_HOUSE"
       ? "SMALL_APARTMENT"
       : ["SHOP", "GROCERY_STORE", "GAS_STATION", "CLOTHING_STORE", "CAR_DEALERSHIP", "BUILDING_SUPPLY_STORE"].includes(type)
         ? "SHOP"
@@ -736,7 +736,7 @@ export const BuildingMesh = memo(
         ]}
       >
         <Model type={type} isNight={isNight} nightIntensity={nightIntensity} occupied={occupied} />
-        {occupied && (type === "HOUSE" || type === "SMALL_APARTMENT") && nightIntensity > 0.01 && (
+        {occupied && ["HOUSE", "LOW_INCOME_HOUSE", "MIDDLE_INCOME_HOUSE", "HIGH_INCOME_HOUSE", "SMALL_APARTMENT", "LOW_INCOME_APARTMENT", "MIDDLE_INCOME_APARTMENT", "HIGH_INCOME_APARTMENT"].includes(type) && nightIntensity > 0.01 && (
           <pointLight position={[0, 0.7, 0.25]} color="#ffc46b" intensity={0.7 * nightIntensity} distance={2.2} decay={2} />
         )}
       </group>

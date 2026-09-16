@@ -89,6 +89,15 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     roofColor: "#7d8a99",
     height: 1.6,
   },
+  LOW_INCOME_APARTMENT: {
+    type: "LOW_INCOME_APARTMENT", name: "Prédio de baixa renda", description: "Habitação vertical acessível para muitas famílias.", category: "RESIDENTIAL", cost: 420, size: { w: 1, d: 1 }, population: 24, jobs: 0, energyProduction: 0, energyConsumption: 8, waterProduction: 0, waterConsumption: 8, happiness: 0, color: "#b67d61", roofColor: "#713f3a", height: 1.7,
+  },
+  MIDDLE_INCOME_APARTMENT: {
+    type: "MIDDLE_INCOME_APARTMENT", name: "Prédio de média renda", description: "Apartamentos confortáveis para a classe média.", category: "RESIDENTIAL", cost: 680, size: { w: 1, d: 1 }, population: 30, jobs: 0, energyProduction: 0, energyConsumption: 11, waterProduction: 0, waterConsumption: 10, happiness: 2, color: "#d6b27c", roofColor: "#52677a", height: 2.15,
+  },
+  HIGH_INCOME_APARTMENT: {
+    type: "HIGH_INCOME_APARTMENT", name: "Prédio de alta renda", description: "Residência vertical sofisticada e valorizada.", category: "RESIDENTIAL", cost: 1100, size: { w: 1, d: 1 }, population: 26, jobs: 0, energyProduction: 0, energyConsumption: 15, waterProduction: 0, waterConsumption: 12, happiness: 6, color: "#e6d9c4", roofColor: "#344a62", height: 2.65,
+  },
   COMMERCIAL_BUILDING: {
     type: "COMMERCIAL_BUILDING", name: "Prédio comercial", description: "Centro comercial com vários serviços.", category: "COMMERCIAL", cost: 420, size: { w: 1, d: 1 }, population: 0, jobs: 14, energyProduction: 0, energyConsumption: 7, waterProduction: 0, waterConsumption: 4, happiness: 4, color: "#6c9fc2", roofColor: "#36536d", height: 1.5,
   },
@@ -152,6 +161,12 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   TECH_FACTORY: {
     type: "TECH_FACTORY", name: "Fábrica de tecnologia", description: "Produz tecnologia e empregos qualificados.", category: "INDUSTRIAL", cost: 950, size: { w: 1, d: 1 }, population: 0, jobs: 20, energyProduction: 0, energyConsumption: 9, waterProduction: 0, waterConsumption: 4, happiness: -1, color: "#6b9ed6", roofColor: "#263b61", height: 1.45,
   },
+  ELECTRIC_GRID: {
+    type: "ELECTRIC_GRID", name: "Rede elétrica", description: "Distribui energia pelas estradas conectadas.", category: "INFRASTRUCTURE", cost: 80, size: { w: 1, d: 1 }, population: 0, jobs: 0, energyProduction: 0, energyConsumption: 0, waterProduction: 0, waterConsumption: 0, happiness: 0, color: "#d7b84a", roofColor: "#725e23", height: 0.08,
+  },
+  SEWER_NETWORK: {
+    type: "SEWER_NETWORK", name: "Rede coletora de esgoto", description: "Transporta o esgoto até uma estação de tratamento.", category: "INFRASTRUCTURE", cost: 90, size: { w: 1, d: 1 }, population: 0, jobs: 0, energyProduction: 0, energyConsumption: 0, waterProduction: 0, waterConsumption: 0, happiness: 0, color: "#536b78", roofColor: "#293842", height: 0.08,
+  },
   PARK: {
     type: "PARK",
     name: "Parque",
@@ -186,6 +201,9 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     color: "#d9772f",
     roofColor: "#3f4756",
     height: 1.3,
+  },
+  SEWAGE_TREATMENT_PLANT: {
+    type: "SEWAGE_TREATMENT_PLANT", name: "Estação de tratamento de esgoto", description: "Trata o esgoto coletado e gera empregos de saneamento.", category: "SERVICES", cost: 1400, size: { w: 1, d: 1 }, population: 0, jobs: 10, energyProduction: 0, energyConsumption: 12, waterProduction: 0, waterConsumption: 2, happiness: 1, color: "#6d9d9d", roofColor: "#355a60", height: 1.05,
   },
   WATER_TOWER: {
     type: "WATER_TOWER",

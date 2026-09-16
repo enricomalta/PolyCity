@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Home, Building2, Store, Factory, Trees, Zap, Droplets, Route, ShoppingCart, Fuel, Shirt, CarFront, Hammer, Cpu } from "lucide-react"
+import { Home, Building2, Store, Factory, Trees, Zap, Droplets, Route, ShoppingCart, Fuel, Shirt, CarFront, Hammer, Cpu, Cable, Waves } from "lucide-react"
 import type { BuildingType } from "@/types/game"
 import {
   BUILDING_LIST,
@@ -34,6 +34,12 @@ const ICONS: Record<BuildingType, React.ReactNode> = {
   PARK: <Trees className="size-5" />,
   POWER_PLANT: <Zap className="size-5" />,
   WATER_TOWER: <Droplets className="size-5" />,
+  LOW_INCOME_APARTMENT: <Building2 className="size-5" />,
+  MIDDLE_INCOME_APARTMENT: <Building2 className="size-5" />,
+  HIGH_INCOME_APARTMENT: <Building2 className="size-5" />,
+  ELECTRIC_GRID: <Cable className="size-5" />,
+  SEWER_NETWORK: <Waves className="size-5" />,
+  SEWAGE_TREATMENT_PLANT: <Droplets className="size-5" />,
 }
 
 interface BuildMenuProps {

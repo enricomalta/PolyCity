@@ -23,6 +23,12 @@ export type BuildingType =
   | "PARK"
   | "POWER_PLANT"
   | "WATER_TOWER"
+  | "LOW_INCOME_APARTMENT"
+  | "MIDDLE_INCOME_APARTMENT"
+  | "HIGH_INCOME_APARTMENT"
+  | "ELECTRIC_GRID"
+  | "SEWER_NETWORK"
+  | "SEWAGE_TREATMENT_PLANT"
 
 export type BuildingCategory =
   | "INFRASTRUCTURE"
