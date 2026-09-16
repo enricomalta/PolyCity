@@ -239,7 +239,7 @@ export function CityScene() {
     ).flat()
     window.dispatchEvent(new CustomEvent("polycity:zoning-range", { detail: { from, to, tiles } }))
   }
-  const [heatMetric, setHeatMetric] = useState<"happiness" | "employment" | "services" | "roads">("happiness")
+  const [heatMetric, setHeatMetric] = useState<"happiness" | "employment" | "services" | "roads" | "energy" | "sewer">("happiness")
 
   useEffect(() => {
     const handleHeatmap = (event: Event) => setHeatMetric((event as CustomEvent<typeof heatMetric>).detail)
@@ -488,13 +488,10 @@ export function CityScene() {
           tool === "ROAD") &&
         selectedBuilding
       ) {
-        if (canPlace(tile)) {
-          void build(
-            x,
-            z,
-            selectedBuilding,
-            buildRotation,
-          )
+        const networkOnRoad = (selectedBuilding === "ELECTRIC_GRID" || selectedBuilding === "SEWER_NETWORK") && buildings.some((building) => building.x === x && building.z === z && building.type === "ROAD")
+        const duplicateNetwork = buildings.some((building) => building.x === x && building.z === z && building.type === selectedBuilding)
+        if ((canPlace(tile) || networkOnRoad) && !duplicateNetwork) {
+          void build(x, z, selectedBuilding, buildRotation)
         }
 
         return
@@ -576,7 +573,7 @@ export function CityScene() {
           const previewRegion = previewZone
           return <mesh key={`zone-preview-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.035, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.92, TILE_SIZE * 0.92]} /><meshBasicMaterial color={regionColor(previewRegion)} transparent opacity={0.72} /></mesh>
         })}
-        {tool === "HEATMAP" && Array.from({ length: 30 * 30 }, (_, index) => { const x = index % 30; const z = Math.floor(index / 30); const region = state?.regions?.find((item) => item.tiles.some((tile) => tile.x === x && tile.z === z)); const road = state?.buildings?.find((building: any) => building.type === "ROAD" && building.x === x && building.z === z); const status = road ? roadStatus(road) : null; const value = heatMetric === "roads" ? (status === "CLOSED" ? 25 : status === "IRREGULAR" ? 58 : status === "REGULAR" ? 86 : -1) : heatValue(heatMetric, state, region); return <mesh key={`heat-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.16, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={heatColor(value)} transparent opacity={heatMetric === "roads" && road ? 0.9 : 0.62} depthWrite={false} /></mesh> })}
+        {tool === "HEATMAP" && Array.from({ length: 30 * 30 }, (_, index) => { const x = index % 30; const z = Math.floor(index / 30); const region = state?.regions?.find((item) => item.tiles.some((tile) => tile.x === x && tile.z === z)); const road = state?.buildings?.find((building: any) => building.type === "ROAD" && building.x === x && building.z === z); const status = road ? roadStatus(road) : null; const network = state?.buildings?.some((building: any) => building.x === x && building.z === z && building.type === (heatMetric === "energy" ? "ELECTRIC_GRID" : "SEWER_NETWORK")); const value = heatMetric === "energy" || heatMetric === "sewer" ? (network ? 100 : -1) : heatMetric === "roads" ? (status === "CLOSED" ? 25 : status === "IRREGULAR" ? 58 : status === "REGULAR" ? 86 : -1) : heatValue(heatMetric, state, region); return <mesh key={`heat-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.16, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={heatColor(value)} transparent opacity={heatMetric === "roads" && road ? 0.9 : 0.62} depthWrite={false} /></mesh> })}
         <GroundTiles
           tiles={tiles}
           onSelect={handleSelect}

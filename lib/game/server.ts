@@ -1034,23 +1034,14 @@ export async function performAction(
         action.buildingType,
       )
 
-    const terrain =
-      applyOccupancy(
-terrainWithOverrides(doc.seed, doc.terrainOverrides),
-        doc.buildings,
-      )
-
-    const tile =
-      terrain[action.x]?.[
-      action.z
-      ]
-
+    const terrain = terrainWithOverrides(doc.seed, doc.terrainOverrides)
+    const tile = terrain[action.x]?.[action.z]
     const sharedRoadNetwork = action.buildingType === "ELECTRIC_GRID" || action.buildingType === "SEWER_NETWORK"
-    const occupiedBuilding = doc.buildings.find((building) => building.x === action.x && building.z === action.z)
+    const occupiedBuilding = doc.buildings.find((building) => building.x === action.x && building.z === action.z && building.type !== "ELECTRIC_GRID" && building.type !== "SEWER_NETWORK")
     const canShareRoad = sharedRoadNetwork && occupiedBuilding?.type === "ROAD"
     const sameNetworkExists = sharedRoadNetwork && doc.buildings.some((building) => building.x === action.x && building.z === action.z && building.type === action.buildingType)
 
-    if (!tile || tile.terrain === "WATER" || tile.terrain === "ROCK" || (tile.occupiedBy && !canShareRoad) || sameNetworkExists) {
+    if (!tile || tile.terrain === "WATER" || tile.terrain === "ROCK" || (occupiedBuilding && !canShareRoad) || sameNetworkExists) {
       return reject("Não é possível construir aqui.")
     }
 
