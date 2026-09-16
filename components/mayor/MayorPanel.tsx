@@ -264,12 +264,12 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
                   label={SERVICE_LABELS[service]}
                   description={service === "sewage" ? `${importingSewage ? "Importando tratamento" : "Exportando excedente de tratamento"} · Saldo: ${state.water > 0 ? "+" : ""}${state.water} · ${importingSewage ? "Verba fixa em 50%" : SERVICE_META[service].description}` : SERVICE_META[service].description}
                   level={service === "sewage" && importingSewage ? 2 : (policy.services[service] ?? 0) as FundingLevel}
-                  index={service === "sewage" && importingSewage ? 50 : services[service] ?? (policy.services[service] ?? 0) * 30}
+                  index={service === "sewage" && importingSewage ? 50 : services[service] ?? ([0, 25, 50, 100][policy.services[service] ?? 0] ?? 0)}
                   locked={service === "sewage" && importingSewage}
                   onChange={(lvl) => setServiceFunding(service, lvl)}
                 />
               ))}
-              <ServiceRow icon={<Zap className="size-5" />} label="Energia" description={`${importingEnergy ? "Importando energia" : "Exportando excedente de energia"} · Saldo: ${state.energy > 0 ? "+" : ""}${state.energy} · Verba ${importingEnergy ? "fixa em 50%" : "ajustável"}`} level={importingEnergy ? 2 : utilityFunding.energy} index={importingEnergy ? 50 : utilityFunding.energy * 30} locked={importingEnergy} onChange={setUtilityFunding} />
+              <ServiceRow icon={<Zap className="size-5" />} label="Energia" description={`${importingEnergy ? "Importando energia" : "Exportando excedente de energia"} · Saldo: ${state.energy > 0 ? "+" : ""}${state.energy} · Verba ${importingEnergy ? "fixa em 50%" : "ajustável"}`} level={importingEnergy ? 2 : utilityFunding.energy} index={importingEnergy ? 50 : ([0, 25, 50, 100][utilityFunding.energy] ?? 0)} locked={importingEnergy} onChange={setUtilityFunding} />
             </div>
           </div>
         </div>
