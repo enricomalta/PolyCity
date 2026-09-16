@@ -16,6 +16,7 @@ import {
   TrendingDown,
   TrendingUp,
   Users,
+  Zap,
 } from "lucide-react"
 import type { CityPolicy, FundingLevel, PublicService, CitizenClass, SelectiveTax } from "@/types/city"
 import { useGame } from "@/hooks/useGame"
@@ -25,7 +26,6 @@ interface MayorPanelProps {
 }
 import { getBuilding } from "@/lib/game/buildings"
 import { deriveBudget, deriveServiceIndices, SERVICE_LABELS } from "@/lib/game/economy"
-import { getUtilityNetwork } from "@/lib/game/utilityNetwork"
 import { cn } from "@/lib/utils"
 import { FullScreenLoader } from "@/components/ui/loader"
 
@@ -96,14 +96,13 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
   const setTax = (taxRate: number) => setDraft({ ...policy, taxRate })
   const setService = (service: PublicService, level: FundingLevel) =>
     setDraft({ ...policy, services: { ...policy.services, [service]: level } })
-  const utilityBuildings = state.buildings
-  const edgeNetwork = (type: "ELECTRIC_GRID" | "SEWER_NETWORK") => Array.from(getUtilityNetwork(utilityBuildings, type)).some((position) => {
-    const [x, z] = position.split(":").map(Number)
-    return x === 0 || z === 0 || x === 31 || z === 31
-  })
-  const connectedPowerPlant = utilityBuildings.some((building) => building.type === "POWER_PLANT" && getUtilityNetwork(utilityBuildings, "ELECTRIC_GRID").has(`${building.x}:${building.z}`))
-  const importingEnergy = edgeNetwork("ELECTRIC_GRID") && (!connectedPowerPlant || state.energy <= 0)
+  const importingEnergy = state.energy <= 0
+  const importingSewage = state.water <= 0
   const setUtilityFunding = (level: FundingLevel) => setDraft({ ...policy, utilityFunding: { ...utilityFunding, energy: level } })
+  const setServiceFunding = (service: PublicService, level: FundingLevel) => {
+    if (service === "sewage" && importingSewage) return
+    setService(service, level)
+  }
 
   const save = async () => {
     const ok = await updatePolicy(draft ?? policy)
@@ -241,12 +240,13 @@ export function MayorPanel({ onClose }: MayorPanelProps) {
                   icon={SERVICE_META[service].icon}
                   label={SERVICE_LABELS[service]}
                   description={SERVICE_META[service].description}
-                  level={(policy.services[service] ?? 0) as FundingLevel}
+                  level={service === "sewage" && importingSewage ? 2 : (policy.services[service] ?? 0) as FundingLevel}
                   index={services[service] ?? (policy.services[service] ?? 0) * 30}
-                  onChange={(lvl) => setService(service, lvl)}
+                  locked={service === "sewage" && importingSewage}
+                  onChange={(lvl) => setServiceFunding(service, lvl)}
                 />
               ))}
-              <UtilityFundingRow label="Energia" description={importingEnergy ? "Importada pela conexão de borda; fixa em 50%." : "Produção própria disponível; verba ajustável."} level={importingEnergy ? 2 : utilityFunding.energy} locked={importingEnergy} onChange={setUtilityFunding} />
+              <ServiceRow icon={<Zap className="size-5" />} label="Energia" description={importingEnergy ? "Importada; verba fixa em 50%." : "Produção própria disponível; verba ajustável."} level={importingEnergy ? 2 : utilityFunding.energy} index={importingEnergy ? 50 : utilityFunding.energy * 30} locked={importingEnergy} onChange={setUtilityFunding} />
             </div>
           </div>
         </div>
@@ -311,6 +311,7 @@ function ServiceRow({
   description,
   level,
   index,
+  locked = false,
   onChange,
 }: {
   icon: React.ReactNode
@@ -318,6 +319,7 @@ function ServiceRow({
   description: string
   level: FundingLevel
   index: number
+  locked?: boolean
   onChange: (level: FundingLevel) => void
 }) {
   return (
@@ -357,6 +359,7 @@ function ServiceRow({
             key={lvl}
             type="button"
             onClick={() => onChange(lvl)}
+            disabled={locked}
             className={cn(
               "rounded-lg px-2 py-1.5 text-xs font-medium transition-colors",
               lvl === level

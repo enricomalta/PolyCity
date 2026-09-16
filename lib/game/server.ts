@@ -1124,7 +1124,7 @@ export async function performAction(
 
     if (idx === -1) {
       return reject(
-        "Nenhuma construção encontrada aqui.",
+        "Nenhuma construç��o encontrada aqui.",
       )
     }
 
@@ -1349,10 +1349,19 @@ export async function performAction(
   action.type ===
   "SET_POLICY"
   ) {
-    doc.policy =
-      sanitizePolicy(
-        action.policy,
-      )
+    const requestedPolicy = sanitizePolicy(action.policy)
+    const currentState = deriveState(doc.buildings, doc.money, requestedPolicy, doc.clockStartedAt, now)
+    doc.policy = {
+      ...requestedPolicy,
+      utilityFunding: {
+        energy: currentState.energy <= 0 ? 2 : requestedPolicy.utilityFunding.energy,
+        sewage: currentState.water <= 0 ? 2 : requestedPolicy.utilityFunding.sewage,
+      },
+      services: {
+        ...requestedPolicy.services,
+        sewage: currentState.water <= 0 ? 2 : requestedPolicy.services.sewage,
+      },
+    }
 
     doc.updatedAt =
       new Date(
