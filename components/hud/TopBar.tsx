@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-
 import { X } from "lucide-react"
 import { LogOut, ChevronDown, UserRound, Link2 } from "lucide-react"
 import type { User } from "@/types/auth"

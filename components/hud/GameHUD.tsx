@@ -31,13 +31,12 @@ export function GameHUD() {
     setTool,
     selectBuildingType,
     selectTile,
-    demolish,
-    rotateSelectedBuilding,
     moveBuilding,
     vacateBuilding,
     closeBuilding,
     openBuilding,
     demarcateRegion,
+    deleteRegion,
     setTerrainBatch,
     lastMessage,
     clearMessage,
@@ -51,7 +50,6 @@ export function GameHUD() {
   const [clockNow, setClockNow] =
     useState(() => Date.now())
   const [mayorOpen, setMayorOpen] = useState(false)
-
   const [anonymousWarningOpen, setAnonymousWarningOpen] = useState(false)
   const [zoneType, setZoneType] = useState<"RESIDENTIAL" | "COMMERCIAL" | "INDUSTRIAL" | "MIXED">("RESIDENTIAL")
   const [zoneClass, setZoneClass] = useState<"LOW" | "MIDDLE" | "HIGH">("MIDDLE")
@@ -59,6 +57,7 @@ export function GameHUD() {
   const [heatMetric, setHeatMetric] = useState<"happiness" | "employment" | "services" | "roads">("happiness")
   const [zoningTiles, setZoningTiles] = useState<Array<{ x: number; z: number }>>([])
   const [editingRegionId, setEditingRegionId] = useState<string | null>(null)
+  const [regionToDelete, setRegionToDelete] = useState<{ id: string; name: string } | null>(null)
   const [terrainSelection, setTerrainSelection] = useState<Array<{ x: number; z: number }>>([])
 
   useEffect(() => {
@@ -270,10 +269,23 @@ export function GameHUD() {
             onDismiss={clearMessage}
           />
 
+          {regionToDelete && (
+            <div className="pointer-events-auto fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+              <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
+                <h2 className="text-lg font-semibold text-card-foreground">Excluir região?</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">A região <strong className="text-card-foreground">{regionToDelete.name}</strong> será removida permanentemente. A seleção e o preview também serão limpos.</p>
+                <div className="mt-5 flex justify-end gap-2">
+                  <button type="button" onClick={() => setRegionToDelete(null)} className="rounded-xl px-4 py-2 text-sm text-muted-foreground hover:bg-secondary">Cancelar</button>
+                  <button type="button" onClick={() => { const region = regionToDelete; setRegionToDelete(null); if (editingRegionId === region.id) { setEditingRegionId(null); setZoningTiles([]); setZoneName("") } window.dispatchEvent(new Event("polycity:clear-selection")); void deleteRegion(region.id) }} className="rounded-xl bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground">Excluir região</button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {tool === "ZONING" && (state.regions ?? []).length > 0 && (
             <div className="pointer-events-auto max-h-[min(42vh,360px)] w-[min(88vw,340px)] overflow-y-auto rounded-2xl border border-border bg-card/95 p-3 shadow-lg shadow-black/30 backdrop-blur">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Regiões demarcadas</p>
-              <div className="mt-2 flex flex-col gap-2">{(state.regions ?? []).map((region) => <button key={region.id} type="button" onClick={() => { if (editingRegionId === region.id) { window.dispatchEvent(new Event("polycity:clear-selection")) } else { setEditingRegionId(region.id); setZoneName(region.name); setZoneType(region.zone as typeof zoneType); setZoneClass(region.citizenClass ?? "MIDDLE"); setZoningTiles(region.tiles); window.dispatchEvent(new CustomEvent("polycity:zone-preview", { detail: { zone: region.zone, citizenClass: region.citizenClass ?? "MIDDLE", tiles: region.tiles } })) } }} className={`rounded-xl border px-3 py-2 text-left text-xs ${editingRegionId === region.id ? "border-primary bg-primary/10" : "border-border bg-secondary/60"}`}><span className="font-semibold text-foreground">{region.name}</span><span className="ml-2 text-muted-foreground">{region.tiles.length} tiles · {region.zone}</span></button>)}</div>
+              <div className="mt-2 flex flex-col gap-2">{(state.regions ?? []).map((region) => <div key={region.id} className={`flex items-center gap-2 rounded-xl border p-2 ${editingRegionId === region.id ? "border-primary bg-primary/10" : "border-border bg-secondary/60"}`}><button type="button" onClick={() => { if (editingRegionId === region.id) { window.dispatchEvent(new Event("polycity:clear-selection")) } else { setEditingRegionId(region.id); setZoneName(region.name); setZoneType(region.zone as typeof zoneType); setZoneClass(region.citizenClass ?? "MIDDLE"); setZoningTiles(region.tiles); window.dispatchEvent(new CustomEvent("polycity:zone-preview", { detail: { zone: region.zone, citizenClass: region.citizenClass ?? "MIDDLE", tiles: region.tiles } })) } }} className="min-w-0 flex-1 text-left text-xs"><span className="font-semibold text-foreground">{region.name}</span><span className="ml-2 text-muted-foreground">{region.tiles.length} tiles · {region.zone}</span></button><button type="button" onClick={() => setRegionToDelete({ id: region.id, name: region.name })} className="rounded-lg px-2 py-1 text-xs font-semibold text-destructive hover:bg-destructive/10">Excluir</button></div>)}</div>
             </div>
           )}
 
@@ -282,24 +294,6 @@ export function GameHUD() {
               tile={inspected.tile}
               building={inspected.building}
               onClose={() => selectTile(null)}
-
-              onDemolish={(x, z) => {
-                void demolish(x, z)
-                selectTile(null)
-              }}
-
-              onRotate={(
-                x,
-                z,
-                rotation,
-              ) => {
-                void rotateSelectedBuilding(
-                  x,
-                  z,
-                  rotation,
-                )
-              }}
-              
               onVacate={vacateBuilding}
               onCloseBuilding={closeBuilding}
               onOpenBuilding={openBuilding}
@@ -366,7 +360,6 @@ export function GameHUD() {
         )}
 
       </div>
-
 
       {anonymousWarningOpen && user?.isAnonymous && (
         <div className="pointer-events-auto fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">

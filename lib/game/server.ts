@@ -1332,6 +1332,15 @@ terrainWithOverrides(doc.seed, doc.terrainOverrides),
     return { success: true, state: docToState(doc), message: `Região ${safeRegion.name} salva.` }
   }
 
+  if (action.type === "DELETE_REGION") {
+    const region = (doc.regions ?? []).find((item) => item.id === action.regionId)
+    if (!region) return reject("Região não encontrada.")
+    doc.regions = (doc.regions ?? []).filter((item) => item.id !== action.regionId)
+    doc.updatedAt = new Date(now).toISOString()
+    await cityRef.update({ regions: doc.regions, updatedAt: doc.updatedAt })
+    return { success: true, state: docToState(doc), message: `Região ${region.name} excluída.` }
+  }
+
   if (
   action.type ===
   "SET_POLICY"

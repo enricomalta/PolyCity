@@ -167,6 +167,7 @@ interface GameContextValue {
   ) => Promise<boolean>
 
   demarcateRegion: (region: CityRegion) => Promise<boolean>
+  deleteRegion: (regionId: string) => Promise<boolean>
 
   renameCity: (name: string) => Promise<boolean>
 
@@ -791,6 +792,24 @@ export function GameProvider({
     [cityId],
   )
 
+  const deleteRegion = useCallback<GameContextValue["deleteRegion"]>(
+    async (regionId) => {
+      setPending(true)
+      try {
+        const res = await gameService.performAction(cityId, { type: "DELETE_REGION", regionId })
+        setState(res.state)
+        setLastMessage(res.message ?? null)
+        return res.success
+      } catch {
+        setLastMessage("Não foi possível excluir a região.")
+        return false
+      } finally {
+        setPending(false)
+      }
+    },
+    [cityId],
+  )
+
   const renameCity = useCallback<GameContextValue["renameCity"]>(
     async (name) => {
       const normalized = name.trim()
@@ -915,7 +934,8 @@ export function GameProvider({
 
   updatePolicy,
   demarcateRegion,
-  
+  deleteRegion,
+
   renameCity,
 
   clearMessage: () =>

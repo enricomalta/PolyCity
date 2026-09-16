@@ -18,15 +18,6 @@ interface TileInspectorProps {
   tile: Tile | null
   building: Building | null
   onClose: () => void
-  onDemolish: (
-    x: number,
-    z: number,
-  ) => void
-  onRotate: (
-    x: number,
-    z: number,
-    rotation: number,
-  ) => void
   onVacate: (
     x: number,
     z: number,
@@ -86,8 +77,6 @@ export function TileInspector({
   tile,
   building,
   onClose,
-  onDemolish,
-  onRotate,
   onVacate,
   onCloseBuilding,
   onOpenBuilding,
@@ -303,34 +292,6 @@ export function TileInspector({
                 </Button>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="secondary"
-                  className="w-full"
-                  onClick={() =>
-                    onRotate(
-                      building.x,
-                      building.z,
-                      (building.rotation + 1) % 4,
-                    )
-                  }
-                >
-                  Girar
-                </Button>
-
-                <Button
-                  variant="destructive"
-                  className="w-full"
-                  onClick={() =>
-                    onDemolish(
-                      building.x,
-                      building.z,
-                    )
-                  }
-                >
-                  Demolir
-                </Button>
-              </div>
             </div>
           )}
         </>
