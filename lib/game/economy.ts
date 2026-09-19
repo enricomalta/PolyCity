@@ -195,12 +195,14 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
     happiness,
     energy: energyProduction - energyConsumption,
     water: waterProduction - waterConsumption,
-    // Isolated districts keep their local production in the internal balance,
-    // but only edge-connected producer capacity can create an export surplus.
-    // Cada recurso é exportado de forma independente: só entra no excedente
-    // o fluxo que chega à borda, descontando apenas o consumo desse mesmo fluxo.
-    energyExport: Math.max(0, edgeEnergyProduction - edgeEnergyConsumption),
-    waterExport: Math.max(0, edgeWaterProduction - edgeWaterConsumption),
+    // A produção isolada participa do balanço interno, mas não pode ser
+    // exportada. O consumo da cidade inteira reduz o excedente exportável:
+    // assim, uma usina ligada à borda pode compensar a demanda de um bairro
+    // isolado, mas nunca exportar a produção desse bairro.
+    // Cada recurso é validado separadamente, sem exigir que água e energia
+    // estejam exportando ao mesmo tempo.
+    energyExport: Math.max(0, edgeEnergyProduction - energyConsumption),
+    waterExport: Math.max(0, edgeWaterProduction - waterConsumption),
     buildings,
     policy,
     regions: [],
