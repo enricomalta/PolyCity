@@ -11,6 +11,7 @@ interface RoadProps {
   x: number
   z: number
   roads: Set<string>
+  buildingType?: "ROAD" | "BRIDGE"
 }
 
 const ROAD_N = 1
@@ -23,12 +24,13 @@ const CURB_HEIGHT = 0.05
 const CURB_OFFSET = 0.05
 const CURB_Y_OFFSET = 0.015
 
-function createRoadShape(
+export function createRoadShape(
   mask: number,
   size: number,
+  widthRatio = 0.42,
 ): THREE.Shape {
   const half = size / 2
-  const width = size * 0.42
+  const width = size * widthRatio
   const halfWidth = width / 2
 
   const shape = new THREE.Shape()
@@ -322,15 +324,17 @@ function RoadSurface({
   size,
   height,
   color,
+  widthRatio = 0.42,
 }: {
   mask: number
   size: number
   height: number
   color: string
+  widthRatio?: number
 }) {
   const shape = useMemo(
-    () => createRoadShape(mask, size),
-    [mask, size],
+    () => createRoadShape(mask, size, widthRatio),
+    [mask, size, widthRatio],
   )
 
   return (
@@ -682,6 +686,47 @@ function TCurbs({
   return null
 }
 
+export function RoadCurbs({
+  mask,
+  shape,
+  size,
+  height,
+}: {
+  mask: number
+  shape: string
+  size: number
+  height: number
+}) {
+  const isVertical = mask === ROAD_N || mask === ROAD_S || mask === (ROAD_N | ROAD_S)
+  const isHorizontal = mask === ROAD_E || mask === ROAD_W || mask === (ROAD_E | ROAD_W)
+
+  return <>
+    {(shape === "STRAIGHT" || shape === "END") && isVertical && <>
+      <mesh position={[-size / 2 + CURB_OFFSET, height + CURB_Y_OFFSET, 0]}>
+        <boxGeometry args={[CURB_WIDTH, CURB_HEIGHT, size]} />
+        <meshStandardMaterial color="#9aa0a6" flatShading />
+      </mesh>
+      <mesh position={[size / 2 - CURB_OFFSET, height + CURB_Y_OFFSET, 0]}>
+        <boxGeometry args={[CURB_WIDTH, CURB_HEIGHT, size]} />
+        <meshStandardMaterial color="#9aa0a6" flatShading />
+      </mesh>
+    </>}
+    {(shape === "STRAIGHT" || shape === "END") && isHorizontal && <>
+      <mesh position={[0, height + CURB_Y_OFFSET, -size / 2 + CURB_OFFSET]}>
+        <boxGeometry args={[size, CURB_HEIGHT, CURB_WIDTH]} />
+        <meshStandardMaterial color="#9aa0a6" flatShading />
+      </mesh>
+      <mesh position={[0, height + CURB_Y_OFFSET, size / 2 - CURB_OFFSET]}>
+        <boxGeometry args={[size, CURB_HEIGHT, CURB_WIDTH]} />
+        <meshStandardMaterial color="#9aa0a6" flatShading />
+      </mesh>
+    </>}
+    {shape === "END" && <EndCurb mask={mask} size={size} height={height} />}
+    {shape === "CURVE" && <CurveCurbs mask={mask} size={size} height={height} />}
+    {shape === "T" && <TCurbs mask={mask} size={size} height={height} />}
+  </>
+}
+
 function StraightMarkings({
   size,
   height,
@@ -740,8 +785,10 @@ export function Road({
   x,
   z,
   roads,
+  buildingType = "ROAD",
 }: RoadProps) {
-  const def = getBuilding("ROAD")
+  const def = getBuilding(buildingType)
+  const widthRatio = buildingType === "BRIDGE" ? 0.52 : 0.42
 
   const size = TILE_SIZE * 0.98
 
@@ -787,6 +834,7 @@ export function Road({
         size={size}
         height={def.height}
         color={def.color}
+        widthRatio={widthRatio}
       />
 
       {/* ----------------------------------------------------------------- */}

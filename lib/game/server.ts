@@ -771,7 +771,7 @@ export async function getOrCreateCity(
   const elapsedDays = Math.max(0, (now - (doc.lastTickAt ?? now)) / (1000 * 60 * 60 * 24))
   let roadsChanged = false
   doc.buildings = doc.buildings.map((building) => {
-    if (building.type !== "ROAD") return building
+    if (building.type !== "ROAD" && building.type !== "BRIDGE") return building
     const current = building.maintenance ?? { status: building.closed ? "CLOSED" as const : "REGULAR" as const, wear: 0, degradationRate: 0.02, lastMaintainedAt: new Date(now).toISOString() }
     if (current.status === "CLOSED") return { ...building, closed: true, maintenance: current }
     const wear = Math.min(100, current.wear + elapsedDays * current.degradationRate * 100)
@@ -1045,12 +1045,20 @@ export async function performAction(
     const terrain = terrainWithOverrides(doc.seed, doc.terrainOverrides)
     const tile = terrain[action.x]?.[action.z]
     const sharedRoadNetwork = action.buildingType === "ELECTRIC_GRID" || action.buildingType === "SEWER_NETWORK"
+    const isBridge = action.buildingType === "BRIDGE"
     const occupiedBuilding = doc.buildings.find((building) => building.x === action.x && building.z === action.z && building.type !== "ELECTRIC_GRID" && building.type !== "SEWER_NETWORK")
-    const roadAtTile = doc.buildings.some((building) => building.x === action.x && building.z === action.z && building.type === "ROAD")
+    const roadAtTile = doc.buildings.some((building) => building.x === action.x && building.z === action.z && (building.type === "ROAD" || building.type === "BRIDGE"))
     const canShareRoad = sharedRoadNetwork && roadAtTile
     const sameNetworkExists = sharedRoadNetwork && doc.buildings.some((building) => building.x === action.x && building.z === action.z && building.type === action.buildingType)
+    const bridgeHasRoadConnection = doc.buildings.some((building) =>
+      (building.type === "ROAD" || building.type === "BRIDGE") &&
+      Math.abs(building.x - action.x) + Math.abs(building.z - action.z) === 1,
+    )
+    const bridgeTouchesWater = [
+      [action.x, action.z - 1], [action.x + 1, action.z], [action.x, action.z + 1], [action.x - 1, action.z],
+    ].some(([neighborX, neighborZ]) => terrain[neighborX]?.[neighborZ]?.terrain === "WATER")
 
-    if (!tile || tile.terrain === "WATER" || tile.terrain === "ROCK" || (sharedRoadNetwork && !roadAtTile) || (occupiedBuilding && !canShareRoad) || sameNetworkExists) {
+    if (!tile || (isBridge ? (tile.terrain !== "WATER" && !bridgeTouchesWater) || !bridgeHasRoadConnection : tile.terrain === "WATER" || tile.terrain === "ROCK") || (isBridge && occupiedBuilding) || (sharedRoadNetwork && !roadAtTile) || (occupiedBuilding && !canShareRoad) || sameNetworkExists) {
       return reject("Não é possível construir aqui.")
     }
 
@@ -1075,8 +1083,8 @@ export async function performAction(
           action.rotation,
         level: 1,
         occupied: false,
-        closed: action.buildingType === "ROAD" ? false : false,
-        ...(action.buildingType === "ROAD" ? { maintenance: { status: "REGULAR" as const, wear: 0, degradationRate: 0.02, lastMaintainedAt: new Date(now).toISOString() } } : {}),
+        closed: false,
+        ...((action.buildingType === "ROAD" || action.buildingType === "BRIDGE") ? { maintenance: { status: "REGULAR" as const, wear: 0, degradationRate: 0.02, lastMaintainedAt: new Date(now).toISOString() } } : {}),
       },
     ]
 
@@ -1134,7 +1142,7 @@ export async function performAction(
       doc.buildings[idx]
 
     if (
-      building.type === "ROAD"
+      building.type === "ROAD" || building.type === "BRIDGE"
     ) {
       return reject(
         "Estradas não podem ser movidas por este modo.",
@@ -1225,7 +1233,7 @@ export async function performAction(
     const removedTypes = new Set([removed.type])
     doc.buildings.splice(idx, 1)
 
-    if (removed.type === "ROAD") {
+    if (removed.type === "ROAD" || removed.type === "BRIDGE") {
       const utilityBuildings = doc.buildings.filter(
         (building) => building.x === action.x && building.z === action.z && (building.type === "ELECTRIC_GRID" || building.type === "SEWER_NETWORK"),
       )

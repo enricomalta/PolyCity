@@ -4,6 +4,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -27,10 +28,15 @@ import {
   HemisphereLight,
   Fog,
   Group,
+  InstancedMesh,
+  MeshBasicMaterial,
+  Object3D,
+  PlaneGeometry,
 } from "three"
 
 import {
   CAMERA,
+  GRID_SIZE,
   TILE_SIZE,
   tileToWorld,
 } from "@/lib/game/constants"
@@ -39,6 +45,7 @@ import { canPlace } from "@/lib/game/grid"
 import { useGame } from "@/hooks/useGame"
 import { BuildingMesh } from "./Building"
 import { Road } from "./Road"
+import { Bridge } from "./Bridge"
 import { GroundTiles } from "./GroundTiles"
 import { SelectionIndicator } from "./SelectionIndicator"
 import { CameraController } from "./CameraController"
@@ -106,19 +113,6 @@ function zoneTypeColor(mode: string) {
   return mode === "ZONING" ? "#4ade80" : "#64748b"
 }
 
-function heatValue(metric: string, state: any, region?: { tiles: Array<{ x: number; z: number }> }) {
-  if (!region) return -1
-  const regionalCitizens = state?.citizens?.filter((citizen: any) => {
-    const home = state?.buildings?.find((building: any) => building.id === citizen.homeBuildingId)
-    return home && region.tiles.some((tile) => tile.x === home.x && tile.z === home.z)
-  }) ?? []
-  if (regionalCitizens.length === 0) return -1
-  if (metric === "happiness") return Math.round(regionalCitizens.reduce((sum: number, citizen: any) => sum + Number(citizen.opinion?.score ?? state.happiness ?? 0), 0) / regionalCitizens.length)
-  if (metric === "employment") return Math.round((regionalCitizens.filter((citizen: any) => citizen.employed).length / regionalCitizens.length) * 100)
-  if (metric === "services") return Math.round(Object.values(state?.services ?? {}).reduce((sum: number, value) => sum + Number(value), 0) / Math.max(1, Object.values(state?.services ?? {}).length))
-  return -1
-}
-
 function roadStatus(building: { maintenance?: { status: "REGULAR" | "IRREGULAR" | "CLOSED" }; roadCondition?: "REGULAR" | "IRREGULAR" | "CLOSED"; closed?: boolean }) {
   return building.maintenance?.status ?? building.roadCondition ?? (building.closed ? "CLOSED" : "REGULAR")
 }
@@ -128,6 +122,121 @@ function heatColor(value: number) {
   if (value < 50) return "#ef4444"
   if (value < 70) return "#eab308"
   return "#22c55e"
+}
+
+type HeatMetric = "happiness" | "employment" | "services" | "roads" | "energy" | "sewer"
+
+function HeatmapOverlay({ state, metric }: { state: any; metric: HeatMetric }) {
+  const dummy = useMemo(() => new Object3D(), [])
+  const geometry = useMemo(() => new PlaneGeometry(TILE_SIZE * 0.94, TILE_SIZE * 0.94), [])
+  const colors = useMemo(() => {
+    const buildings = state?.buildings ?? []
+    const regions = state?.regions ?? []
+    const citizens = state?.citizens ?? []
+    const buildingById = new Map<string, any>(buildings.map((building: any) => [building.id, building]))
+    const regionByTile = new Map<string, any>()
+
+    for (const region of regions) {
+      for (const tile of region.tiles) regionByTile.set(`${tile.x}:${tile.z}`, region)
+    }
+
+    const citizensByRegion = new Map<string, { happiness: number; employed: number; count: number }>()
+    for (const citizen of citizens) {
+      const home = buildingById.get(citizen.homeBuildingId)
+      if (!home) continue
+      const region = regionByTile.get(`${home.x}:${home.z}`)
+      if (!region) continue
+      const stats = citizensByRegion.get(region.id) ?? { happiness: 0, employed: 0, count: 0 }
+      stats.happiness += Number(citizen.opinion?.score ?? state?.happiness ?? 0)
+      stats.employed += citizen.employed ? 1 : 0
+      stats.count += 1
+      citizensByRegion.set(region.id, stats)
+    }
+
+    const roadsByTile = new Map<string, any>()
+    const electricNetworkTiles = new Set<string>()
+    const sewerNetworkTiles = new Set<string>()
+    for (const building of buildings) {
+      const tileKey = `${building.x}:${building.z}`
+      if (building.type === "ROAD") roadsByTile.set(tileKey, building)
+      if (building.type === "ELECTRIC_GRID") electricNetworkTiles.add(tileKey)
+      if (building.type === "SEWER_NETWORK") sewerNetworkTiles.add(tileKey)
+    }
+
+    const serviceValues = Object.values(state?.services ?? {}) as number[]
+    const serviceValue = Math.round(serviceValues.reduce((sum, value) => sum + Number(value), 0) / Math.max(1, serviceValues.length))
+
+    return Array.from({ length: GRID_SIZE * GRID_SIZE }, (_, index) => {
+      const x = index % GRID_SIZE
+      const z = Math.floor(index / GRID_SIZE)
+      const tileKey = `${x}:${z}`
+      const road = roadsByTile.get(tileKey)
+      const region = regionByTile.get(tileKey)
+      const stats = region ? citizensByRegion.get(region.id) : undefined
+      let value = -1
+
+      if (metric === "energy" || metric === "sewer") {
+        value = (metric === "energy" ? electricNetworkTiles : sewerNetworkTiles).has(tileKey) ? 100 : -1
+      } else if (metric === "roads") {
+        const status = road ? roadStatus(road) : null
+        value = status === "CLOSED" ? 25 : status === "IRREGULAR" ? 58 : status === "REGULAR" ? 86 : -1
+      } else if (stats?.count) {
+        if (metric === "happiness") value = Math.round(stats.happiness / stats.count)
+        if (metric === "employment") value = Math.round((stats.employed / stats.count) * 100)
+        if (metric === "services") value = serviceValue
+      }
+
+      return heatColor(value)
+    })
+  }, [metric, state])
+  const layers = useMemo(() => {
+    const layerColors = ["#9ca3af", "#ef4444", "#eab308", "#22c55e"]
+    return layerColors.map((layerColor) => ({
+      color: layerColor,
+      positions: colors.flatMap((color, index) => color === layerColor ? [index] : []),
+    }))
+  }, [colors])
+  const materials = useMemo(() => layers.map((layer) => new MeshBasicMaterial({
+    color: layer.color,
+    transparent: true,
+    opacity: metric === "roads" ? 0.9 : 0.62,
+    depthWrite: false,
+  })), [layers, metric])
+  const meshes = useRef<Array<InstancedMesh | null>>([])
+
+  useLayoutEffect(() => {
+    for (let layerIndex = 0; layerIndex < layers.length; layerIndex += 1) {
+      const mesh = meshes.current[layerIndex]
+      const layer = layers[layerIndex]
+      if (!mesh) continue
+
+      for (let index = 0; index < layer.positions.length; index += 1) {
+        const tileIndex = layer.positions[index]
+        const x = tileIndex % GRID_SIZE
+        const z = Math.floor(tileIndex / GRID_SIZE)
+        dummy.position.set(tileToWorld(x), 0.16, tileToWorld(z))
+        dummy.rotation.set(-Math.PI / 2, 0, 0)
+        dummy.updateMatrix()
+        mesh.setMatrixAt(index, dummy.matrix)
+      }
+
+      mesh.instanceMatrix.needsUpdate = true
+    }
+  }, [dummy, layers])
+
+  return (
+    <>
+      {layers.map((layer, index) => (
+        <instancedMesh
+          key={`${layer.color}-${layer.positions.length}`}
+          ref={(mesh) => { meshes.current[index] = mesh }}
+          args={[geometry, materials[index], layer.positions.length]}
+          frustumCulled={false}
+          dispose={null}
+        />
+      ))}
+    </>
+  )
 }
 
 function UtilityPipes({ buildings, type }: { buildings: Array<{ x: number; z: number; type: string }>; type: "ELECTRIC_GRID" | "SEWER_NETWORK" }) {
@@ -528,10 +637,19 @@ export function CityScene() {
           tool === "ROAD") &&
         selectedBuilding
       ) {
+        const isBridge = selectedBuilding === "BRIDGE"
         const isUtilityNetwork = selectedBuilding === "ELECTRIC_GRID" || selectedBuilding === "SEWER_NETWORK"
-        const networkOnRoad = isUtilityNetwork && buildings.some((building) => building.x === x && building.z === z && building.type === "ROAD")
+        const networkOnRoad = isUtilityNetwork && buildings.some((building) => building.x === x && building.z === z && (building.type === "ROAD" || building.type === "BRIDGE"))
         const duplicateNetwork = buildings.some((building) => building.x === x && building.z === z && building.type === selectedBuilding)
-        if ((canPlace(tile) || networkOnRoad) && (!isUtilityNetwork || networkOnRoad) && !duplicateNetwork) {
+        const adjacentRoad = buildings.some((building) =>
+          (building.type === "ROAD" || building.type === "BRIDGE") &&
+          Math.abs(building.x - x) + Math.abs(building.z - z) === 1,
+        )
+        const adjacentWater = [
+          [x, z - 1], [x + 1, z], [x, z + 1], [x - 1, z],
+        ].some(([neighborX, neighborZ]) => tiles[neighborX]?.[neighborZ]?.terrain === "WATER")
+        const canPlaceBridge = isBridge && !tile?.occupiedBy && adjacentRoad && (tile?.terrain === "WATER" || adjacentWater)
+        if ((canPlaceBridge || canPlace(tile) || networkOnRoad) && (!isUtilityNetwork || networkOnRoad) && !duplicateNetwork) {
           void build(x, z, selectedBuilding, buildRotation)
         }
 
@@ -616,7 +734,7 @@ export function CityScene() {
           const previewRegion = previewZone
           return <mesh key={`zone-preview-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.035, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.92, TILE_SIZE * 0.92]} /><meshBasicMaterial color={regionColor(previewRegion)} transparent opacity={0.72} /></mesh>
         })}
-        {tool === "HEATMAP" && Array.from({ length: 30 * 30 }, (_, index) => { const x = index % 30; const z = Math.floor(index / 30); const region = state?.regions?.find((item) => item.tiles.some((tile) => tile.x === x && tile.z === z)); const road = state?.buildings?.find((building: any) => building.type === "ROAD" && building.x === x && building.z === z); const status = road ? roadStatus(road) : null; const network = state?.buildings?.some((building: any) => building.x === x && building.z === z && building.type === (heatMetric === "energy" ? "ELECTRIC_GRID" : "SEWER_NETWORK")); const value = heatMetric === "energy" || heatMetric === "sewer" ? (network ? 100 : -1) : heatMetric === "roads" ? (status === "CLOSED" ? 25 : status === "IRREGULAR" ? 58 : status === "REGULAR" ? 86 : -1) : heatValue(heatMetric, state, region); return <mesh key={`heat-${x}-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[tileToWorld(x), 0.16, tileToWorld(z)]}><planeGeometry args={[TILE_SIZE * 0.94, TILE_SIZE * 0.94]} /><meshBasicMaterial color={heatColor(value)} transparent opacity={heatMetric === "roads" && road ? 0.9 : 0.62} depthWrite={false} /></mesh> })}
+        {tool === "HEATMAP" && <HeatmapOverlay state={state} metric={heatMetric} />}
         <GroundTiles
           tiles={tiles}
           onSelect={handleSelect}
@@ -655,6 +773,10 @@ export function CityScene() {
                 roads={roadSet}
               />
             )
+          }
+
+          if (b.type === "BRIDGE") {
+            return <Bridge key={b.id} position={position} x={b.x} z={b.z} buildings={buildings} />
           }
 
           return (

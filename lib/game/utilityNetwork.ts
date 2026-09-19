@@ -1,15 +1,15 @@
 import type { Building } from "@/types/city"
+import { GRID_SIZE } from "./constants"
 
 export type UtilityType = "ELECTRIC_GRID" | "SEWER_NETWORK"
 
 const key = (x: number, z: number) => `${x}:${z}`
 
 function isRoad(building: Building) {
-  return building.type === "ROAD" && !building.closed && building.roadCondition !== "CLOSED" && building.maintenance?.status !== "CLOSED"
+  return (building.type === "ROAD" || building.type === "BRIDGE") && !building.closed && building.roadCondition !== "CLOSED" && building.maintenance?.status !== "CLOSED"
 }
 
 const DIRECTIONS = [[0, -1], [1, 0], [0, 1], [-1, 0]] as const
-const MAP_SIZE = 32
 
 function flood(utilities: Set<string>, seeds: Iterable<string>) {
   const connected = new Set<string>()
@@ -34,10 +34,15 @@ export function getUtilityFlow(buildings: Building[], type: UtilityType): Utilit
   const utilities = new Set(buildings.filter((b) => b.type === type).map((b) => key(b.x, b.z)))
   const edgeSeeds = [...utilities].filter((position) => {
     const [x, z] = position.split(":").map(Number)
-    return x === 0 || z === 0 || x === MAP_SIZE - 1 || z === MAP_SIZE - 1
+    return x === 0 || z === 0 || x === GRID_SIZE - 1 || z === GRID_SIZE - 1
   })
-  const sourceType = type === "ELECTRIC_GRID" ? "POWER_PLANT" : "SEWAGE_TREATMENT_PLANT"
-  const sourceSeeds = buildings.filter((b) => b.type === sourceType).flatMap((b) =>
+  // A rede de saneamento tem duas fontes distintas: a estação trata o
+  // esgoto, enquanto a caixa d'água produz água. Ambas devem ativar o mesmo
+  // fluxo, sem obrigar uma fonte a estar conectada à outra.
+  const sourceTypes = type === "ELECTRIC_GRID"
+    ? new Set(["POWER_PLANT"])
+    : new Set(["SEWAGE_TREATMENT_PLANT", "WATER_TOWER"])
+  const sourceSeeds = buildings.filter((b) => sourceTypes.has(b.type)).flatMap((b) =>
     DIRECTIONS.map(([dx, dz]) => key(b.x + dx, b.z + dz)),
   )
   const edgeTiles = flood(utilities, edgeSeeds)
@@ -49,14 +54,43 @@ export function getUtilityNetwork(buildings: Building[], type: UtilityType) {
   return getUtilityFlow(buildings, type).tiles
 }
 
+function componentFromTiles(buildings: Building[], building: Building, type: UtilityType, allowedTiles: Set<string>) {
+  const utilities = new Set(
+    buildings
+      .filter((candidate) => candidate.type === type)
+      .map((candidate) => key(candidate.x, candidate.z)),
+  )
+  const connectedUtilities = new Set(
+    [...utilities].filter((position) => allowedTiles.has(position)),
+  )
+  const attachedTile = DIRECTIONS
+    .map(([dx, dz]) => key(building.x + dx, building.z + dz))
+    .find((position) => connectedUtilities.has(position))
+
+  if (!attachedTile) return null
+  return flood(connectedUtilities, [attachedTile])
+}
+
+export function getBuildingUtilityComponent(buildings: Building[], building: Building, type: UtilityType) {
+  return componentFromTiles(buildings, building, type, getUtilityFlow(buildings, type).tiles)
+}
+
+// O produtor pertence à componente física da rede à qual está conectado.
+// Não usamos a união global de sourceTiles aqui: ela pode juntar a avaliação
+// de bairros diferentes e transformar uma validação individual em uma regra
+// coletiva. A exportação decide depois, para esta componente, se existe um
+// caminho contínuo até a borda.
+export function getBuildingSourceComponent(buildings: Building[], building: Building, type: UtilityType) {
+  return getBuildingUtilityComponent(buildings, building, type)
+}
+
 export function hasBuildingUtility(buildings: Building[], building: Building, type: UtilityType) {
-  const flow = getUtilityFlow(buildings, type)
-  return DIRECTIONS.some(([dx, dz]) => flow.tiles.has(key(building.x + dx, building.z + dz)))
+  return getBuildingUtilityComponent(buildings, building, type) !== null
 }
 
 export function hasBuildingUtilityToEdge(buildings: Building[], building: Building, type: UtilityType) {
-  const flow = getUtilityFlow(buildings, type)
-  return DIRECTIONS.some(([dx, dz]) => flow.edgeTiles.has(key(building.x + dx, building.z + dz)))
+  const edgeTiles = getUtilityFlow(buildings, type).edgeTiles
+  return DIRECTIONS.some(([dx, dz]) => edgeTiles.has(key(building.x + dx, building.z + dz)))
 }
 
 export function isUtilityConnected(buildings: Building[], x: number, z: number, type: UtilityType) {

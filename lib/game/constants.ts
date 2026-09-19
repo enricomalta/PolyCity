@@ -1,7 +1,7 @@
 // Central place for tuning the world. Nothing here should be duplicated in
 // components; import from this module instead.
 
-export const GRID_SIZE = 30 // 30 x 30 tiles
+export const GRID_SIZE = 32 // 32 x 32 tiles
 export const TILE_SIZE = 1 // world units per tile
 
 // Convert a tile coordinate to a centered world position so the grid is

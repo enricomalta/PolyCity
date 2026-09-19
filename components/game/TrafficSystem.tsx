@@ -428,6 +428,7 @@ export function TrafficSystem({
         <Car
           key={car.id}
           path={car.path}
+          buildings={buildings}
           onArrive={() =>
             handleArrive(car)
           }
@@ -484,9 +485,11 @@ export function TrafficSystem({
 
 function Car({
   path,
+  buildings,
   onArrive,
 }: {
   path: Coord[]
+  buildings: Building[]
   onArrive: () => void
 }) {
   const groupRef =
@@ -504,6 +507,11 @@ function Car({
       })),
     [path],
   )
+
+  const heightAt = (point: Coord) => {
+    const bridge = buildings.some((building) => building.type === "BRIDGE" && building.x === point.x && building.z === point.z)
+    return bridge ? 0.72 : 0.12
+  }
 
   useFrame((_, delta) => {
     if (
@@ -557,7 +565,7 @@ function Car({
 
         groupRef.current.position.set(
           last.x,
-          0.12,
+          heightAt(path[path.length - 1] ?? { x: 0, z: 0 }),
           last.z,
         )
 
@@ -589,7 +597,7 @@ function Car({
 
     groupRef.current.position.set(
       x,
-      0.12,
+      heightAt(from) + (heightAt(to) - heightAt(from)) * progressRef.current,
       z,
     )
 
@@ -611,7 +619,7 @@ function Car({
       ref={groupRef}
       position={[
         start.x,
-        0.12,
+      heightAt(path[0] ?? { x: 0, z: 0 }),
         start.z,
       ]}
     >

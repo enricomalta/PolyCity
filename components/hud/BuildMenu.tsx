@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Home, Building2, Store, Factory, Trees, Zap, Droplets, Route, ShoppingCart, Fuel, Shirt, CarFront, Hammer, Cpu, Cable, Waves } from "lucide-react"
+import { Home, Building2, Store, Factory, Trees, Zap, Droplets, Route, ShoppingCart, Fuel, Shirt, CarFront, Hammer, Cpu, Cable, Waves, School, HeartPulse, Shield, BriefcaseMedical, Trash2, BusFront, Landmark, ShieldAlert } from "lucide-react"
 import type { BuildingType } from "@/types/game"
 import {
   BUILDING_LIST,
@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"
 
 const ICONS: Record<BuildingType, React.ReactNode> = {
   ROAD: <Route className="size-5" />,
+  BRIDGE: <Route className="size-5" />,
   HOUSE: <Home className="size-5" />,
   LOW_INCOME_HOUSE: <Home className="size-5" />,
   MIDDLE_INCOME_HOUSE: <Home className="size-5" />,
@@ -40,6 +41,21 @@ const ICONS: Record<BuildingType, React.ReactNode> = {
   ELECTRIC_GRID: <Cable className="size-5" />,
   SEWER_NETWORK: <Waves className="size-5" />,
   SEWAGE_TREATMENT_PLANT: <Droplets className="size-5" />,
+  ELEMENTARY_SCHOOL: <School className="size-5" />,
+  HIGH_SCHOOL: <School className="size-5" />,
+  UNIVERSITY: <School className="size-5" />,
+  MEDICAL_CENTER: <HeartPulse className="size-5" />,
+  HOSPITAL: <BriefcaseMedical className="size-5" />,
+  CEMETERY: <Landmark className="size-5" />,
+  RELIGIOUS_CENTER: <Landmark className="size-5" />,
+  POLICE_STATION: <Shield className="size-5" />,
+  POLICE_DEPARTMENT: <ShieldAlert className="size-5" />,
+  CIVIL_DEFENSE: <ShieldAlert className="size-5" />,
+  FIRE_STATION: <ShieldAlert className="size-5" />,
+  GARBAGE_COLLECTION: <Trash2 className="size-5" />,
+  BUS_STOP: <BusFront className="size-5" />,
+  BUS_TERMINAL: <BusFront className="size-5" />,
+  BUS_BRIDGE: <Route className="size-5" />,
 }
 
 type BuildGroup = { label: string; types: BuildingType[] }
@@ -62,18 +78,12 @@ const GROUPS: Record<string, BuildGroup[]> = {
     { label: "Tecnologia", types: ["TECH_FACTORY"] },
   ],
   SERVICES: [
-    { label: "Qualidade de vida", types: ["PARK"] },
-    { label: "Energia", types: ["POWER_PLANT", "ELECTRIC_GRID"] },
-    { label: "Água", types: ["WATER_TOWER", "SEWAGE_TREATMENT_PLANT", "SEWER_NETWORK"] },
-    { label: "Educação", types: [] },
-    { label: "Saúde", types: [] },
-    { label: "Segurança", types: [] },
-    { label: "Prevenção", types: [] },
-    { label: "Coleta de lixo", types: [] },
-    { label: "Transporte", types: [] },
+    { label: "Coleta de lixo", types: ["GARBAGE_COLLECTION"] },
+    { label: "Transporte", types: ["BUS_TERMINAL"] },
   ],
   INFRASTRUCTURE: [
     { label: "Vias", types: ["ROAD"] },
+    { label: "Pontes", types: ["BRIDGE"] },
   ],
 }
 
