@@ -130,12 +130,10 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
   let buildingHappiness = 0
   let energyProduction = 0
   let edgeEnergyProduction = 0
-  let isolatedEnergyProduction = 0
   let energyConsumption = 0
   let edgeEnergyConsumption = 0
   let waterProduction = 0
   let edgeWaterProduction = 0
-  let isolatedWaterProduction = 0
   let waterConsumption = 0
   let edgeWaterConsumption = 0
 
@@ -165,12 +163,10 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
     if (b.type === "POWER_PLANT" && hasElectricUtility(b)) {
       energyProduction += def.energyProduction
       if (hasBuildingUtilityToEdge(buildings, b, "ELECTRIC_GRID")) edgeEnergyProduction += def.energyProduction
-      else isolatedEnergyProduction += def.energyProduction
     }
     if (b.type === "WATER_TOWER" && hasSewerUtility(b)) {
       waterProduction += def.waterProduction
       if (hasBuildingUtilityToEdge(buildings, b, "SEWER_NETWORK")) edgeWaterProduction += def.waterProduction
-      else isolatedWaterProduction += def.waterProduction
     }
     if (b.type === "SEWAGE_TREATMENT_PLANT" && hasSewerUtility(b) && connectedTowers.length > 0) {
       waterConsumption = Math.max(0, waterConsumption - def.waterConsumption)
@@ -199,14 +195,12 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
     happiness,
     energy: energyProduction - energyConsumption,
     water: waterProduction - waterConsumption,
-    // A produção isolada participa do balanço interno, mas não pode ser
-    // exportada. O consumo da cidade inteira reduz o excedente exportável:
-    // assim, uma usina ligada à borda pode compensar a demanda de um bairro
-    // isolado, mas nunca exportar a produção desse bairro.
-    // Cada recurso é validado separadamente, sem exigir que água e energia
-    // estejam exportando ao mesmo tempo.
-    energyExport: Math.max(0, energyProduction - energyConsumption - isolatedEnergyProduction),
-    waterExport: Math.max(0, waterProduction - waterConsumption - isolatedWaterProduction),
+    // A exportação considera somente o componente da rede que alcança a
+    // borda. Produção e consumo de bairros isolados continuam no balanço
+    // interno, mas não alteram o excedente que pode sair da cidade.
+    // Cada recurso é validado separadamente.
+    energyExport: Math.max(0, edgeEnergyProduction - edgeEnergyConsumption),
+    waterExport: Math.max(0, edgeWaterProduction - edgeWaterConsumption),
     buildings,
     policy,
     regions: [],
