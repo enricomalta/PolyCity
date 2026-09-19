@@ -54,25 +54,33 @@ export function getUtilityNetwork(buildings: Building[], type: UtilityType) {
   return getUtilityFlow(buildings, type).tiles
 }
 
-function componentFromTiles(buildings: Building[], building: Building, tiles: Set<string>) {
-  const utilities = new Set(buildings.filter((b) => b.type === "ELECTRIC_GRID" || b.type === "SEWER_NETWORK").map((b) => key(b.x, b.z)))
+function componentFromTiles(buildings: Building[], building: Building, type: UtilityType, allowedTiles: Set<string>) {
+  const utilities = new Set(
+    buildings
+      .filter((candidate) => candidate.type === type)
+      .map((candidate) => key(candidate.x, candidate.z)),
+  )
+  const connectedUtilities = new Set(
+    [...utilities].filter((position) => allowedTiles.has(position)),
+  )
   const attachedTile = DIRECTIONS
     .map(([dx, dz]) => key(building.x + dx, building.z + dz))
-    .find((position) => tiles.has(position) && utilities.has(position))
+    .find((position) => connectedUtilities.has(position))
 
   if (!attachedTile) return null
-  return flood(utilities, [attachedTile])
+  return flood(connectedUtilities, [attachedTile])
 }
 
 export function getBuildingUtilityComponent(buildings: Building[], building: Building, type: UtilityType) {
-  return componentFromTiles(buildings, building, getUtilityFlow(buildings, type).tiles)
+  return componentFromTiles(buildings, building, type, getUtilityFlow(buildings, type).tiles)
 }
 
-// Produtores precisam ser classificados pela rede que realmente os alimenta,
-// não pela primeira rede encontrada ao redor. Isso impede que uma rede da borda
-// "empreste" o produtor de um bairro isolado.
+// Produtores são classificados apenas pela mesma componente que parte de uma
+// fonte desse recurso. A componente é limitada a sourceTiles para impedir que
+// o flood atravesse uma rede vizinha que só está próxima, mas não está ligada à
+// fonte. A exportação depois exige que essa mesma componente alcance a borda.
 export function getBuildingSourceComponent(buildings: Building[], building: Building, type: UtilityType) {
-  return componentFromTiles(buildings, building, getUtilityFlow(buildings, type).sourceTiles)
+  return componentFromTiles(buildings, building, type, getUtilityFlow(buildings, type).sourceTiles)
 }
 
 export function hasBuildingUtility(buildings: Building[], building: Building, type: UtilityType) {
