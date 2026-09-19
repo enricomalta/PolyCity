@@ -24,7 +24,7 @@ interface GroundTilesProps {
  * The base terrain: a grass plane, a soil rim for depth, a grid overlay, and
  * a single large invisible picking plane. We derive the tile coordinate from
  * the pointer's world position instead of rendering thousands of meshes, which
- * keeps the scene light even on a 30x30 grid.
+ * keeps the scene light even on a 32x32 grid.
  */
 export function GroundTiles({ tiles, onSelect, onCancelSelect, onDragSelect, allowDragSelect = false, hoverControllerRef, }: GroundTilesProps) {
   const worldSize = GRID_SIZE * TILE_SIZE

@@ -210,10 +210,19 @@ export const SelectionIndicator =
                 }
               }
             } else {
+              const isBridge = selectedBuilding === "BRIDGE"
               const isUtilityNetwork = selectedBuilding === "ELECTRIC_GRID" || selectedBuilding === "SEWER_NETWORK"
-              const hasRoad = isUtilityNetwork && buildings.some((item) => item.x === x && item.z === z && item.type === "ROAD")
+              const hasRoad = isUtilityNetwork && buildings.some((item) => item.x === x && item.z === z && (item.type === "ROAD" || item.type === "BRIDGE"))
               const hasDuplicateNetwork = isUtilityNetwork && buildings.some((item) => item.x === x && item.z === z && item.type === selectedBuilding)
-              valid = isUtilityNetwork ? Boolean(hasRoad && !hasDuplicateNetwork) : canPlace(tile)
+              const adjacentRoad = buildings.some((item) =>
+                (item.type === "ROAD" || item.type === "BRIDGE") &&
+                Math.abs(item.x - x) + Math.abs(item.z - z) === 1,
+              )
+              const adjacentWater = [
+                [x, z - 1], [x + 1, z], [x, z + 1], [x - 1, z],
+              ].some(([neighborX, neighborZ]) => tiles[neighborX]?.[neighborZ]?.terrain === "WATER")
+              const validBridge = isBridge && !tile?.occupiedBy && adjacentRoad && (tile?.terrain === "WATER" || adjacentWater)
+              valid = isBridge ? Boolean(validBridge) : isUtilityNetwork ? Boolean(hasRoad && !hasDuplicateNetwork) : canPlace(tile)
             }
 
             const highlight =

@@ -44,6 +44,10 @@ function tileKey(x: number, z: number): string {
   return `${x}:${z}`
 }
 
+function isRoadLike(building: Building) {
+  return building.type === "ROAD" || building.type === "BRIDGE"
+}
+
 function neighbors4(
   x: number,
   z: number,
@@ -387,7 +391,7 @@ export function findWorkTripRoutes(
       if (
         buildings.some(
           (b) =>
-            b.type === "ROAD" &&
+            isRoadLike(b) &&
             b.x === n.x &&
             b.z === n.z,
         )
@@ -479,7 +483,7 @@ export function findReturnTripRoutes(
       if (
         buildings.some(
           (b) =>
-            b.type === "ROAD" &&
+            isRoadLike(b) &&
             b.x === n.x &&
             b.z === n.z,
         )

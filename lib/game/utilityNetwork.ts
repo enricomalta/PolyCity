@@ -1,15 +1,15 @@
 import type { Building } from "@/types/city"
+import { GRID_SIZE } from "./constants"
 
 export type UtilityType = "ELECTRIC_GRID" | "SEWER_NETWORK"
 
 const key = (x: number, z: number) => `${x}:${z}`
 
 function isRoad(building: Building) {
-  return building.type === "ROAD" && !building.closed && building.roadCondition !== "CLOSED" && building.maintenance?.status !== "CLOSED"
+  return (building.type === "ROAD" || building.type === "BRIDGE") && !building.closed && building.roadCondition !== "CLOSED" && building.maintenance?.status !== "CLOSED"
 }
 
 const DIRECTIONS = [[0, -1], [1, 0], [0, 1], [-1, 0]] as const
-const MAP_SIZE = 32
 
 function flood(utilities: Set<string>, seeds: Iterable<string>) {
   const connected = new Set<string>()
@@ -34,7 +34,7 @@ export function getUtilityFlow(buildings: Building[], type: UtilityType): Utilit
   const utilities = new Set(buildings.filter((b) => b.type === type).map((b) => key(b.x, b.z)))
   const edgeSeeds = [...utilities].filter((position) => {
     const [x, z] = position.split(":").map(Number)
-    return x === 0 || z === 0 || x === MAP_SIZE - 1 || z === MAP_SIZE - 1
+    return x === 0 || z === 0 || x === GRID_SIZE - 1 || z === GRID_SIZE - 1
   })
   // A rede de saneamento tem duas fontes distintas: a estação trata o
   // esgoto, enquanto a caixa d'água produz água. Ambas devem ativar o mesmo
@@ -89,9 +89,8 @@ export function hasBuildingUtility(buildings: Building[], building: Building, ty
 }
 
 export function hasBuildingUtilityToEdge(buildings: Building[], building: Building, type: UtilityType) {
-  const flow = getUtilityFlow(buildings, type)
-  const component = getBuildingUtilityComponent(buildings, building, type)
-  return component !== null && [...component].some((position) => flow.edgeTiles.has(position))
+  const edgeTiles = getUtilityFlow(buildings, type).edgeTiles
+  return DIRECTIONS.some(([dx, dz]) => edgeTiles.has(key(building.x + dx, building.z + dz)))
 }
 
 export function isUtilityConnected(buildings: Building[], x: number, z: number, type: UtilityType) {

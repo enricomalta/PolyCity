@@ -86,6 +86,21 @@ function hasJobs(
     "POWER_PLANT",
     "WATER_TOWER",
     "SEWAGE_TREATMENT_PLANT",
+    "ELEMENTARY_SCHOOL",
+    "HIGH_SCHOOL",
+    "UNIVERSITY",
+    "MEDICAL_CENTER",
+    "HOSPITAL",
+    "CEMETERY",
+    "RELIGIOUS_CENTER",
+    "POLICE_STATION",
+    "POLICE_DEPARTMENT",
+    "CIVIL_DEFENSE",
+    "FIRE_STATION",
+    "GARBAGE_COLLECTION",
+    "BUS_STOP",
+    "BUS_TERMINAL",
+    "BUS_BRIDGE",
   ].includes(type)
 }
 
