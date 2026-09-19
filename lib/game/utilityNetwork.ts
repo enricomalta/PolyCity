@@ -75,12 +75,13 @@ export function getBuildingUtilityComponent(buildings: Building[], building: Bui
   return componentFromTiles(buildings, building, type, getUtilityFlow(buildings, type).tiles)
 }
 
-// Produtores são classificados apenas pela mesma componente que parte de uma
-// fonte desse recurso. A componente é limitada a sourceTiles para impedir que
-// o flood atravesse uma rede vizinha que só está próxima, mas não está ligada à
-// fonte. A exportação depois exige que essa mesma componente alcance a borda.
+// O produtor pertence à componente física da rede à qual está conectado.
+// Não usamos a união global de sourceTiles aqui: ela pode juntar a avaliação
+// de bairros diferentes e transformar uma validação individual em uma regra
+// coletiva. A exportação decide depois, para esta componente, se existe um
+// caminho contínuo até a borda.
 export function getBuildingSourceComponent(buildings: Building[], building: Building, type: UtilityType) {
-  return componentFromTiles(buildings, building, type, getUtilityFlow(buildings, type).sourceTiles)
+  return getBuildingUtilityComponent(buildings, building, type)
 }
 
 export function hasBuildingUtility(buildings: Building[], building: Building, type: UtilityType) {
