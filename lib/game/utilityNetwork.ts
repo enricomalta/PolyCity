@@ -36,8 +36,13 @@ export function getUtilityFlow(buildings: Building[], type: UtilityType): Utilit
     const [x, z] = position.split(":").map(Number)
     return x === 0 || z === 0 || x === MAP_SIZE - 1 || z === MAP_SIZE - 1
   })
-  const sourceType = type === "ELECTRIC_GRID" ? "POWER_PLANT" : "SEWAGE_TREATMENT_PLANT"
-  const sourceSeeds = buildings.filter((b) => b.type === sourceType).flatMap((b) =>
+  // A rede de saneamento tem duas fontes distintas: a estação trata o
+  // esgoto, enquanto a caixa d'água produz água. Ambas devem ativar o mesmo
+  // fluxo, sem obrigar uma fonte a estar conectada à outra.
+  const sourceTypes = type === "ELECTRIC_GRID"
+    ? new Set(["POWER_PLANT"])
+    : new Set(["SEWAGE_TREATMENT_PLANT", "WATER_TOWER"])
+  const sourceSeeds = buildings.filter((b) => sourceTypes.has(b.type)).flatMap((b) =>
     DIRECTIONS.map(([dx, dz]) => key(b.x + dx, b.z + dz)),
   )
   const edgeTiles = flood(utilities, edgeSeeds)
@@ -49,14 +54,25 @@ export function getUtilityNetwork(buildings: Building[], type: UtilityType) {
   return getUtilityFlow(buildings, type).tiles
 }
 
-export function getBuildingUtilityComponent(buildings: Building[], building: Building, type: UtilityType) {
-  const flow = getUtilityFlow(buildings, type)
+function componentFromTiles(buildings: Building[], building: Building, tiles: Set<string>) {
+  const utilities = new Set(buildings.filter((b) => b.type === "ELECTRIC_GRID" || b.type === "SEWER_NETWORK").map((b) => key(b.x, b.z)))
   const attachedTile = DIRECTIONS
     .map(([dx, dz]) => key(building.x + dx, building.z + dz))
-    .find((position) => flow.tiles.has(position))
+    .find((position) => tiles.has(position) && utilities.has(position))
 
   if (!attachedTile) return null
-  return flood(new Set(buildings.filter((b) => b.type === type).map((b) => key(b.x, b.z))), [attachedTile])
+  return flood(utilities, [attachedTile])
+}
+
+export function getBuildingUtilityComponent(buildings: Building[], building: Building, type: UtilityType) {
+  return componentFromTiles(buildings, building, getUtilityFlow(buildings, type).tiles)
+}
+
+// Produtores precisam ser classificados pela rede que realmente os alimenta,
+// não pela primeira rede encontrada ao redor. Isso impede que uma rede da borda
+// "empreste" o produtor de um bairro isolado.
+export function getBuildingSourceComponent(buildings: Building[], building: Building, type: UtilityType) {
+  return componentFromTiles(buildings, building, getUtilityFlow(buildings, type).sourceTiles)
 }
 
 export function hasBuildingUtility(buildings: Building[], building: Building, type: UtilityType) {

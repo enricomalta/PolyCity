@@ -3,7 +3,7 @@ import {
   createGameClock,
 } from "@/lib/game/clock"
 import { getBuilding } from "./buildings"
-import { getBuildingUtilityComponent, getUtilityFlow, hasBuildingUtility } from "./utilityNetwork"
+import { getBuildingSourceComponent, getBuildingUtilityComponent, getUtilityFlow, hasBuildingUtility } from "./utilityNetwork"
 
 // IMPORTANT: economy math here is the SAME code the backend runs. The server
 // imports these helpers so the authoritative economy and the optimistic
@@ -135,8 +135,10 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
   const energyFlows = new Map<string, { production: number; consumption: number; reachesEdge: boolean }>()
   const waterFlows = new Map<string, { production: number; consumption: number; reachesEdge: boolean }>()
 
-  const flowFor = (map: Map<string, { production: number; consumption: number; reachesEdge: boolean }>, building: Building, type: "ELECTRIC_GRID" | "SEWER_NETWORK") => {
-    const component = getBuildingUtilityComponent(buildings, building, type)
+  const flowFor = (map: Map<string, { production: number; consumption: number; reachesEdge: boolean }>, building: Building, type: "ELECTRIC_GRID" | "SEWER_NETWORK", producer = false) => {
+    const component = producer
+      ? getBuildingSourceComponent(buildings, building, type)
+      : getBuildingUtilityComponent(buildings, building, type)
     if (!component) return null
     const id = [...component].sort()[0]
     let flow = map.get(id)
@@ -174,12 +176,12 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
     // no balanço interno, mas nunca empresta produção a outro componente para exportação.
     if (b.type === "POWER_PLANT" && hasElectricUtility(b)) {
       energyProduction += def.energyProduction
-      const flow = flowFor(energyFlows, b, "ELECTRIC_GRID")
+      const flow = flowFor(energyFlows, b, "ELECTRIC_GRID", true)
       if (flow) flow.production += def.energyProduction
     }
     if (b.type === "WATER_TOWER" && hasSewerUtility(b)) {
       waterProduction += def.waterProduction
-      const flow = flowFor(waterFlows, b, "SEWER_NETWORK")
+      const flow = flowFor(waterFlows, b, "SEWER_NETWORK", true)
       if (flow) flow.production += def.waterProduction
     }
     if (b.type === "SEWAGE_TREATMENT_PLANT" && hasSewerUtility(b) && connectedTowers.length > 0) {
