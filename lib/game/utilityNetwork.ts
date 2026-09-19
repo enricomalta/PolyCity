@@ -49,14 +49,24 @@ export function getUtilityNetwork(buildings: Building[], type: UtilityType) {
   return getUtilityFlow(buildings, type).tiles
 }
 
-export function hasBuildingUtility(buildings: Building[], building: Building, type: UtilityType) {
+export function getBuildingUtilityComponent(buildings: Building[], building: Building, type: UtilityType) {
   const flow = getUtilityFlow(buildings, type)
-  return DIRECTIONS.some(([dx, dz]) => flow.tiles.has(key(building.x + dx, building.z + dz)))
+  const attachedTile = DIRECTIONS
+    .map(([dx, dz]) => key(building.x + dx, building.z + dz))
+    .find((position) => flow.tiles.has(position))
+
+  if (!attachedTile) return null
+  return flood(new Set(buildings.filter((b) => b.type === type).map((b) => key(b.x, b.z))), [attachedTile])
+}
+
+export function hasBuildingUtility(buildings: Building[], building: Building, type: UtilityType) {
+  return getBuildingUtilityComponent(buildings, building, type) !== null
 }
 
 export function hasBuildingUtilityToEdge(buildings: Building[], building: Building, type: UtilityType) {
   const flow = getUtilityFlow(buildings, type)
-  return DIRECTIONS.some(([dx, dz]) => flow.edgeTiles.has(key(building.x + dx, building.z + dz)))
+  const component = getBuildingUtilityComponent(buildings, building, type)
+  return component !== null && [...component].some((position) => flow.edgeTiles.has(position))
 }
 
 export function isUtilityConnected(buildings: Building[], x: number, z: number, type: UtilityType) {

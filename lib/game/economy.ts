@@ -3,7 +3,7 @@ import {
   createGameClock,
 } from "@/lib/game/clock"
 import { getBuilding } from "./buildings"
-import { hasBuildingUtility, hasBuildingUtilityToEdge } from "./utilityNetwork"
+import { getBuildingUtilityComponent, getUtilityFlow, hasBuildingUtility } from "./utilityNetwork"
 
 // IMPORTANT: economy math here is the SAME code the backend runs. The server
 // imports these helpers so the authoritative economy and the optimistic
@@ -129,13 +129,24 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
   let jobs = 0
   let buildingHappiness = 0
   let energyProduction = 0
-  let edgeEnergyProduction = 0
   let energyConsumption = 0
-  let edgeEnergyConsumption = 0
   let waterProduction = 0
-  let edgeWaterProduction = 0
   let waterConsumption = 0
-  let edgeWaterConsumption = 0
+  const energyFlows = new Map<string, { production: number; consumption: number; reachesEdge: boolean }>()
+  const waterFlows = new Map<string, { production: number; consumption: number; reachesEdge: boolean }>()
+
+  const flowFor = (map: Map<string, { production: number; consumption: number; reachesEdge: boolean }>, building: Building, type: "ELECTRIC_GRID" | "SEWER_NETWORK") => {
+    const component = getBuildingUtilityComponent(buildings, building, type)
+    if (!component) return null
+    const id = [...component].sort()[0]
+    let flow = map.get(id)
+    if (!flow) {
+      const edgeTiles = getUtilityFlow(buildings, type).edgeTiles
+      flow = { production: 0, consumption: 0, reachesEdge: [...component].some((position) => edgeTiles.has(position)) }
+      map.set(id, flow)
+    }
+    return flow
+  }
 
   const hasElectricUtility = (building: Building) => hasBuildingUtility(buildings, building, "ELECTRIC_GRID")
   const hasSewerUtility = (building: Building) => hasBuildingUtility(buildings, building, "SEWER_NETWORK")
@@ -151,26 +162,32 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
     buildingHappiness += def.happiness
     if (def.energyConsumption > 0 && hasElectricUtility(b)) {
       energyConsumption += def.energyConsumption
-      if (hasBuildingUtilityToEdge(buildings, b, "ELECTRIC_GRID")) edgeEnergyConsumption += def.energyConsumption
+      const flow = flowFor(energyFlows, b, "ELECTRIC_GRID")
+      if (flow) flow.consumption += def.energyConsumption
     }
     if (def.waterConsumption > 0 && hasSewerUtility(b)) {
       waterConsumption += def.waterConsumption
-      if (hasBuildingUtilityToEdge(buildings, b, "SEWER_NETWORK")) edgeWaterConsumption += def.waterConsumption
+      const flow = flowFor(waterFlows, b, "SEWER_NETWORK")
+      if (flow) flow.consumption += def.waterConsumption
     }
-    // A produção local entra no balanço assim que o produtor está ligado à
-    // sua rede. A ligação até a borda é uma condição de exportação, não de
-    // existência do recurso dentro da cidade.
+    // Cada componente é liquidado separadamente: uma usina isolada continua
+    // no balanço interno, mas nunca empresta produção a outro componente para exportação.
     if (b.type === "POWER_PLANT" && hasElectricUtility(b)) {
       energyProduction += def.energyProduction
-      if (hasBuildingUtilityToEdge(buildings, b, "ELECTRIC_GRID")) edgeEnergyProduction += def.energyProduction
+      const flow = flowFor(energyFlows, b, "ELECTRIC_GRID")
+      if (flow) flow.production += def.energyProduction
     }
     if (b.type === "WATER_TOWER" && hasSewerUtility(b)) {
       waterProduction += def.waterProduction
-      if (hasBuildingUtilityToEdge(buildings, b, "SEWER_NETWORK")) edgeWaterProduction += def.waterProduction
+      const flow = flowFor(waterFlows, b, "SEWER_NETWORK")
+      if (flow) flow.production += def.waterProduction
     }
     if (b.type === "SEWAGE_TREATMENT_PLANT" && hasSewerUtility(b) && connectedTowers.length > 0) {
       waterConsumption = Math.max(0, waterConsumption - def.waterConsumption)
+      const flow = flowFor(waterFlows, b, "SEWER_NETWORK")
+      if (flow) flow.consumption = Math.max(0, flow.consumption - def.waterConsumption)
     }
+
   }
 
   const services = deriveServiceIndices(policy, population)
@@ -199,8 +216,8 @@ export function deriveState(buildings: Building[], money: number, policy: CityPo
     // borda. Produção e consumo de bairros isolados continuam no balanço
     // interno, mas não alteram o excedente que pode sair da cidade.
     // Cada recurso é validado separadamente.
-    energyExport: Math.max(0, edgeEnergyProduction - edgeEnergyConsumption),
-    waterExport: Math.max(0, edgeWaterProduction - edgeWaterConsumption),
+    energyExport: [...energyFlows.values()].reduce((total, flow) => total + (flow.reachesEdge ? Math.max(0, flow.production - flow.consumption) : 0), 0),
+    waterExport: [...waterFlows.values()].reduce((total, flow) => total + (flow.reachesEdge ? Math.max(0, flow.production - flow.consumption) : 0), 0),
     buildings,
     policy,
     regions: [],
