@@ -64,7 +64,6 @@ const GROUPS: Record<string, BuildGroup[]> = {
   RESIDENTIAL: [
     { label: "Casas", types: ["HOUSE", "LOW_INCOME_HOUSE", "MIDDLE_INCOME_HOUSE", "HIGH_INCOME_HOUSE"] },
     { label: "Prédios", types: ["SMALL_APARTMENT", "LOW_INCOME_APARTMENT", "MIDDLE_INCOME_APARTMENT", "HIGH_INCOME_APARTMENT"] },
-    { label: "Hotéis", types: [] },
   ],
   COMMERCIAL: [
     { label: "Comércio local", types: ["SHOP", "CLOTHING_STORE", "BUILDING_SUPPLY_STORE"] },
@@ -78,12 +77,21 @@ const GROUPS: Record<string, BuildGroup[]> = {
     { label: "Tecnologia", types: ["TECH_FACTORY"] },
   ],
   SERVICES: [
+    { label: "Qualidade de vida", types: ["PARK"] },
+    { label: "Energia", types: ["POWER_PLANT"] },
+    { label: "Água e saneamento", types: ["WATER_TOWER", "SEWAGE_TREATMENT_PLANT"] },
+    { label: "Educação", types: ["ELEMENTARY_SCHOOL", "HIGH_SCHOOL", "UNIVERSITY"] },
+    { label: "Saúde", types: ["MEDICAL_CENTER", "HOSPITAL"] },
+    { label: "Segurança", types: ["POLICE_STATION", "POLICE_DEPARTMENT"] },
+    { label: "Prevenção", types: ["CIVIL_DEFENSE", "FIRE_STATION"] },
     { label: "Coleta de lixo", types: ["GARBAGE_COLLECTION"] },
-    { label: "Transporte", types: ["BUS_TERMINAL"] },
+    { label: "Transporte", types: ["BUS_STOP", "BUS_TERMINAL", "BUS_BRIDGE"] },
+    { label: "Comunidade", types: ["CEMETERY", "RELIGIOUS_CENTER"] },
   ],
   INFRASTRUCTURE: [
     { label: "Vias", types: ["ROAD"] },
     { label: "Pontes", types: ["BRIDGE"] },
+    { label: "Redes", types: ["ELECTRIC_GRID", "SEWER_NETWORK"] },
   ],
 }
 
